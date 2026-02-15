@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Plus, PanelLeftClose, PanelLeft, ChevronDown, Menu, Sun, Moon } from "lucide-react";
+import { Plus, PanelLeftClose, PanelLeft, Menu, Sun, Moon } from "lucide-react";
+import { SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { useState } from "react";
 import { useTheme } from "next-themes";
 
@@ -60,20 +61,30 @@ function SidebarContent({
       </div>
       <div className="p-3 border-t border-sidebar-border space-y-2">
         <ThemeToggle />
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-sidebar-accent">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-emerald-500 shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-sidebar-foreground">Guest</p>
-            <button className="text-xs text-muted-foreground hover:text-foreground underline">
-              Login to your account
-            </button>
-            <span className="text-muted-foreground mx-1">/</span>
-            <button className="text-xs text-muted-foreground hover:text-foreground underline">
-              Sign up
-            </button>
+        <SignedIn>
+          <div className="flex items-center gap-2 px-3 py-2">
+            <UserButton afterSignOutUrl="/" />
           </div>
-          <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
-        </div>
+        </SignedIn>
+        <SignedOut>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-sidebar-accent">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-emerald-500 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-sidebar-foreground">Guest</p>
+              <SignInButton mode="modal">
+                <button className="text-xs text-muted-foreground hover:text-foreground underline">
+                  Sign in
+                </button>
+              </SignInButton>
+              <span className="text-muted-foreground mx-1">/</span>
+              <SignUpButton mode="modal">
+                <button className="text-xs text-muted-foreground hover:text-foreground underline">
+                  Sign up
+                </button>
+              </SignUpButton>
+            </div>
+          </div>
+        </SignedOut>
       </div>
     </>
   );
