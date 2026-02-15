@@ -93,7 +93,7 @@ export default function HomePage() {
             ))}
           </div>
         </div>
-      </div>
+      </main>
 
       {/* Modals */}
       <ScanModal open={modalOpen} onClose={() => setModalOpen(false)} url={url || "https://yourbusiness.com"} />
