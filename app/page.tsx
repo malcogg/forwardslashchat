@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { ScanModal } from "@/components/ScanModal";
 import { InfoModal } from "@/components/InfoModal";
+import { AppSidebar } from "@/components/AppSidebar";
 import Link from "next/link";
 
 type InfoModalType = "how" | "pricing" | "about" | "demo" | null;
@@ -11,30 +12,38 @@ export default function HomePage() {
   const [url, setUrl] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [infoModal, setInfoModal] = useState<InfoModalType>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleScan = () => {
     const trimmed = url.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      inputRef.current?.focus();
+      return;
+    }
     const normalized = trimmed.startsWith("http") ? trimmed : `https://${trimmed}`;
     setUrl(normalized);
     setModalOpen(true);
   };
 
-  return (
-    <main className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-zinc-800/50">
-        <span className="text-lg font-semibold text-white">ForwardSlash.Chat</span>
-        <Link
-          href="/dashboard"
-          className="text-sm text-zinc-400 hover:text-white transition-colors"
-        >
-          Dashboard
-        </Link>
-      </header>
+  const handleSidebarScan = () => {
+    if (url.trim()) {
+      handleScan();
+    } else {
+      inputRef.current?.focus();
+    }
+  };
 
-      {/* Hero + Input - Vercel template style */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+  return (
+    <div className="min-h-screen flex">
+      <AppSidebar onScanClick={handleSidebarScan} onInfoClick={(id) => setInfoModal(id)} />
+
+      {/* Main content - offset for desktop sidebar */}
+      <main className="flex-1 flex flex-col md:pl-60 min-h-screen">
+        {/* Mobile top spacer */}
+        <div className="h-14 md:h-0" />
+
+        {/* Hero + Input - ai-chatbot style */}
+        <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
         <div className="w-full max-w-2xl">
           <h1 className="text-3xl sm:text-4xl font-bold text-white text-center mb-3">
             AI chatbot for your website
@@ -46,6 +55,7 @@ export default function HomePage() {
           {/* Chat-style input */}
           <div className="relative rounded-xl border border-zinc-700 bg-zinc-900/50 focus-within:border-zinc-600 focus-within:ring-1 focus-within:ring-zinc-600 transition-colors">
             <input
+              ref={inputRef}
               type="url"
               placeholder="Enter your website URL"
               value={url}
@@ -162,6 +172,6 @@ export default function HomePage() {
           Open Demo Chat
         </Link>
       </InfoModal>
-    </main>
+    </div>
   );
 }
