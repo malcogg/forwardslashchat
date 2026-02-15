@@ -18,8 +18,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Clerk needs publishableKey at build time. Use fallback so build succeeds when env not yet set in Vercel.
-  const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "pk_test_placeholder";
+  // Clerk publishableKey - must be set in Vercel env vars for deploy
+  const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
   return (
     <ClerkProvider publishableKey={clerkKey}>
       <html lang="en" suppressHydrationWarning>
