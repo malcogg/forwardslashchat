@@ -44,7 +44,7 @@ export default function HomePage() {
 
         {/* Hero + Input - ai-chatbot style */}
         <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
-        <div className="w-full max-w-2xl">
+          <div className="w-full max-w-2xl">
           <h1 className="text-3xl sm:text-4xl font-bold text-white text-center mb-3">
             AI chatbot for your website
           </h1>
@@ -91,6 +91,7 @@ export default function HomePage() {
                 {label}
               </button>
             ))}
+          </div>
           </div>
         </div>
       </main>
