@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ForwardSlash.Chat – Pricing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --bg-secondary: #171717;
+      --border: #262626;
+      --text: #ededed;
+      --text-muted: #a3a3a3;
+      --accent: #fafafa;
+    }
+    .light {
+      --bg: #ffffff;
+      --bg-secondary: #fafafa;
+      --border: #e5e5e5;
+      --text: #171717;
+      --text-muted: #737373;
+      --accent: #0a0a0a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    h1 {
+      font-size: 2rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1rem;
+      font-weight: 400;
+    }
+    .theme-toggle {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .theme-toggle:hover {
+      background: var(--border);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: border-color 0.2s;
+    }
+    .card:hover {
+      border-color: var(--text-muted);
+    }
+    .card.recommended {
+      border-color: var(--text);
+      position: relative;
+    }
+    .card.recommended::before {
+      content: 'Recommended';
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent);
+      color: var(--bg);
+      font-size: 0.7rem;
+      font-weight: 500;
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+    }
+    .tier-name {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    .tier-pages {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+    .price {
+      display: flex;
+      align-items: baseline;
+      gap: 0.25rem;
+      margin-bottom: 0.5rem;
+    }
+    .price-upfront {
+      font-size: 1.75rem;
+      font-weight: 600;
+    }
+    .price-upfront-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+    .price-monthly {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+    .features {
+      list-style: none;
+      font-size: 0.875rem;
+    }
+    .features li {
+      padding: 0.35rem 0;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .features li::before {
+      content: '✓';
+      color: var(--text);
+      font-weight: 600;
+    }
+    .cta {
+      display: block;
+      width: 100%;
+      margin-top: 1.25rem;
+      padding: 0.65rem 1rem;
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+    }
+    .cta:hover {
+      opacity: 0.9;
+    }
+    .cta.secondary {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .upsell {
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+    }
+    .upsell-title {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .upsell-desc {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+    .upsell-price {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" onclick="document.body.classList.toggle('light')">Toggle light</button>
+  <div class="container">
+    <header>
+      <h1>ForwardSlash.Chat</h1>
+      <p class="subtitle">AI chatbots trained on your website. Simple pricing.</p>
+    </header>
+    <div class="grid">
+      <div class="card">
+        <div class="tier-name">Small</div>
+        <div class="tier-pages">Under 300 pages</div>
+        <div class="price">
+          <span class="price-upfront">$599</span>
+          <span class="price-upfront-label">one-time setup</span>
+        </div>
+        <div class="price-monthly">$14.99 / month</div>
+        <ul class="features">
+          <li>1,000 messages / month included</li>
+          <li>ChatGPT-style interface</li>
+          <li>Your domain: chat.yoursite.com</li>
+          <li>Hosting & maintenance</li>
+        </ul>
+        <a href="#" class="cta secondary">Get started</a>
+      </div>
+      <div class="card recommended">
+        <div class="tier-name">Medium</div>
+        <div class="tier-pages">300 – 1,000 pages</div>
+        <div class="price">
+          <span class="price-upfront">$899</span>
+          <span class="price-upfront-label">one-time setup</span>
+        </div>
+        <div class="price-monthly">$29.99 / month</div>
+        <ul class="features">
+          <li>2,000 messages / month included</li>
+          <li>ChatGPT-style interface</li>
+          <li>Your domain: chat.yoursite.com</li>
+          <li>Hosting & maintenance</li>
+        </ul>
+        <a href="#" class="cta">Get started</a>
+      </div>
+      <div class="card">
+        <div class="tier-name">Large</div>
+        <div class="tier-pages">1,000 – 5,000 pages</div>
+        <div class="price">
+          <span class="price-upfront">$1,499</span>
+          <span class="price-upfront-label">one-time setup</span>
+        </div>
+        <div class="price-monthly">$59.99 / month</div>
+        <ul class="features">
+          <li>5,000 messages / month included</li>
+          <li>ChatGPT-style interface</li>
+          <li>Your domain: chat.yoursite.com</li>
+          <li>Hosting & maintenance</li>
+        </ul>
+        <a href="#" class="cta secondary">Get started</a>
+      </div>
+      <div class="card">
+        <div class="tier-name">Enterprise</div>
+        <div class="tier-pages">5,000+ pages</div>
+        <div class="price">
+          <span class="price-upfront">Custom</span>
+        </div>
+        <div class="price-monthly">Custom / month</div>
+        <ul class="features">
+          <li>Custom message limits</li>
+          <li>Dedicated support</li>
+          <li>Your domain: chat.yoursite.com</li>
+          <li>Hosting & maintenance</li>
+        </ul>
+        <a href="#" class="cta secondary">Contact us</a>
+      </div>
+    </div>
+    <div class="upsell">
+      <div class="upsell-title">Need help with DNS setup?</div>
+      <p class="upsell-desc">We’ll add the CNAME record and configure your domain for you.</p>
+      <span class="upsell-price">+$99 one-time</span>
+    </div>
+  </div>
+</body>
+</html>
