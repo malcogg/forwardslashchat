@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Plus, PanelLeftClose, PanelLeft, ChevronDown, Menu } from "lucide-react";
+import { Plus, PanelLeftClose, PanelLeft, ChevronDown, Menu, Sun, Moon } from "lucide-react";
 import { useState } from "react";
+import { useTheme } from "next-themes";
 
 interface AppSidebarProps {
   onScanClick: () => void;
@@ -22,12 +23,12 @@ function SidebarContent({
 }) {
   return (
     <>
-      <div className="flex items-center justify-between gap-2 px-3 py-4 border-b border-zinc-800/50">
-        <span className="text-base font-semibold text-white">Chatbot</span>
+      <div className="flex items-center justify-between gap-2 px-3 py-4 border-b border-sidebar-border">
+        <span className="text-base font-semibold text-sidebar-foreground">Chatbot</span>
         <div className="flex items-center gap-1">
           <button
             onClick={onScanClick}
-            className="p-2 rounded-lg text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors"
+            className="p-2 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
             aria-label="New scan"
           >
             <Plus className="w-4 h-4" />
@@ -39,14 +40,14 @@ function SidebarContent({
           <Link
             href="/chat/demo"
             onClick={onCloseMobile}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors text-sm w-full text-left"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors text-sm w-full text-left"
           >
             Demo
           </Link>
           {scannedSites.map((site) => (
             <div
               key={site}
-              className="px-3 py-2 rounded-lg text-zinc-400 text-sm truncate"
+              className="px-3 py-2 rounded-lg text-muted-foreground text-sm truncate"
               title={site}
             >
               {site.replace(/^https?:\/\//, "").replace(/\/$/, "")}
@@ -54,23 +55,24 @@ function SidebarContent({
           ))}
         </div>
         {scannedSites.length === 0 && (
-          <p className="px-3 text-xs text-zinc-500 mt-4">Scan a website to add it here</p>
+          <p className="px-3 text-xs text-muted-foreground mt-4">Scan a website to add it here</p>
         )}
       </div>
-      <div className="p-3 border-t border-zinc-800">
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-800/50">
+      <div className="p-3 border-t border-sidebar-border space-y-2">
+        <ThemeToggle />
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-sidebar-accent">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-emerald-500 shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white">Guest</p>
-            <button className="text-xs text-zinc-400 hover:text-zinc-300 underline">
+            <p className="text-sm font-medium text-sidebar-foreground">Guest</p>
+            <button className="text-xs text-muted-foreground hover:text-foreground underline">
               Login to your account
             </button>
-            <span className="text-zinc-500 mx-1">/</span>
-            <button className="text-xs text-zinc-400 hover:text-zinc-300 underline">
+            <span className="text-muted-foreground mx-1">/</span>
+            <button className="text-xs text-muted-foreground hover:text-foreground underline">
               Sign up
             </button>
           </div>
-          <ChevronDown className="w-4 h-4 text-zinc-500 shrink-0" />
+          <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
         </div>
       </div>
     </>
@@ -84,7 +86,7 @@ export function AppSidebar({ onScanClick, scannedSites, sidebarOpen, onSidebarTo
     <>
       {/* Desktop sidebar */}
       <aside
-        className={`hidden md:flex md:flex-col md:fixed md:inset-y-0 bg-zinc-950 border-r border-zinc-800/50 transition-all duration-200 ${
+        className={`hidden md:flex md:flex-col md:fixed md:inset-y-0 bg-sidebar border-r border-sidebar-border transition-all duration-200 ${
           sidebarOpen ? "md:w-60" : "md:w-0 md:overflow-hidden"
         }`}
       >
@@ -92,15 +94,15 @@ export function AppSidebar({ onScanClick, scannedSites, sidebarOpen, onSidebarTo
       </aside>
 
       {/* Mobile: menu button */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 bg-zinc-950/95 backdrop-blur border-b border-zinc-800/50">
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 bg-sidebar/95 backdrop-blur border-b border-sidebar-border">
         <button
           onClick={() => setMobileOpen(true)}
-          className="p-2 rounded-lg text-zinc-400 hover:bg-zinc-800 hover:text-white"
+          className="p-2 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           aria-label="Open menu"
         >
           <Menu className="w-5 h-5" />
         </button>
-        <span className="text-sm font-semibold text-white">ForwardSlash.Chat</span>
+        <span className="text-sm font-semibold text-sidebar-foreground">ForwardSlash.Chat</span>
         <div className="w-10" />
       </div>
 
@@ -108,12 +110,12 @@ export function AppSidebar({ onScanClick, scannedSites, sidebarOpen, onSidebarTo
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-zinc-950 border-r border-zinc-800 flex flex-col">
-            <div className="flex items-center justify-between px-4 py-4 border-b border-zinc-800">
-              <span className="text-base font-semibold text-white">Chatbot</span>
+          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
+            <div className="flex items-center justify-between px-4 py-4 border-b border-sidebar-border">
+              <span className="text-base font-semibold text-sidebar-foreground">Chatbot</span>
               <button
                 onClick={() => setMobileOpen(false)}
-                className="p-2 rounded-lg text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                className="p-2 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               >
                 ×
               </button>
@@ -134,12 +136,26 @@ export function AppSidebar({ onScanClick, scannedSites, sidebarOpen, onSidebarTo
   );
 }
 
+function ThemeToggle() {
+  const { resolvedTheme, setTheme } = useTheme();
+  return (
+    <button
+      onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+      className="flex items-center gap-2 px-3 py-2 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors text-sm w-full"
+      title="Toggle dark mode"
+    >
+      {resolvedTheme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+      Toggle dark mode
+    </button>
+  );
+}
+
 export function SidebarToggle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   return (
     <button
       onClick={onToggle}
       title="Toggle Sidebar"
-      className="hidden md:flex items-center justify-center w-9 h-9 rounded-r-lg bg-zinc-800/80 border border-l-0 border-zinc-700 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors"
+      className="hidden md:flex items-center justify-center w-9 h-9 rounded-r-lg bg-muted border border-l-0 border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
       aria-label="Toggle Sidebar"
     >
       {open ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeft className="w-4 h-4" />}

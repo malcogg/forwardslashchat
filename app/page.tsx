@@ -64,11 +64,11 @@ export default function HomePage() {
         <div className="h-14 md:h-0" />
 
         {/* Top bar: sidebar toggle + deploy button */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/50">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <SidebarToggle open={sidebarOpen} onToggle={() => setSidebarOpen((o) => !o)} />
           <Link
             href="/dashboard"
-            className="flex items-center gap-2 px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-zinc-200 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
           >
             Dashboard
           </Link>
@@ -77,10 +77,10 @@ export default function HomePage() {
         {/* Main content: greeting + pills, flex-1 to push input down */}
         <div className="flex-1 flex flex-col items-center justify-center px-4 py-8">
           <div className="w-full max-w-2xl text-center">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
               Hello there!
             </h1>
-            <p className="text-zinc-400 mb-8">
+            <p className="text-muted-foreground mb-8">
               How can I help you today?
             </p>
 
@@ -90,7 +90,7 @@ export default function HomePage() {
                 <button
                   key={id}
                   onClick={() => setInfoModal(id)}
-                  className="px-4 py-3 rounded-lg text-sm font-medium text-zinc-300 bg-zinc-800/50 border border-zinc-700 hover:bg-zinc-700/50 transition-colors text-left"
+                  className="px-4 py-3 rounded-lg text-sm font-medium text-foreground bg-muted border border-border hover:bg-accent transition-colors text-left"
                 >
                   {label}
                 </button>
@@ -100,9 +100,9 @@ export default function HomePage() {
         </div>
 
         {/* Input fixed at bottom */}
-        <div className="sticky bottom-0 p-4 bg-zinc-950 border-t border-zinc-800/50">
+        <div className="sticky bottom-0 p-4 bg-background border-t border-border">
           <div className="max-w-2xl mx-auto">
-            <div className="relative rounded-xl border border-zinc-700 bg-zinc-900/50 focus-within:border-zinc-600 focus-within:ring-1 focus-within:ring-zinc-600 transition-colors">
+            <div className="relative rounded-xl border border-input bg-muted/50 focus-within:border-ring focus-within:ring-1 focus-within:ring-ring transition-colors">
               <input
                 ref={inputRef}
                 type="url"
@@ -110,16 +110,16 @@ export default function HomePage() {
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleScan()}
-                className="w-full px-5 py-4 pr-24 bg-transparent text-white placeholder-zinc-500 focus:outline-none text-base"
+                className="w-full px-5 py-4 pr-24 bg-transparent text-foreground placeholder-muted-foreground focus:outline-none text-base"
               />
               <button
                 onClick={handleScan}
-                className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 bg-white text-black font-medium rounded-lg hover:bg-zinc-200 transition-colors text-sm"
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 bg-primary text-primary-foreground font-medium rounded-lg hover:opacity-90 transition-opacity text-sm"
               >
                 Scan
               </button>
             </div>
-            <p className="text-xs text-zinc-500 text-center mt-2">
+            <p className="text-xs text-muted-foreground text-center mt-2">
               One-time payment • Your domain • Delivered in 3–10 days
             </p>
           </div>
@@ -136,50 +136,50 @@ export default function HomePage() {
       <InfoModal open={infoModal === "how"} onClose={() => setInfoModal(null)} title="How it works">
         <ol className="space-y-4 list-decimal list-inside">
           <li>
-            <strong className="text-white">Enter your URL</strong> — We scan your site and count pages.
+            <strong className="text-foreground">Enter your URL</strong> — We scan your site and count pages.
           </li>
           <li>
-            <strong className="text-white">Choose what to include</strong> — Toggle products, blog, services, etc.
+            <strong className="text-foreground">Choose what to include</strong> — Toggle products, blog, services, etc.
           </li>
           <li>
-            <strong className="text-white">Pay once</strong> — No monthly fees. Pick a 1–5 year bundle.
+            <strong className="text-foreground">Pay once</strong> — No monthly fees. Pick a 1–5 year bundle.
           </li>
           <li>
-            <strong className="text-white">Get your chatbot</strong> — Live at chat.yourdomain.com in 3–10 days.
+            <strong className="text-foreground">Get your chatbot</strong> — Live at chat.yourdomain.com in 3–10 days.
           </li>
         </ol>
-        <p className="mt-6 text-zinc-500">
+        <p className="mt-6 text-muted-foreground">
           Your chatbot is trained on your real content. Branded to match your site. Hosting included for your prepaid period.
         </p>
       </InfoModal>
 
       <InfoModal open={infoModal === "pricing"} onClose={() => setInfoModal(null)} title="Pricing">
-        <p className="text-zinc-400 mb-4">
+        <p className="text-muted-foreground mb-4">
           One upfront payment. Hosting and maintenance included for your prepaid period. Renewal optional at $495/year after.
         </p>
         <div className="space-y-3">
-          <div className="flex justify-between py-2 border-b border-zinc-800">
+          <div className="flex justify-between py-2 border-b border-border">
             <span>1-Year Starter</span>
-            <span className="text-white font-medium">$550</span>
+            <span className="text-foreground font-medium">$550</span>
           </div>
-          <div className="flex justify-between py-2 border-b border-zinc-800">
-            <span>2-Year Bundle <span className="text-zinc-500">(recommended)</span></span>
-            <span className="text-white font-medium">$850</span>
+          <div className="flex justify-between py-2 border-b border-border">
+            <span>2-Year Bundle <span className="text-muted-foreground">(recommended)</span></span>
+            <span className="text-foreground font-medium">$850</span>
           </div>
-          <div className="flex justify-between py-2 border-b border-zinc-800">
+          <div className="flex justify-between py-2 border-b border-border">
             <span>3-Year Bundle</span>
-            <span className="text-white font-medium">$1,250</span>
+            <span className="text-foreground font-medium">$1,250</span>
           </div>
-          <div className="flex justify-between py-2 border-b border-zinc-800">
+          <div className="flex justify-between py-2 border-b border-border">
             <span>4-Year Bundle</span>
-            <span className="text-white font-medium">$1,600</span>
+            <span className="text-foreground font-medium">$1,600</span>
           </div>
           <div className="flex justify-between py-2">
             <span>5-Year Bundle</span>
-            <span className="text-white font-medium">$1,950</span>
+            <span className="text-foreground font-medium">$1,950</span>
           </div>
         </div>
-        <p className="mt-4 text-zinc-500">
+        <p className="mt-4 text-muted-foreground">
           +$99 optional: Help with DNS setup. Scan your site to see your recommended tier based on page count.
         </p>
       </InfoModal>
@@ -191,7 +191,7 @@ export default function HomePage() {
         <p className="mb-4">
           We use your real content—services, FAQ, products, blog—so visitors get accurate answers. The chatbot is branded with your colors and logo.
         </p>
-        <p className="text-zinc-500">
+        <p className="text-muted-foreground">
           Delivery in 3–10 business days. Hosting included. You own your subdomain (chat.yourdomain.com). Renewal is optional after your prepaid period.
         </p>
       </InfoModal>
@@ -202,7 +202,7 @@ export default function HomePage() {
         </p>
         <Link
           href="/chat/demo"
-          className="inline-block px-4 py-2 bg-white text-black font-medium rounded-lg hover:bg-zinc-200 transition-colors"
+          className="inline-block px-4 py-2 bg-primary text-primary-foreground font-medium rounded-lg hover:opacity-90 transition-opacity"
         >
           Open Demo Chat
         </Link>

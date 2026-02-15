@@ -109,10 +109,10 @@ export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps
         className="absolute inset-0 bg-black/60 backdrop-blur-md"
         onClick={onClose}
       />
-      <div className="relative z-10 w-full max-w-lg mx-4 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl overflow-hidden">
+      <div className="relative z-10 w-full max-w-lg mx-4 bg-card border border-border rounded-xl shadow-2xl overflow-hidden">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
+          className="absolute top-4 right-4 p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-accent-foreground transition-colors"
           aria-label="Close"
         >
           <X className="w-5 h-5" />
@@ -120,20 +120,20 @@ export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps
 
         {step === "scanning" && (
           <div className="p-12 text-center">
-            <div className="animate-pulse w-12 h-12 mx-auto mb-6 rounded-full bg-zinc-700" />
-            <p className="text-lg font-medium text-white mb-2">
+            <div className="animate-pulse w-12 h-12 mx-auto mb-6 rounded-full bg-muted" />
+            <p className="text-lg font-medium text-foreground mb-2">
               Scanning your site...
             </p>
-            <p className="text-sm text-zinc-400 mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               {SCAN_MESSAGES[scanMessageIndex]}
             </p>
-            <div className="h-2 bg-zinc-800 rounded-full overflow-hidden mb-2">
+            <div className="h-2 bg-muted rounded-full overflow-hidden mb-2">
               <div
-                className="h-full bg-white rounded-full transition-all duration-500 ease-out"
+                className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted-foreground">
               Typically 2–8 minutes for most sites
             </p>
           </div>
@@ -141,11 +141,11 @@ export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps
 
         {step === "error" && (
           <div className="p-12 text-center">
-            <p className="text-lg font-medium text-white mb-2">Scan failed</p>
-            <p className="text-sm text-zinc-400 mb-6">{error}</p>
+            <p className="text-lg font-medium text-foreground mb-2">Scan failed</p>
+            <p className="text-sm text-muted-foreground mb-6">{error}</p>
             <button
               onClick={() => setRetryKey((k) => k + 1)}
-              className="px-4 py-2 bg-white text-black font-medium rounded-lg hover:bg-zinc-200 transition-colors"
+              className="px-4 py-2 bg-primary text-primary-foreground font-medium rounded-lg hover:opacity-90 transition-opacity"
             >
               Try again
             </button>
@@ -154,10 +154,10 @@ export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps
 
         {step === "results" && (
           <div className="p-8">
-            <h2 className="text-xl font-semibold text-white mb-2">
+            <h2 className="text-xl font-semibold text-foreground mb-2">
               Nice site! We found {pageCount} pages on {url.replace(/^https?:\/\//, "").replace(/\/$/, "")}
             </h2>
-            <p className="text-sm text-zinc-400 mb-6">
+            <p className="text-sm text-muted-foreground mb-6">
               Choose what to include in your chatbot:
             </p>
             <div className="space-y-3 mb-8">
@@ -167,18 +167,18 @@ export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps
                   className={cn(
                     "flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors",
                     cat.on
-                      ? "bg-zinc-800 border-zinc-600"
-                      : "bg-zinc-900/50 border-zinc-800 opacity-60"
+                      ? "bg-accent border-border"
+                      : "bg-muted/50 border-border opacity-60"
                   )}
                 >
-                  <span className="text-white font-medium">{cat.label}</span>
+                  <span className="text-foreground font-medium">{cat.label}</span>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm text-zinc-400">{cat.count} pages</span>
+                    <span className="text-sm text-muted-foreground">{cat.count} pages</span>
                     <input
                       type="checkbox"
                       checked={cat.on}
                       onChange={() => toggleCategory(cat.label)}
-                      className="w-4 h-4 rounded border-zinc-600 bg-zinc-800"
+                      className="w-4 h-4 rounded border-border bg-muted"
                     />
                   </div>
                 </label>
@@ -186,7 +186,7 @@ export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps
             </div>
             <button
               onClick={() => setStep("pricing")}
-              className="w-full py-3 px-4 bg-white text-black font-medium rounded-lg hover:bg-zinc-200 transition-colors"
+              className="w-full py-3 px-4 bg-primary text-primary-foreground font-medium rounded-lg hover:opacity-90 transition-opacity"
             >
               See Your Price
             </button>
@@ -195,39 +195,39 @@ export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps
 
         {step === "pricing" && (
           <div className="p-8">
-            <h2 className="text-xl font-semibold text-white mb-2">
+            <h2 className="text-xl font-semibold text-foreground mb-2">
               Your Price
             </h2>
-            <p className="text-sm text-zinc-400 mb-6">
+            <p className="text-sm text-muted-foreground mb-6">
               Based on {pageCount} pages, we recommend the {tier.tier} tier.
             </p>
-            <div className="bg-zinc-800 rounded-lg p-4 mb-6">
-              <p className="text-2xl font-bold text-white">
+            <div className="bg-muted rounded-lg p-4 mb-6">
+              <p className="text-2xl font-bold text-foreground">
                 ${tier.price?.toLocaleString() ?? "Custom"} one-time
               </p>
-              <p className="text-sm text-zinc-400 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 {tier.years != null ? `${tier.years}-year bundle • ` : ""}Hosting included
               </p>
             </div>
-            <label className="flex items-center gap-3 p-3 rounded-lg border border-zinc-700 mb-6 cursor-pointer hover:bg-zinc-800/50">
+            <label className="flex items-center gap-3 p-3 rounded-lg border border-border mb-6 cursor-pointer hover:bg-accent">
               <input
                 type="checkbox"
                 checked={dnsHelp}
                 onChange={(e) => setDnsHelp(e.target.checked)}
                 className="w-4 h-4 rounded"
               />
-              <span className="text-white">+$99 Help me set up my domain (DNS)</span>
+              <span className="text-foreground">+$99 Help me set up my domain (DNS)</span>
             </label>
-            <p className="text-lg font-semibold text-white mb-4">
+            <p className="text-lg font-semibold text-foreground mb-4">
               Total: ${totalPrice.toLocaleString()}
             </p>
             <button
-              className="w-full py-3 px-4 bg-white text-black font-medium rounded-lg hover:bg-zinc-200 transition-colors"
+              className="w-full py-3 px-4 bg-primary text-primary-foreground font-medium rounded-lg hover:opacity-90 transition-opacity"
               onClick={() => window.location.href = "/dashboard"}
             >
               Continue to Payment
             </button>
-            <p className="text-xs text-zinc-500 mt-4 text-center">
+            <p className="text-xs text-muted-foreground mt-4 text-center">
               You&apos;ll be redirected to PayPal or Stripe
             </p>
           </div>
