@@ -1,0 +1,144 @@
+{
+  "customer_id": "frankgay_001",
+  "business_name": "Frank Gay Services",
+  "chat_domain": "chat.frankgayservices.com",
+  "website_url": "https://frankgayservices.com",
+  "primary_color": "#DC2626",
+  "logo_url": "https://frankgayservices.com/logo.png",
+  "crawled_at": "2025-01-15T10:00:00Z",
+  "total_pages": 25,
+  "contact_info": {
+    "phone": "(407) 512-8102",
+    "email": "ask@frankgayservices.com",
+    "address": "100 Sunport Lane, Suite 100, Orlando, FL 32809",
+    "hours": "24/7 Emergency Service"
+  },
+  "pages": [
+    {
+      "url": "https://frankgayservices.com/",
+      "title": "Frank Gay Services - HVAC, Plumbing & Electrical | Central Florida",
+      "description": "Trusted home services in Central Florida since 1976. AC repair, plumbing, electrical, and drain services available 24/7.",
+      "content": "Frank Gay Services has been serving Central Florida since 1976. We provide comprehensive HVAC, electrical, plumbing, and drain solutions. Our large fleet of service trucks covers Orlando, The Villages, Lakeland, and Daytona Beach. Available 24/7 for emergencies. Contact us at (407) 512-8102.",
+      "keywords": ["home services", "central florida", "hvac", "plumbing", "electrical", "24/7", "emergency"]
+    },
+    {
+      "url": "https://frankgayservices.com/cooling-services/",
+      "title": "AC Repair & Installation Services | Frank Gay",
+      "description": "Fast AC repairs, installations, and maintenance in Central Florida. Same-day service available.",
+      "content": "Our cooling services include AC repairs (same-day priority), AC installations with free energy audits, and regular maintenance. We handle refrigerant leaks, frozen coils, electrical malfunctions, and faulty thermostats. Before calling, check your thermostat, breaker box, and air filter. Maintenance recommended once yearly (twice in Florida). Call (407) 512-8102.",
+      "keywords": ["ac repair", "air conditioning", "ac installation", "ac maintenance", "cooling", "hvac"]
+    },
+    {
+      "url": "https://frankgayservices.com/cooling-services/air-conditioning-repair/",
+      "title": "Air Conditioning Repair Services | Same-Day AC Repair",
+      "description": "Expert AC repair for all issues. Same-day service prioritized.",
+      "content": "AC not cooling? We prioritize same-day repairs for refrigerant leaks, frozen evaporator coils, electrical malfunctions, and faulty thermostats. Warning signs: poor airflow, water leaks, frequent short-cycling, strange odors, odd noises (rattling, screeching, clanging). Before calling, verify thermostat settings, check breaker box, inspect air filters. Contact (407) 512-8102.",
+      "keywords": ["ac repair", "air conditioning repair", "same-day", "emergency ac", "ac not cooling"]
+    },
+    {
+      "url": "https://frankgayservices.com/cooling-services/air-conditioning-installation/",
+      "title": "AC Installation & Replacement | Free Energy Audit",
+      "description": "Professional AC installation with free energy audit and ductwork assessment.",
+      "content": "We install top AC brands and high-efficiency units to lower utility bills. Every installation includes a free pre-installation energy audit to determine your home's cooling load and assessment of ductwork compatibility. Contact (407) 512-8102 for a free consultation.",
+      "keywords": ["ac installation", "ac replacement", "new ac unit", "energy audit", "high efficiency"]
+    },
+    {
+      "url": "https://frankgayservices.com/cooling-services/air-conditioning-maintenance/",
+      "title": "AC Maintenance & Tune-ups | Preventive Service",
+      "description": "Regular AC maintenance to extend system life and prevent breakdowns.",
+      "content": "AC maintenance includes component inspection, refrigerant level checks, coil cleaning, and adjustments. Recommended once a year (ideally spring). In Florida, twice a year is better due to heavy usage. Benefits: extends system life, prevents breakdowns, maintains efficiency. Contact (407) 512-8102.",
+      "keywords": ["ac maintenance", "ac tune-up", "preventive maintenance", "hvac maintenance"]
+    },
+    {
+      "url": "https://frankgayservices.com/electrical-services/",
+      "title": "Electrical Services | Licensed Electricians",
+      "description": "Professional electrical repair, installation, and surge protection by licensed electricians.",
+      "content": "Our licensed and certified electricians handle electrical repairs (dead outlets, flickering lights, strange smells, buzzing sounds), electrical installations (ceiling fans, appliances, lighting), whole-home surge protection, and home generator installation. Call (407) 512-8102.",
+      "keywords": ["electrical services", "electrician", "electrical repair", "licensed electrician"]
+    },
+    {
+      "url": "https://frankgayservices.com/home-generator-installation/",
+      "title": "Home Generator Installation | Standby Generators",
+      "description": "Expert installation of whole-home and partial standby generators.",
+      "content": "We install whole-home standby generators and partial generators that automatically restore power during outages. Self-installation is strongly discouraged for permanent standby generators due to safety and code compliance. Only portable units should be handled by homeowners. Licensed electricians ensure safe connection, proper sizing, and code compliance. Generator maintenance needed every 6-12 months or after 100 hours runtime. Contact (407) 512-8102.",
+      "keywords": ["generator installation", "standby generator", "whole-home generator", "backup power"]
+    },
+    {
+      "url": "https://frankgayservices.com/plumbing-services/",
+      "title": "Plumbing Services | Repair, Water Heaters & More",
+      "description": "Comprehensive plumbing services including repairs, water heaters, leak detection, and repiping.",
+      "content": "Plumbing services include repairs (dripping faucets, burst pipes, running toilets), water heater services (traditional, tankless, on-demand), leak detection using specialized equipment, and whole home repiping with modern PEX or CPVC materials. We work with all pipe types: copper, PVC, PEX. Contact (407) 512-8102.",
+      "keywords": ["plumbing", "plumber", "plumbing repair", "water heater", "leak detection"]
+    },
+    {
+      "url": "https://frankgayservices.com/plumbing-services/plumbing-repair/",
+      "title": "Plumbing Repair Services | Emergency Plumbing",
+      "description": "Expert plumbing repair for all common issues and emergencies.",
+      "content": "We handle dripping faucets, burst pipes, running toilets, and all common plumbing issues. Expertise in copper, PVC, and PEX pipe materials. Available 24/7 for plumbing emergencies. Contact (407) 512-8102.",
+      "keywords": ["plumbing repair", "emergency plumbing", "burst pipe", "leaky faucet"]
+    },
+    {
+      "url": "https://frankgayservices.com/plumbing-services/water-heater-repair/",
+      "title": "Water Heater Repair & Installation Services",
+      "description": "Installation, repair, and maintenance for all water heater types.",
+      "content": "Water heater services for traditional, tankless, and on-demand units. Common issues: sediment buildup, faulty heating elements, thermostat problems, pressure relief valve issues. Repair vs replace: Often worth repairing if unit is relatively new. Professional assessment recommended. Contact (407) 512-8102.",
+      "keywords": ["water heater", "water heater repair", "tankless water heater", "water heater installation"]
+    },
+    {
+      "url": "https://frankgayservices.com/plumbing-services/leak-detection/",
+      "title": "Leak Detection Services | Hidden Leak Detection",
+      "description": "Identify and repair hidden leaks without extensive demolition.",
+      "content": "Professional leak detection for hidden leaks in walls, ceilings, floors, and slabs. Specialized equipment minimizes demolition and property damage. Contact (407) 512-8102.",
+      "keywords": ["leak detection", "hidden leak", "water leak", "slab leak"]
+    },
+    {
+      "url": "https://frankgayservices.com/plumbing-services/repiping-installation/",
+      "title": "Whole Home Repiping Services",
+      "description": "Replace outdated pipes with modern, durable materials.",
+      "content": "Whole home repiping replaces outdated, corroded, or leaking pipes with modern, durable PEX or CPVC materials. Contact (407) 512-8102.",
+      "keywords": ["repiping", "whole home repiping", "pipe replacement", "pex piping"]
+    },
+    {
+      "url": "https://frankgayservices.com/drain-services/",
+      "title": "Drain Clearing & Sewer Line Services",
+      "description": "Professional drain clearing and sewer line repair services.",
+      "content": "Drain services include clearing blockages with professional rooter machines and hydro-jetting, and sewer line repair/replacement with trenchless options. NEVER use Drano - it's corrosive and damages pipes. Prevention: don't put food, oils, fats, hygiene products (even 'flushable'), or hair down drains. Use strainers. Contact (407) 512-8102.",
+      "keywords": ["drain cleaning", "drain clearing", "sewer line", "clogged drain", "hydro jetting"]
+    },
+    {
+      "url": "https://frankgayservices.com/heating-services/heating-installation/",
+      "title": "Heating Installation | Furnaces & Heat Pumps",
+      "description": "Professional heating system installation for Central Florida homes.",
+      "content": "Heating installation services include furnaces, heat pumps, ductless mini-splits, and hybrid systems tailored to your home's heating demands and energy efficiency goals. Annual maintenance essential for efficiency and longevity. Contact (407) 512-8102.",
+      "keywords": ["heating installation", "furnace", "heat pump", "ductless mini split"]
+    },
+    {
+      "url": "https://frankgayservices.com/about-us/maintenance-plan/",
+      "title": "Family Plan - Maintenance Subscription",
+      "description": "Annual maintenance plan with priority scheduling and repair discounts.",
+      "content": "The Family Plan is a subscription service providing priority scheduling, regular tune-ups for HVAC, plumbing, and electrical systems, and discounts on repairs. Includes: 2 AC maintenances per year, 1 electrical maintenance per year, 1 plumbing maintenance per year. Benefits: extends system lifespan, prevents major repairs, maintains efficiency. Contact (407) 512-8102.",
+      "keywords": ["maintenance plan", "family plan", "subscription", "preventive maintenance"]
+    },
+    {
+      "url": "https://frankgayservices.com/about-us/",
+      "title": "About Frank Gay Services | Since 1976",
+      "description": "Nearly 50 years serving Central Florida with trusted home services.",
+      "content": "Frank Gay Services was founded in 1976 and has been serving Central Florida for nearly 50 years. Starting as a plumbing-focused company in Orlando, we've expanded to comprehensive HVAC, electrical, plumbing, and drain solutions. Large fleet of service trucks, 24/7 emergency availability. Locations: Orlando, The Villages, Lakeland, Daytona Beach. 'The Frank Gay Way' emphasizes customer satisfaction. We support the Wounded Warrior Project.",
+      "keywords": ["about", "history", "founded 1976", "central florida", "orlando"]
+    },
+    {
+      "url": "https://frankgayservices.com/about-us/faq/",
+      "title": "Frequently Asked Questions",
+      "description": "Common questions about our services and policies.",
+      "content": "FAQ highlights: AC maintenance recommended once/year (twice in Florida). AC warning signs: poor airflow, water leaks, short-cycling, strange odors, odd noises. Never use Drano - it damages pipes. Generator installation should be professional, not DIY. Water heater repairs often extend life if unit is relatively new. All electricians licensed and certified. Clog prevention: avoid food, oils, fats, hygiene products, hair down drains; use strainers.",
+      "keywords": ["faq", "questions", "common questions"]
+    },
+    {
+      "url": "https://frankgayservices.com/contact/",
+      "title": "Contact Frank Gay Services",
+      "description": "Get in touch with our team for service requests and questions.",
+      "content": "Contact Frank Gay Services: Phone (407) 512-8102, Email ask@frankgayservices.com, Address 100 Sunport Lane, Suite 100, Orlando, FL 32809. Available 24/7 for emergencies. Serving Orlando, The Villages, Lakeland, Daytona Beach, and all of Central Florida.",
+      "keywords": ["contact", "phone", "email", "address", "service areas"]
+    }
+  ]
+}

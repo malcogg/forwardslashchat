@@ -1,0 +1,263 @@
+{
+  "company": {
+    "name": "Frank Gay Services",
+    "founded": 1976,
+    "tagline": "The Frank Gay Way - Customer Satisfaction First",
+    "years_in_business": 49,
+    "service_area": "Central Florida",
+    "locations": ["Orlando", "The Villages", "Lakeland", "Daytona Beach"],
+    "emergency_available": true,
+    "hours": "24/7"
+  },
+  "contact": {
+    "phone": "(407) 512-8102",
+    "email": "ask@frankgayservices.com",
+    "address": "100 Sunport Lane, Suite 100, Orlando, FL 32809",
+    "website": "frankgayservices.com"
+  },
+  "services": {
+    "cooling": {
+      "ac_repair": {
+        "name": "AC Repairs",
+        "description": "Fast and effective AC repairs for refrigerant leaks, frozen evaporator coils, electrical malfunctions, and faulty thermostats. Same-day repairs prioritized.",
+        "common_issues": [
+          "refrigerant leaks",
+          "frozen evaporator coils",
+          "electrical malfunctions",
+          "faulty thermostats"
+        ],
+        "troubleshooting": {
+          "before_calling": [
+            "Check thermostat settings (set to cool, temp below room temp)",
+            "Check breaker box for tripped circuits",
+            "Inspect and replace dirty air filter"
+          ],
+          "warning_signs": [
+            "poor airflow",
+            "water leaks",
+            "frequent short-cycling",
+            "strange odors",
+            "odd noises (rattling, screeching, clanging)"
+          ]
+        }
+      },
+      "ac_installation": {
+        "name": "AC Installation & Replacement",
+        "description": "Installation of top AC brands and high-efficiency units to lower utility bills. Includes pre-installation energy audit and ductwork assessment.",
+        "features": [
+          "Pre-installation energy audit",
+          "Cooling load assessment",
+          "Ductwork compatibility check",
+          "High-efficiency options"
+        ]
+      },
+      "ac_maintenance": {
+        "name": "AC Maintenance & Tune-ups",
+        "description": "Regular maintenance to inspect components, check refrigerant, clean coils, and extend system life.",
+        "frequency": "Once yearly (spring), twice yearly recommended in Florida due to heavy usage",
+        "benefits": [
+          "Extends system lifespan",
+          "Prevents breakdowns",
+          "Maintains efficiency",
+          "Catches issues early"
+        ]
+      },
+      "air_quality": {
+        "name": "Indoor Air Quality Assessment",
+        "description": "Comprehensive assessments for pollutants, humidity, and ventilation with solutions like UV-light and advanced filtration.",
+        "solutions": [
+          "UV-light installations",
+          "Advanced filtration systems",
+          "Humidity control",
+          "Air purification"
+        ]
+      }
+    },
+    "heating": {
+      "installation": {
+        "name": "Heating Installation",
+        "description": "Installation of furnaces, heat pumps, ductless mini-splits, and hybrid systems tailored to home heating needs.",
+        "options": [
+          "Furnaces",
+          "Heat pumps",
+          "Ductless mini-splits",
+          "Hybrid systems"
+        ],
+        "maintenance_required": "Annual maintenance essential"
+      }
+    },
+    "electrical": {
+      "repair": {
+        "name": "Electrical Repair",
+        "description": "Professional diagnosis and repair by licensed electricians for dead outlets, flickering lights, strange smells, or buzzing sounds.",
+        "common_issues": [
+          "Dead outlets",
+          "Flickering lights",
+          "Strange smells",
+          "Buzzing sounds"
+        ],
+        "safety_note": "All electricians licensed and certified"
+      },
+      "installation": {
+        "name": "Electrical Installation",
+        "description": "Wiring and installation for ceiling fans, kitchen appliances, lighting fixtures, and more."
+      },
+      "surge_protection": {
+        "name": "Whole-Home Surge Protection",
+        "description": "Professional surge protectors installed at main electrical panel to shield electronics from voltage spikes."
+      },
+      "generators": {
+        "name": "Home Generator Installation",
+        "description": "Expert installation of whole-home or partial standby generators that automatically restore power during outages.",
+        "types": ["Whole-home generators", "Partial generators"],
+        "warning": "Self-installation strongly discouraged for permanent standby units. Only portable units should be DIY.",
+        "maintenance": "Every 6-12 months or after 100 hours runtime"
+      }
+    },
+    "plumbing": {
+      "repair": {
+        "name": "Plumbing Repair",
+        "description": "Comprehensive repair for dripping faucets, burst pipes, running toilets with expertise in copper, PVC, and PEX.",
+        "materials": ["Copper", "PVC", "PEX"],
+        "common_issues": [
+          "Dripping faucets",
+          "Burst pipes",
+          "Running toilets",
+          "Leaky fixtures"
+        ]
+      },
+      "water_heater": {
+        "name": "Water Heater Services",
+        "description": "Installation, repair, and maintenance for traditional, tankless, and on-demand water heaters.",
+        "types": ["Traditional tank", "Tankless", "On-demand"],
+        "common_issues": [
+          "Sediment buildup",
+          "Faulty heating elements",
+          "Thermostat problems",
+          "Pressure relief valve issues"
+        ],
+        "repair_vs_replace": "Often worth repairing if relatively new. Professional assessment recommended."
+      },
+      "leak_detection": {
+        "name": "Leak Detection Services",
+        "description": "Identification and repair of hidden leaks in walls, ceilings, floors, and slabs using specialized equipment.",
+        "benefit": "Minimizes demolition and property damage"
+      },
+      "repiping": {
+        "name": "Whole Home Repiping",
+        "description": "Replacing outdated, corroded, or leaking pipes with modern PEX or CPVC materials.",
+        "materials": ["PEX", "CPVC"]
+      }
+    },
+    "drain": {
+      "clearing": {
+        "name": "Drain Clearing & Cleaning",
+        "description": "Removing blockages using professional rooter machines and hydro-jetting for stubborn clogs.",
+        "tools": ["Rooter machines", "Hydro-jetting"],
+        "warning": "NEVER use Drano - it's corrosive and damages pipes",
+        "prevention": [
+          "Don't put food, oils, fats down drains",
+          "No hygiene products (even 'flushable')",
+          "No hair",
+          "Use drain strainers"
+        ]
+      },
+      "sewer": {
+        "name": "Sewer Line Repair & Replacement",
+        "description": "Diagnosis and repair of broken or leaking sewer pipes with trenchless options available.",
+        "options": ["Trenchless repair", "Traditional replacement"],
+        "benefit": "Trenchless minimizes property disturbance"
+      }
+    }
+  },
+  "maintenance_plan": {
+    "name": "Family Plan",
+    "description": "Subscription service with priority scheduling, regular tune-ups, and repair discounts.",
+    "includes": [
+      "2 AC maintenances per year",
+      "1 electrical maintenance per year",
+      "1 plumbing maintenance per year",
+      "Priority scheduling",
+      "Discounts on repairs"
+    ],
+    "benefits": [
+      "Extends system lifespan",
+      "Prevents major repairs",
+      "Maintains efficiency",
+      "Peace of mind"
+    ]
+  },
+  "faqs": [
+    {
+      "id": "ac_before_calling",
+      "question": "What should I check before calling for AC repair?",
+      "answer": "Check thermostat settings (set to cool, temp below room temp), check breaker box for tripped circuits, and inspect/replace your air filter. These simple fixes often resolve issues."
+    },
+    {
+      "id": "ac_maintenance_frequency",
+      "question": "How often should I schedule AC maintenance?",
+      "answer": "Once yearly in spring is recommended. In Florida, twice yearly is better due to heavy usage and humidity."
+    },
+    {
+      "id": "ac_repair_signs",
+      "question": "What are signs I need AC repair?",
+      "answer": "Poor airflow, water leaks, frequent short-cycling, strange odors, and odd noises like rattling, screeching, or clanging."
+    },
+    {
+      "id": "water_heater_repair",
+      "question": "Should I repair or replace my water heater?",
+      "answer": "Often worth repairing if relatively new, especially for isolated issues like sediment buildup or faulty valves. A professional assessment determines the best course."
+    },
+    {
+      "id": "drain_clog_prevention",
+      "question": "How can I prevent drain clogs?",
+      "answer": "Avoid putting food, oils, fats, hygiene products (even 'flushable'), and hair down drains. Use strainers in all drains."
+    },
+    {
+      "id": "drano_safety",
+      "question": "Can I use Drano for clogs?",
+      "answer": "No. Drano is corrosive and damages pipes and fixtures. Professional drain clearing is safer and more effective."
+    },
+    {
+      "id": "generator_diy",
+      "question": "Can I install a generator myself?",
+      "answer": "Self-installation is strongly discouraged for permanent standby generators due to safety and code compliance. Only portable units should be DIY. Licensed electricians should handle permanent installs."
+    },
+    {
+      "id": "generator_maintenance",
+      "question": "How often should I service my generator?",
+      "answer": "Every 6-12 months or after 100 hours of runtime."
+    },
+    {
+      "id": "annual_maintenance",
+      "question": "Is annual HVAC maintenance necessary?",
+      "answer": "Yes. It keeps systems efficient, catches minor issues before major repairs, and extends system lifespan."
+    },
+    {
+      "id": "licensed_electricians",
+      "question": "Are your electricians licensed?",
+      "answer": "Yes, all electricians are licensed and certified to perform inspections, repairs, and installations safely."
+    }
+  ],
+  "emergency_keywords": [
+    "no heat",
+    "no cooling",
+    "flooding",
+    "burst pipe",
+    "sewage backup",
+    "electrical fire",
+    "gas smell",
+    "sparks",
+    "smoke",
+    "emergency",
+    "urgent",
+    "help"
+  ],
+  "safety_escalations": [
+    "gas smell - evacuate and call 911",
+    "electrical sparks/smoke - evacuate and call 911",
+    "major flooding - turn off main water if safe",
+    "no heat with freezing temps - immediate service needed",
+    "sewage backup - health hazard, immediate service"
+  ]
+}
