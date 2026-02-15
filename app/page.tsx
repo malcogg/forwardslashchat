@@ -3,15 +3,24 @@
 import { useState, useRef } from "react";
 import { ScanModal } from "@/components/ScanModal";
 import { InfoModal } from "@/components/InfoModal";
-import { AppSidebar } from "@/components/AppSidebar";
+import { AppSidebar, SidebarToggle } from "@/components/AppSidebar";
 import Link from "next/link";
 
 type InfoModalType = "how" | "pricing" | "about" | "demo" | null;
+
+const PILLS = [
+  { id: "how" as const, label: "How it works" },
+  { id: "pricing" as const, label: "Pricing" },
+  { id: "about" as const, label: "About" },
+  { id: "demo" as const, label: "Demo" },
+];
 
 export default function HomePage() {
   const [url, setUrl] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [infoModal, setInfoModal] = useState<InfoModalType>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [scannedSites, setScannedSites] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleScan = () => {
@@ -33,71 +42,96 @@ export default function HomePage() {
     }
   };
 
+  const handleScanComplete = (scannedUrl: string) => {
+    const normalized = scannedUrl.startsWith("http") ? scannedUrl : `https://${scannedUrl}`;
+    setScannedSites((prev) =>
+      prev.some((s) => s.replace(/\/$/, "") === normalized.replace(/\/$/, ""))
+        ? prev
+        : [...prev, normalized.replace(/\/$/, "")]
+    );
+  };
+
   return (
     <div className="min-h-screen flex">
-      <AppSidebar onScanClick={handleSidebarScan} onInfoClick={(id) => setInfoModal(id)} />
+      <AppSidebar
+        onScanClick={handleSidebarScan}
+        scannedSites={scannedSites}
+        sidebarOpen={sidebarOpen}
+        onSidebarToggle={() => setSidebarOpen((o) => !o)}
+      />
 
-      {/* Main content - offset for desktop sidebar */}
-      <main className="flex-1 flex flex-col md:pl-60 min-h-screen">
-        {/* Mobile top spacer */}
+      <main className={`flex-1 flex flex-col min-h-screen transition-all duration-200 ${sidebarOpen ? "md:pl-60" : "md:pl-0"}`}>
         <div className="h-14 md:h-0" />
 
-        {/* Hero + Input - ai-chatbot style */}
-        <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
-          <div className="w-full max-w-2xl">
-          <h1 className="text-3xl sm:text-4xl font-bold text-white text-center mb-3">
-            AI chatbot for your website
-          </h1>
-          <p className="text-zinc-400 text-center mb-10 max-w-xl mx-auto">
-            Enter your website URL. We&apos;ll scan it and build a custom chatbot. One-time payment, no monthly fees.
-          </p>
+        {/* Top bar: sidebar toggle + deploy button */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/50">
+          <SidebarToggle open={sidebarOpen} onToggle={() => setSidebarOpen((o) => !o)} />
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2 px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-zinc-200 transition-colors"
+          >
+            Dashboard
+          </Link>
+        </div>
 
-          {/* Chat-style input */}
-          <div className="relative rounded-xl border border-zinc-700 bg-zinc-900/50 focus-within:border-zinc-600 focus-within:ring-1 focus-within:ring-zinc-600 transition-colors">
-            <input
-              ref={inputRef}
-              type="url"
-              placeholder="Enter your website URL"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleScan()}
-              className="w-full px-5 py-4 pr-32 bg-transparent text-white placeholder-zinc-500 focus:outline-none text-base"
-            />
-            <button
-              onClick={handleScan}
-              className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 bg-white text-black font-medium rounded-lg hover:bg-zinc-200 transition-colors text-sm"
-            >
-              Scan
-            </button>
+        {/* Main content: greeting + pills, flex-1 to push input down */}
+        <div className="flex-1 flex flex-col items-center justify-center px-4 py-8">
+          <div className="w-full max-w-2xl text-center">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+              Hello there!
+            </h1>
+            <p className="text-zinc-400 mb-8">
+              How can I help you today?
+            </p>
+
+            {/* 4 pills in 2x2 grid */}
+            <div className="grid grid-cols-2 gap-3 max-w-md mx-auto mb-12">
+              {PILLS.map(({ id, label }) => (
+                <button
+                  key={id}
+                  onClick={() => setInfoModal(id)}
+                  className="px-4 py-3 rounded-lg text-sm font-medium text-zinc-300 bg-zinc-800/50 border border-zinc-700 hover:bg-zinc-700/50 transition-colors text-left"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
+        </div>
 
-          <p className="text-xs text-zinc-500 text-center mt-4">
-            One-time payment • Your domain • Delivered in 3–10 days
-          </p>
-
-          {/* Compact pills */}
-          <div className="flex flex-wrap justify-center gap-2 mt-10">
-            {[
-              { id: "how" as const, label: "How it works" },
-              { id: "pricing" as const, label: "Pricing" },
-              { id: "about" as const, label: "About" },
-              { id: "demo" as const, label: "Demo" },
-            ].map(({ id, label }) => (
+        {/* Input fixed at bottom */}
+        <div className="sticky bottom-0 p-4 bg-zinc-950 border-t border-zinc-800/50">
+          <div className="max-w-2xl mx-auto">
+            <div className="relative rounded-xl border border-zinc-700 bg-zinc-900/50 focus-within:border-zinc-600 focus-within:ring-1 focus-within:ring-zinc-600 transition-colors">
+              <input
+                ref={inputRef}
+                type="url"
+                placeholder="Enter your website URL"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleScan()}
+                className="w-full px-5 py-4 pr-24 bg-transparent text-white placeholder-zinc-500 focus:outline-none text-base"
+              />
               <button
-                key={id}
-                onClick={() => setInfoModal(id)}
-                className="px-3 py-1.5 rounded-full text-xs font-medium text-zinc-400 bg-zinc-800/50 border border-zinc-700/50 hover:bg-zinc-800 hover:text-zinc-300 hover:border-zinc-600 transition-colors"
+                onClick={handleScan}
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 bg-white text-black font-medium rounded-lg hover:bg-zinc-200 transition-colors text-sm"
               >
-                {label}
+                Scan
               </button>
-            ))}
-          </div>
+            </div>
+            <p className="text-xs text-zinc-500 text-center mt-2">
+              One-time payment • Your domain • Delivered in 3–10 days
+            </p>
           </div>
         </div>
       </main>
 
-      {/* Modals */}
-      <ScanModal open={modalOpen} onClose={() => setModalOpen(false)} url={url || "https://yourbusiness.com"} />
+      <ScanModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        url={url || "https://yourbusiness.com"}
+        onScanComplete={handleScanComplete}
+      />
 
       <InfoModal open={infoModal === "how"} onClose={() => setInfoModal(null)} title="How it works">
         <ol className="space-y-4 list-decimal list-inside">
@@ -164,7 +198,7 @@ export default function HomePage() {
 
       <InfoModal open={infoModal === "demo"} onClose={() => setInfoModal(null)} title="Demo">
         <p className="mb-4">
-          Try our demo chatbot to see how it works. It&apos;s trained on sample content so you can experience the flow before scanning your own site.
+          Try our demo chatbot to see how it works. It&apos;s trained on sample content (products, blog, etc.) so you can experience the flow before scanning your own site.
         </p>
         <Link
           href="/chat/demo"

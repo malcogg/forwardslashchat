@@ -25,9 +25,10 @@ interface ScanModalProps {
   open: boolean;
   onClose: () => void;
   url: string;
+  onScanComplete?: (url: string) => void;
 }
 
-export function ScanModal({ open, onClose, url }: ScanModalProps) {
+export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps) {
   const [step, setStep] = useState<ModalStep>("scanning");
   const [scanMessageIndex, setScanMessageIndex] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -65,6 +66,7 @@ export function ScanModal({ open, onClose, url }: ScanModalProps) {
         if (!res.ok) throw new Error(data.error ?? "Scan failed");
         setProgress(100);
         setPageCount(data.pageCount);
+        onScanComplete?.(data.url ? (data.url.startsWith("http") ? data.url : `https://${data.url}`) : url);
         setCategories(
           (data.categories ?? []).map((c: { label: string; count: number }) => ({
             ...c,
