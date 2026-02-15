@@ -103,7 +103,8 @@ export async function POST(
   for (const page of result.data) {
     const markdown = page.markdown ?? "";
     const sourceUrl = page.metadata?.sourceURL ?? "";
-    const title = page.metadata?.title ?? new URL(sourceUrl).pathname || "Page";
+    const title =
+      (page.metadata?.title ?? (sourceUrl ? new URL(sourceUrl).pathname : "")) || "Page";
 
     if (!markdown && !sourceUrl) continue;
 
