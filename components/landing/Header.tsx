@@ -76,10 +76,13 @@ export function Header() {
         forwardslash.chat
       </Link>
       <nav className="hidden md:flex items-center justify-center gap-8 flex-1">
-        <a href="#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <Link href="/services" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          Services
+        </Link>
+        <a href="/#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
           How it works
         </a>
-        <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <a href="/#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
           Pricing
         </a>
         <Link href="/chat/demo" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
