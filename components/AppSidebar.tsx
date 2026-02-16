@@ -11,16 +11,19 @@ interface AppSidebarProps {
   scannedSites: string[];
   sidebarOpen: boolean;
   onSidebarToggle: () => void;
+  onSiteClick?: (url: string) => void;
 }
 
 function SidebarContent({
   onScanClick,
   scannedSites,
   onCloseMobile,
+  onSiteClick,
 }: {
   onScanClick: () => void;
   scannedSites: string[];
   onCloseMobile?: () => void;
+  onSiteClick?: (url: string) => void;
 }) {
   return (
     <>
@@ -45,14 +48,26 @@ function SidebarContent({
           >
             Demo
           </Link>
+          <Link
+            href="/dashboard"
+            onClick={onCloseMobile}
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors text-sm w-full text-left"
+          >
+            Dashboard
+          </Link>
           {scannedSites.map((site) => (
-            <div
+            <button
               key={site}
-              className="px-3 py-2 rounded-lg text-muted-foreground text-sm truncate"
+              type="button"
+              onClick={() => {
+                onSiteClick?.(site);
+                onCloseMobile?.();
+              }}
+              className="w-full px-3 py-2 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors text-sm text-left truncate"
               title={site}
             >
               {site.replace(/^https?:\/\//, "").replace(/\/$/, "")}
-            </div>
+            </button>
           ))}
         </div>
         {scannedSites.length === 0 && (
@@ -90,7 +105,7 @@ function SidebarContent({
   );
 }
 
-export function AppSidebar({ onScanClick, scannedSites, sidebarOpen, onSidebarToggle }: AppSidebarProps) {
+export function AppSidebar({ onScanClick, scannedSites, sidebarOpen, onSidebarToggle, onSiteClick }: AppSidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -101,7 +116,7 @@ export function AppSidebar({ onScanClick, scannedSites, sidebarOpen, onSidebarTo
           sidebarOpen ? "md:w-60" : "md:w-0 md:overflow-hidden"
         }`}
       >
-        {sidebarOpen && <SidebarContent onScanClick={onScanClick} scannedSites={scannedSites} />}
+        {sidebarOpen && <SidebarContent onScanClick={onScanClick} scannedSites={scannedSites} onSiteClick={onSiteClick} />}
       </aside>
 
       {/* Mobile: menu button */}
@@ -137,6 +152,7 @@ export function AppSidebar({ onScanClick, scannedSites, sidebarOpen, onSidebarTo
                 setMobileOpen(false);
               }}
               scannedSites={scannedSites}
+              onSiteClick={onSiteClick}
               onCloseMobile={() => setMobileOpen(false)}
             />
           </aside>

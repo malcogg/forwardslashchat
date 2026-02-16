@@ -39,8 +39,8 @@ export function CustomerChat({
 
   return (
     <div
-      className={`flex flex-col bg-zinc-950 rounded-2xl overflow-hidden ${
-        compact ? "h-[380px]" : "min-h-[400px]"
+      className={`flex flex-col bg-zinc-950 overflow-hidden ${
+        compact ? "h-[380px] rounded-2xl" : "h-full min-h-0"
       }`}
     >
       <header

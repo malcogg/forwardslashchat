@@ -50,20 +50,32 @@ This creates/updates tables from `db/schema.ts`.
 - `npm run db:migrate` – Run migrations
 - `npm run db:studio` – Open Drizzle Studio (requires `DATABASE_URL`)
 
+### Admin
+
+Add `ADMIN_EMAILS=your@email.com` (comma-separated) to access `/admin` — list orders, trigger crawl, view dashboard.
+
+### Payments
+
+See `docs/PAYMENT-SETUP.md`. Stripe: add `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`.
+
 ## API routes
 
 | Route | Method | Description |
 |-------|--------|-------------|
 | `/api/scan` | POST | Scan URL via Firecrawl, save to DB, return pageCount + scanId |
 | `/api/orders` | POST | Create order + customer |
+| `/api/orders/me` | GET | Current user's orders (for sidebar) |
 | `/api/orders/[id]` | GET | Get order by ID |
-| `/api/customers/by-order/[orderId]` | GET | Get customer for order |
-| `/api/dashboard?orderId=` | GET | Order + customer for dashboard |
+| `/api/checkout/stripe` | POST | Create order + Stripe session, return checkout URL |
+| `/api/webhooks/stripe` | POST | Stripe webhook — marks order paid |
+| `/api/customers/[id]` | PATCH | Update customer status |
+| `/api/customers/[id]/crawl` | POST | Crawl customer site, save content |
+| `/api/dashboard?orderId=` | GET | Order + customer + contentCount |
+| `/api/admin/orders` | GET | All orders (admin only) |
 
 ## Flow
 
-1. **Scan** – User enters URL → `/api/scan` → saves to `scans`, returns scanId
-2. **Checkout** – User fills form at `/checkout` → POST `/api/orders` → creates order + customer
-3. **Dashboard** – `/dashboard?orderId=xxx` → GET `/api/dashboard` → shows real data
-
-Payment webhooks (PayPal/Stripe) will call POST `/api/orders` with `paymentId` and `paymentProvider` when ready.
+1. **Scan** – URL → Firecrawl (50 pages) → saves to `scans` + sidebar (localStorage)
+2. **Checkout** – Form → "Create order (test)" or "Pay with Stripe" → order + customer in DB
+3. **Dashboard** – Sign in → order linked → "Build my chatbot" → crawl → content in DB
+4. **Preview** – iPhone mockup shows chat using customer content + LLM

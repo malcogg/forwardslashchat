@@ -83,6 +83,44 @@ export async function POST(request: Request) {
       );
     }
 
+    // Check if we already have content for this URL (saves Firecrawl credits)
+    if (db) {
+      const { customers, content } = await import("@/db/schema");
+      const { eq, count } = await import("drizzle-orm");
+      let host: string;
+      try {
+        host = new URL(normalized).hostname.replace(/^www\./, "");
+      } catch {
+        host = "";
+      }
+      if (host) {
+        const allCustomers = await db.select().from(customers);
+        const matching = allCustomers.find((c) => {
+          try {
+            const cHost = new URL(c.websiteUrl.startsWith("http") ? c.websiteUrl : `https://${c.websiteUrl}`).hostname.replace(/^www\./, "");
+            return cHost === host;
+          } catch {
+            return false;
+          }
+        });
+        if (matching) {
+          const [row] = await db
+            .select({ cnt: count() })
+            .from(content)
+            .where(eq(content.customerId, matching.id));
+          const pageCount = Number(row?.cnt ?? 0);
+          if (pageCount > 0) {
+            return NextResponse.json({
+              pageCount,
+              categories: [{ label: "Pages", count: pageCount }],
+              url: normalized.replace(/^https?:\/\//, "").replace(/\/$/, ""),
+              fromCache: true,
+            });
+          }
+        }
+      }
+    }
+
     const crawl = await runFirecrawlCrawl(apiKey, normalized);
 
     if (!crawl.success || !crawl.data) {

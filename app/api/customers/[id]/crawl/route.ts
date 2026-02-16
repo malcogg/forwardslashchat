@@ -1,8 +1,19 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { customers, content, orders } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, count } from "drizzle-orm";
 import { getOrCreateUser } from "@/lib/auth";
+import { auth } from "@clerk/nextjs/server";
+import { getCreditBalance, deductCredits } from "@/lib/credits";
+
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
+  .split(",")
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
+function isAdmin(email: string | undefined): boolean {
+  return !!email && ADMIN_EMAILS.includes(email.toLowerCase());
+}
 
 async function runFirecrawlCrawl(
   apiKey: string,
@@ -87,6 +98,32 @@ export async function POST(
     return NextResponse.json({ error: "Crawl not configured" }, { status: 503 });
   }
 
+  // Check existing content - avoid duplicate crawl if recent
+  const [contentRow] = await db
+    .select({ count: count() })
+    .from(content)
+    .where(eq(content.customerId, customerId));
+  const existingPages = contentRow?.count ?? 0;
+
+  // Credit check: admins bypass
+  const { sessionClaims } = await auth();
+  const userEmail = sessionClaims?.email as string | undefined;
+  const adminBypass = isAdmin(userEmail);
+
+  if (!adminBypass) {
+    const CRAWL_LIMIT = 50;
+    const creditsNeeded = CRAWL_LIMIT;
+    const balance = await getCreditBalance(user.userId);
+    if (balance.remaining < creditsNeeded) {
+      return NextResponse.json(
+        {
+          error: `Insufficient credits. Need ${creditsNeeded}, have ${balance.remaining}. Limit: ${balance.creditsLimit} (crawl uses ~${CRAWL_LIMIT} credits)`,
+        },
+        { status: 402 }
+      );
+    }
+  }
+
   const url = customer.websiteUrl.startsWith("http")
     ? customer.websiteUrl
     : `https://${customer.websiteUrl}`;
@@ -117,10 +154,24 @@ export async function POST(
     });
   }
 
+  const pagesCrawled = result.data.length;
+  if (!adminBypass) {
+    const deducted = await deductCredits(user.userId, pagesCrawled);
+    if (!deducted.ok) {
+      return NextResponse.json({ error: "Credit deduction failed" }, { status: 500 });
+    }
+  }
+
+  const now = new Date();
   await db
     .update(customers)
-    .set({ status: "dns_setup", updatedAt: new Date() })
+    .set({ status: "dns_setup", lastCrawledAt: now, updatedAt: now })
     .where(eq(customers.id, customerId));
 
-  return NextResponse.json({ success: true, pages: result.data.length });
+  const remaining = adminBypass ? 9999 : (await getCreditBalance(user.userId)).remaining;
+  return NextResponse.json({
+    success: true,
+    pages: pagesCrawled,
+    creditsRemaining: remaining,
+  });
 }

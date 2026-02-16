@@ -46,9 +46,11 @@ function DashboardContent() {
     } | null;
     contentCount?: number;
   } | null>(null);
+  const [myOrders, setMyOrders] = useState<{ order: { id: string }; customer: { businessName: string; websiteUrl: string } | null }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [crawling, setCrawling] = useState(false);
+  const [credits, setCredits] = useState<{ remaining: number; creditsLimit: number } | null>(null);
 
   useEffect(() => {
     fetch(`/api/dashboard${orderId ? `?orderId=${encodeURIComponent(orderId)}` : ""}`)
@@ -61,13 +63,27 @@ function DashboardContent() {
       .finally(() => setLoading(false));
   }, [orderId]);
 
+  useEffect(() => {
+    fetch("/api/orders/me")
+      .then((res) => (res.ok ? res.json() : []))
+      .then(setMyOrders)
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/credits")
+      .then((res) => (res.ok ? res.json() : null))
+      .then(setCredits)
+      .catch(() => {});
+  }, []);
+
   const handleCrawl = () => {
     if (!data?.customer?.id) return;
     setCrawling(true);
     fetch(`/api/customers/${data.customer.id}/crawl`, { method: "POST" })
       .then(async (res) => {
-        if (!res.ok) throw new Error("Crawl failed");
         const json = await res.json();
+        if (!res.ok) throw new Error(json.error ?? "Crawl failed");
         setData((d) =>
           d?.customer
             ? {
@@ -77,12 +93,13 @@ function DashboardContent() {
               }
             : d
         );
-        // Refetch to get accurate contentCount
-        const dash = await fetch(`/api/dashboard${orderId ? `?orderId=${encodeURIComponent(orderId)}` : ""}`);
-        if (dash.ok) {
-          const fresh = await dash.json();
-          setData(fresh);
-        }
+        // Refetch dashboard and credits
+        const [dashRes, creditsRes] = await Promise.all([
+          fetch(`/api/dashboard${orderId ? `?orderId=${encodeURIComponent(orderId)}` : ""}`),
+          fetch("/api/credits"),
+        ]);
+        if (dashRes.ok) setData(await dashRes.json());
+        if (creditsRes.ok) setCredits(await creditsRes.json());
       })
       .catch(() => setCrawling(false))
       .finally(() => setCrawling(false));
@@ -121,10 +138,35 @@ function DashboardContent() {
         <Link href="/" className="text-sm font-medium text-muted-foreground hover:text-foreground">
           ← ForwardSlash.Chat
         </Link>
-        <UserButton afterSignOutUrl="/" />
+        <div className="flex items-center gap-3">
+          <Link href="/admin" className="text-xs text-muted-foreground hover:text-foreground">
+            Admin
+          </Link>
+          <UserButton afterSignOutUrl="/" />
+        </div>
       </header>
-      {/* 75% left panel | 25% right iPhone mockup */}
+      {/* Sidebar | 75% content | 25% mockup */}
       <div className="flex h-[calc(100vh-52px)]">
+        {/* Sites sidebar - when user has orders */}
+        {myOrders.length > 0 && (
+          <aside className="hidden lg:flex flex-col w-48 border-r border-border bg-muted/20 py-4 shrink-0">
+            <p className="px-3 text-xs font-medium text-muted-foreground mb-2">Your sites</p>
+            {myOrders.map(({ order, customer }) => (
+              <Link
+                key={order.id}
+                href={`/dashboard?orderId=${order.id}`}
+                className={`px-3 py-2 text-sm truncate ${
+                  orderId === order.id
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-accent/50"
+                }`}
+                title={customer?.websiteUrl}
+              >
+                {customer?.businessName ?? customer?.websiteUrl?.replace(/^https?:\/\//, "") ?? "Order"}
+              </Link>
+            ))}
+          </aside>
+        )}
         {/* Left: dashboard info - 75% */}
         <div className="flex-[3] overflow-y-auto p-6 lg:p-8 min-w-0">
           <div className="max-w-2xl">
@@ -167,13 +209,28 @@ function DashboardContent() {
                     <li><span className="text-foreground">Website:</span> {customer?.websiteUrl}</li>
                     <li><span className="text-foreground">Prepaid until:</span> {prepaidUntil?.toLocaleDateString()}</li>
                   </ul>
+                  {customer && (data?.contentCount ?? 0) > 0 && (
+                    <Link
+                      href={`/chat/c/${customer.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block mt-3 text-sm text-primary hover:underline"
+                    >
+                      Open full-page chat →
+                    </Link>
+                  )}
+                  {credits && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Firecrawl credits: {credits.remaining} / {credits.creditsLimit} remaining
+                    </p>
+                  )}
                   {customer && ["content_collection", "crawling", "indexing"].includes(customer.status) && (
                     <button
                       onClick={handleCrawl}
-                      disabled={crawling}
+                      disabled={crawling || (credits !== null && credits.remaining < 1)}
                       className="mt-4 px-4 py-2 bg-primary text-primary-foreground text-sm rounded-lg hover:opacity-90 disabled:opacity-50"
                     >
-                      {crawling ? "Crawling your site..." : "Build my chatbot"}
+                      {crawling ? "Crawling your site..." : data?.contentCount ? "Refresh content (~50 credits)" : "Build my chatbot (~50 credits)"}
                     </button>
                   )}
                 </section>

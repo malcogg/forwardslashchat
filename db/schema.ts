@@ -8,13 +8,32 @@ import {
   jsonb,
 } from "drizzle-orm/pg-core";
 
+// Per-user credit allocation (your Firecrawl account is shared; each user gets a slice)
+// 1 page = 1 credit. One crawl ≈ 50 credits. Adjust via FIRECRAWL_CREDITS_* env vars.
+export const FIRECRAWL_PLANS = {
+  free: { credits: 50, period: "one-time" as const },
+  hobby: { credits: 100, period: "monthly" as const },
+  standard: { credits: 250, period: "monthly" as const },
+  growth: { credits: 500, period: "monthly" as const },
+} as const;
+
 // Users - for auth (Clerk/NextAuth will sync)
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   externalId: text("external_id").unique(), // Clerk/NextAuth user id
   email: text("email").notNull(),
   name: text("name"),
+  firecrawlPlan: text("firecrawl_plan").default("free"), // free | hobby | standard | growth
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Per-user Firecrawl credit usage
+export const creditUsage = pgTable("credit_usage", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id).notNull().unique(),
+  creditsUsed: integer("credits_used").notNull().default(0),
+  periodStart: timestamp("period_start", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Scans - store scan results (can be anonymous before payment)
@@ -55,6 +74,7 @@ export const customers = pgTable("customers", {
   welcomeMessage: text("welcome_message"),
   prepaidUntil: timestamp("prepaid_until", { withTimezone: true }),
   status: text("status").notNull().default("pending"), // pending | content_collection | crawling | indexing | dns_setup | testing | delivered
+  lastCrawledAt: timestamp("last_crawled_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

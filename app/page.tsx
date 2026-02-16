@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ScanModal } from "@/components/ScanModal";
 import { InfoModal } from "@/components/InfoModal";
 import { AppSidebar, SidebarToggle } from "@/components/AppSidebar";
 import Link from "next/link";
+
+const STORAGE_KEY = "forwardslash-scanned-sites";
 
 type InfoModalType = "how" | "pricing" | "about" | "demo" | null;
 
@@ -22,6 +24,18 @@ export default function HomePage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [scannedSites, setScannedSites] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as string[];
+        if (Array.isArray(parsed)) setScannedSites(parsed);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const handleScan = () => {
     const trimmed = url.trim();
@@ -44,11 +58,17 @@ export default function HomePage() {
 
   const handleScanComplete = (scannedUrl: string) => {
     const normalized = scannedUrl.startsWith("http") ? scannedUrl : `https://${scannedUrl}`;
-    setScannedSites((prev) =>
-      prev.some((s) => s.replace(/\/$/, "") === normalized.replace(/\/$/, ""))
-        ? prev
-        : [...prev, normalized.replace(/\/$/, "")]
-    );
+    const clean = normalized.replace(/\/$/, "");
+    setScannedSites((prev) => {
+      if (prev.some((s) => s.replace(/\/$/, "") === clean)) return prev;
+      const next = [...prev, clean];
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
   };
 
   return (
@@ -58,6 +78,10 @@ export default function HomePage() {
         scannedSites={scannedSites}
         sidebarOpen={sidebarOpen}
         onSidebarToggle={() => setSidebarOpen((o) => !o)}
+        onSiteClick={(site) => {
+          setUrl(site);
+          inputRef.current?.focus();
+        }}
       />
 
       <main className={`flex-1 flex flex-col min-h-screen transition-all duration-200 ${sidebarOpen ? "md:pl-60" : "md:pl-0"}`}>
