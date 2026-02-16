@@ -80,7 +80,7 @@ function DashboardContent() {
   useEffect(() => {
     let mounted = true;
     const load = (retries = 2) => {
-      fetch(`/api/dashboard${orderId ? `?orderId=${encodeURIComponent(orderId)}` : ""}`)
+      fetch(`/api/dashboard${orderId ? `?orderId=${encodeURIComponent(orderId)}` : ""}`, { credentials: "include", cache: "no-store" })
         .then(async (res) => {
           if (res.ok) {
             const json = await res.json();
@@ -145,9 +145,33 @@ function DashboardContent() {
   if (error || (orderId && !data?.order)) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-background p-8">
-        <div className="text-center">
+        <div className="text-center max-w-md">
           <p className="text-muted-foreground mb-4">{error ?? "Order not found"}</p>
-          <Link href="/" className="text-primary hover:underline">Back to home</Link>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={() => {
+                setError(null);
+                setLoading(true);
+                fetch(`/api/dashboard${orderId ? `?orderId=${encodeURIComponent(orderId)}` : ""}`, { credentials: "include", cache: "no-store" })
+                  .then(async (res) => {
+                    const json = await res.json();
+                    if (res.ok) {
+                      setData(json);
+                    } else {
+                      setError((json as { error?: string }).error ?? "Could not load dashboard");
+                    }
+                  })
+                  .catch(() => setError("Could not load dashboard"))
+                  .finally(() => setLoading(false));
+              }}
+              className="text-sm px-4 py-2 border border-border rounded hover:bg-muted"
+            >
+              Retry
+            </button>
+            <Link href="/" className="text-sm px-4 py-2 text-primary hover:underline">
+              Back to home
+            </Link>
+          </div>
         </div>
       </main>
     );

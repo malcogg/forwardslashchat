@@ -27,18 +27,31 @@ export async function getOrCreateUser() {
   const email = (sessionClaims?.email as string) ?? "unknown@example.com";
   const name = (sessionClaims?.name as string) ?? (sessionClaims?.firstName as string) ?? null;
 
-  const [created] = await db
-    .insert(users)
-    .values({
-      externalId: clerkIdStr,
-      email,
-      name,
-    })
-    .returning({ id: users.id });
+  try {
+    const [created] = await db
+      .insert(users)
+      .values({
+        externalId: clerkIdStr,
+        email,
+        name,
+      })
+      .returning({ id: users.id });
 
-  return {
-    userId: created?.id,
-    clerkUserId: clerkIdStr,
-    email,
-  };
+    return {
+      userId: created?.id,
+      clerkUserId: clerkIdStr,
+      email,
+    };
+  } catch (e) {
+    // Race: user may have been created by another request; fetch existing
+    const [existing] = await db.select().from(users).where(eq(users.externalId, clerkIdStr));
+    if (existing) {
+      return {
+        userId: existing.id,
+        clerkUserId: clerkIdStr,
+        email: existing.email,
+      };
+    }
+    throw e;
+  }
 }

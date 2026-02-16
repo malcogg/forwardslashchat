@@ -11,21 +11,22 @@ import { getOrCreateUser } from "@/lib/auth";
  * - If no orderId: return user's first order (or empty)
  */
 export async function GET(request: Request) {
-  const user = await getOrCreateUser();
-  if (!user) {
-    return NextResponse.json({ error: "Sign in required" }, { status: 401 });
-  }
+  try {
+    const user = await getOrCreateUser();
+    if (!user) {
+      return NextResponse.json({ error: "Sign in required" }, { status: 401 });
+    }
 
-  const { searchParams } = new URL(request.url);
-  const orderId = searchParams.get("orderId");
+    const { searchParams } = new URL(request.url);
+    const orderId = searchParams.get("orderId");
 
-  // When DB not configured or user not in DB yet, return empty dashboard (allows "Get started" UX)
-  if (!db || !user.userId) {
-    return NextResponse.json({ order: null, customer: null });
-  }
+    // When DB not configured or user not in DB yet, return empty dashboard (allows "Get started" UX)
+    if (!db || !user.userId) {
+      return NextResponse.json({ order: null, customer: null });
+    }
 
-  let order;
-  if (orderId) {
+    let order;
+    if (orderId) {
     const [o] = await db.select().from(orders).where(eq(orders.id, orderId));
     order = o;
     if (!order) {
@@ -71,4 +72,9 @@ export async function GET(request: Request) {
     customer: customer ?? null,
     contentCount,
   });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[dashboard] Error:", msg);
+    return NextResponse.json({ error: msg || "Dashboard error" }, { status: 500 });
+  }
 }
