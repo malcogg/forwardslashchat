@@ -28,7 +28,7 @@ const CHECKLIST = [
   "Chatbot live",
 ];
 
-function getDisplayName(user: { firstName?: string; lastName?: string; fullName?: string } | null | undefined): string {
+function getDisplayName(user: { firstName?: string | null; lastName?: string | null; fullName?: string | null } | null | undefined): string {
   if (!user) return "Michael Francis";
   if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`;
   if (user.fullName) return user.fullName;
