@@ -6,7 +6,7 @@ import { FadeInSection } from "@/components/FadeInSection";
 
 export function CtaSection() {
   return (
-    <section className="py-32 px-6">
+    <section className="py-32 px-6 bg-background">
       <FadeInSection className="max-w-3xl mx-auto text-center">
         <h2 className="font-serif text-3xl md:text-4xl lg:text-5xl mb-4 text-foreground">
           Get your AI chatbot today

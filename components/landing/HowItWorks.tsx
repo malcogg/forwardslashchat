@@ -6,7 +6,7 @@ import { FadeInSection } from "@/components/FadeInSection";
 
 export function HowItWorks() {
   return (
-    <section id="how-it-works" className="py-24 px-6">
+    <section id="how-it-works" className="py-24 px-6 bg-background">
       <div className="max-w-6xl mx-auto">
         <FadeInSection className="text-center mb-20">
           <span className="inline-block px-4 py-1.5 text-sm border border-border rounded-full mb-6 text-muted-foreground">

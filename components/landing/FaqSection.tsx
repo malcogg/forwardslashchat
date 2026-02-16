@@ -31,7 +31,7 @@ export function FaqSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section className="py-24 px-6">
+    <section className="py-24 px-6 bg-background">
       <div className="max-w-5xl mx-auto">
         <FadeInSection>
         <div className="grid md:grid-cols-2 gap-12">

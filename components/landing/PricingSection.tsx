@@ -19,7 +19,7 @@ const tiers = [
 
 export function PricingSection() {
   return (
-    <section id="pricing" className="py-24 px-6">
+    <section id="pricing" className="py-24 px-6 bg-background">
       <div className="max-w-4xl mx-auto">
         <FadeInSection className="text-center mb-16">
           <h2 className="font-serif text-3xl md:text-4xl text-foreground">Simple pricing</h2>
