@@ -1,33 +1,11 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { UserButton, useUser } from "@clerk/nextjs";
-import { Globe } from "lucide-react";
+import { Globe, Check, ChevronDown } from "lucide-react";
 import { CustomerChat } from "@/components/CustomerChat";
-
-const STATUS_LABELS: Record<string, string> = {
-  pending: "Pending",
-  paid: "Payment confirmed",
-  processing: "Processing",
-  delivered: "Delivered",
-  failed: "Failed",
-  content_collection: "Content collection",
-  crawling: "Crawling website",
-  indexing: "Indexing content",
-  dns_setup: "DNS setup",
-  testing: "Testing",
-};
-
-const CHECKLIST = [
-  "Payment confirmed",
-  "Website scanned",
-  "Content selected",
-  "Bot trained",
-  "DNS configured",
-  "Chatbot live",
-];
 
 const ACCENT_COLORS = [
   "#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6", "#06b6d4",
@@ -54,8 +32,18 @@ function DashboardContent() {
   const displayName = getDisplayName(user);
   const initials = getInitials(displayName);
 
-  const [activePanel, setActivePanel] = useState<"design" | "domains" | "order">("design");
-  const [designTab, setDesignTab] = useState<"general" | "about" | "pricing">("general");
+  const [activePanel, setActivePanel] = useState<"design" | "domains">("design");
+  const [scanDropdownOpen, setScanDropdownOpen] = useState(false);
+  const scanDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!scanDropdownOpen) return;
+    const h = (e: MouseEvent) => {
+      if (scanDropdownRef.current && !scanDropdownRef.current.contains(e.target as Node)) setScanDropdownOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [scanDropdownOpen]);
 
   const [data, setData] = useState<{
     order: { id: string; status: string; amountCents: number; bundleYears: number; dnsHelp: boolean };
@@ -180,8 +168,6 @@ function DashboardContent() {
   const order = data?.order;
   const customer = data?.customer;
   const hasOrder = !!order;
-  const prepaidUntil = customer?.prepaidUntil ? new Date(customer.prepaidUntil) : null;
-  const chatUrl = customer ? `${customer.subdomain}.${customer.domain}` : "chat.yourbusiness.com";
   const contentCount = data?.contentCount ?? 0;
 
   return (
@@ -216,49 +202,69 @@ function DashboardContent() {
             <span className="text-sm font-medium text-foreground truncate">{displayName}</span>
           </div>
 
-          {myOrders.length > 1 && (
-            <div className="mb-4">
-              <p className="text-xs font-medium text-muted-foreground mb-1">Your sites</p>
-              {myOrders.map(({ order: o, customer: c }) => (
-                <Link
-                  key={o.id}
-                  href={`/dashboard?orderId=${o.id}`}
-                  className={`block px-2 py-1 text-sm rounded truncate ${
-                    orderId === o.id ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50"
-                  }`}
-                >
-                  {c?.businessName ?? c?.websiteUrl?.replace(/^https?:\/\//, "") ?? "Order"}
-                </Link>
-              ))}
-            </div>
-          )}
+          <div className="relative mb-4" ref={scanDropdownRef}>
+            <button
+              onClick={() => setScanDropdownOpen((o) => !o)}
+              className="w-full flex items-center justify-between gap-2 px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted/50 rounded hover:text-foreground"
+            >
+              <span className="flex items-center gap-2">
+                <span>▸</span> Scan site
+              </span>
+              <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${scanDropdownOpen ? "rotate-180" : ""}`} />
+            </button>
+            {scanDropdownOpen && (
+              <div className="absolute left-0 right-0 top-full mt-1 py-1 bg-popover border border-border rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                {myOrders.length === 0 ? (
+                  <Link href="/" onClick={() => setScanDropdownOpen(false)} className="block px-3 py-2 text-sm text-foreground hover:bg-accent">
+                    Scan new site
+                  </Link>
+                ) : (
+                  <>
+                    {myOrders.map(({ order: o, customer: c }) => (
+                      <Link
+                        key={o.id}
+                        href={`/dashboard?orderId=${o.id}`}
+                        onClick={() => setScanDropdownOpen(false)}
+                        className={`block px-3 py-2 text-sm truncate ${
+                          orderId === o.id ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-accent"
+                        }`}
+                      >
+                        {c?.websiteUrl?.replace(/^https?:\/\//, "").replace(/\/$/, "") ?? c?.businessName ?? "Order"}
+                      </Link>
+                    ))}
+                    <Link href="/" onClick={() => setScanDropdownOpen(false)} className="block px-3 py-2 text-sm text-primary hover:bg-accent border-t border-border mt-1 pt-2">
+                      + Scan new site
+                    </Link>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
 
           <nav className="space-y-0.5 flex-1">
-            {customer?.websiteUrl && (
-              <a href={customer.websiteUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted/50 rounded hover:text-foreground">
-                <span>▸</span> View site
-              </a>
-            )}
             <button onClick={() => setActivePanel("design")} className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded text-left ${activePanel === "design" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`}>
-              <span>✦</span> Training
+              <span className="w-5 shrink-0">{contentCount > 0 ? <Check className="w-4 h-4 text-green-500" /> : <span className="text-muted-foreground/50">○</span>}</span>
+              Training
             </button>
             <button onClick={() => setActivePanel("design")} className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded text-left ${activePanel === "design" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`}>
-              <span>◉</span> Design
+              <span className="w-5 shrink-0">{customer && contentCount > 0 ? <Check className="w-4 h-4 text-green-500" /> : <span className="text-muted-foreground/50">○</span>}</span>
+              Design
             </button>
             <button onClick={() => setActivePanel("domains")} className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded text-left ${activePanel === "domains" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`}>
-              <span>⊕</span> Domains
-            </button>
-            <button onClick={() => setActivePanel("order")} className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded text-left ${activePanel === "order" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`}>
-              <span>$</span> Get paid
+              <span className="w-5 shrink-0">{[ "testing", "delivered" ].includes(customer?.status ?? "") ? <Check className="w-4 h-4 text-green-500" /> : <span className="text-muted-foreground/50">○</span>}</span>
+              Domains
             </button>
             <div className="flex items-center gap-2 px-2 py-1.5 text-sm text-muted-foreground">
-              <span>☰</span> Chat logs
+              <span className="w-5 shrink-0">○</span>
+              Chat logs
             </div>
             <div className="flex items-center gap-2 px-2 py-1.5 text-sm text-muted-foreground">
-              <span>☺</span> Users
+              <span className="w-5 shrink-0">○</span>
+              Users
             </div>
             <div className="flex items-center gap-2 px-2 py-1.5 text-sm text-muted-foreground">
-              <span>⚙</span> Settings
+              <span className="w-5 shrink-0">○</span>
+              Settings
             </div>
           </nav>
 
@@ -275,24 +281,20 @@ function DashboardContent() {
           </div>
         </aside>
 
-        {/* Center panel: Design | Domains | Order (matches mockup layout) */}
+        {/* Center panel: Design | Domains */}
         <div className={`border-r border-border overflow-y-auto shrink-0 ${activePanel === "design" ? "w-64 p-4" : "min-w-[280px] flex-1 max-w-md p-6"}`}>
           {activePanel === "design" && (
             <>
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-medium text-foreground">Design</h3>
-                <div className="flex gap-1">
-                  <button onClick={() => setDesignTab("general")} className={`px-3 py-1 text-xs rounded ${designTab === "general" ? "bg-muted text-foreground" : "text-muted-foreground"}`}>General</button>
-                  <button onClick={() => setDesignTab("about")} className={`px-3 py-1 text-xs rounded ${designTab === "about" ? "bg-muted text-foreground" : "text-muted-foreground"}`}>About</button>
-                  <button onClick={() => setDesignTab("pricing")} className={`px-3 py-1 text-xs rounded ${designTab === "pricing" ? "bg-muted text-foreground" : "text-muted-foreground"}`}>Pricing</button>
-                </div>
-              </div>
+              <h3 className="font-medium text-foreground mb-6">Design</h3>
 
               {!hasOrder ? (
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
                     Welcome, {displayName}. Get your AI chatbot by completing checkout.
                   </p>
+                  <Link href="/" className="block w-full px-3 py-2 text-sm text-center border border-border rounded hover:bg-muted">
+                    Scan your site
+                  </Link>
                   <Link href="/checkout" className="block w-full px-3 py-2 text-sm text-center bg-primary text-primary-foreground rounded hover:opacity-90">
                     Get started →
                   </Link>
@@ -300,7 +302,7 @@ function DashboardContent() {
                     One payment. Your domain. Hosting included.
                   </p>
                 </div>
-              ) : designTab === "general" ? (
+              ) : (
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm text-muted-foreground">Display name</label>
@@ -352,14 +354,6 @@ function DashboardContent() {
                     </Link>
                   )}
                 </div>
-              ) : designTab === "about" ? (
-                <div className="text-sm text-muted-foreground space-y-2">
-                  <p>About page content for your chatbot.</p>
-                </div>
-              ) : (
-                <div className="text-sm text-muted-foreground space-y-2">
-                  <p>Pricing page content for your chatbot.</p>
-                </div>
               )}
 
               {hasOrder && (
@@ -410,36 +404,6 @@ function DashboardContent() {
             </>
           )}
 
-          {activePanel === "order" && (
-            hasOrder ? (
-              <>
-                <h2 className="text-lg font-semibold text-foreground mb-4">Order Status</h2>
-                <div className="flex items-center gap-2 mb-4">
-                  <span className={`w-2 h-2 rounded-full ${order.status === "paid" || order.status === "delivered" ? "bg-green-500" : "bg-amber-500"}`} />
-                  <span>{STATUS_LABELS[order.status] ?? order.status}</span>
-                </div>
-                <p className="text-sm text-muted-foreground mb-6">
-                  ${(order.amountCents / 100).toLocaleString()} • {order.bundleYears}-year bundle {order.dnsHelp ? "• DNS help" : ""}
-                </p>
-                <h3 className="font-medium text-foreground mb-3">Checklist</h3>
-                <ul className="space-y-2">
-                  {CHECKLIST.map((item, i) => {
-                    const done = [true, true, contentCount > 0, contentCount > 0, ["testing", "delivered"].includes(customer?.status ?? ""), customer?.status === "delivered"][i];
-                    return <li key={i} className="flex items-center gap-2 text-muted-foreground"><span className={done ? "text-green-500" : ""}>{done ? "✓" : "○"}</span>{item}</li>;
-                  })}
-                </ul>
-              </>
-            ) : (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Complete a checkout to see your order.
-                </p>
-                <Link href="/checkout" className="block w-full px-4 py-2 text-sm text-center bg-primary text-primary-foreground rounded hover:opacity-90">
-                  Go to checkout →
-                </Link>
-              </div>
-            )
-          )}
         </div>
 
         {/* Chat preview */}
