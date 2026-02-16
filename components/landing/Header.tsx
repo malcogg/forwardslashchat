@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { SignedIn, SignedOut, useUser, SignOutButton } from "@clerk/nextjs";
-import { LayoutDashboard, LogOut } from "lucide-react";
+import { SignedIn, SignedOut, useUser, useClerk, SignOutButton } from "@clerk/nextjs";
+import { LayoutDashboard, LogOut, Menu, X } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Drawer } from "vaul";
 
 function getInitials(user: { firstName?: string | null; lastName?: string | null; fullName?: string | null } | null | undefined) {
   if (!user) return "?";
@@ -69,42 +70,147 @@ function ProfileMenu() {
   );
 }
 
+const navLinks = [
+  { href: "/services", label: "Services" },
+  { href: "/#how-it-works", label: "How it works" },
+  { href: "/#pricing", label: "Pricing" },
+  { href: "/chat/demo", label: "Demo" },
+];
+
 export function Header() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const { signOut } = useClerk();
+
   return (
-    <header className="w-full py-4 px-6 flex items-center justify-between max-w-7xl mx-auto">
-      <Link href="/" className="text-xl font-bold text-foreground lowercase shrink-0">
-        forwardslash.chat
-      </Link>
-      <nav className="hidden md:flex items-center justify-center gap-8 flex-1">
-        <Link href="/services" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-          Services
-        </Link>
-        <a href="/#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-          How it works
-        </a>
-        <a href="/#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-          Pricing
-        </a>
-        <Link href="/chat/demo" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-          Demo
-        </Link>
-      </nav>
-      <div className="flex items-center gap-3 shrink-0">
-        <ThemeToggle />
-        <SignedOut>
-          <Link href="/sign-in">
-            <Button variant="ghost" size="sm">Sign in</Button>
+    <>
+      <header
+        className="sticky top-0 z-50 w-full backdrop-blur-xl bg-background/80 border-b border-border/50 supports-[backdrop-filter]:bg-background/60"
+      >
+        <div className="w-full py-4 px-6 flex items-center justify-between max-w-7xl mx-auto">
+          <Link href="/" className="text-xl font-bold text-foreground lowercase shrink-0">
+            forwardslash.chat
           </Link>
-          <Link href="/sign-up">
-            <Button size="sm" className="rounded-full bg-foreground text-background hover:bg-foreground/90">
-              Get started
-            </Button>
-          </Link>
-        </SignedOut>
-        <SignedIn>
-          <ProfileMenu />
-        </SignedIn>
-      </div>
-    </header>
+
+          {/* Desktop nav */}
+          <nav className="hidden md:flex items-center justify-center gap-8 flex-1">
+            {navLinks.map(({ href, label }) =>
+              href.startsWith("/") && !href.startsWith("/#") ? (
+                <Link key={href} href={href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  {label}
+                </Link>
+              ) : (
+                <a key={href} href={href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  {label}
+                </a>
+              )
+            )}
+          </nav>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <ThemeToggle />
+            <SignedOut>
+              <Link href="/sign-in" className="hidden md:inline-block">
+                <Button variant="ghost" size="sm">Sign in</Button>
+              </Link>
+              <Link href="/sign-up" className="hidden md:inline-block">
+                <Button size="sm" className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white">
+                  Get started
+                </Button>
+              </Link>
+            </SignedOut>
+            <SignedIn>
+              <div className="hidden md:block">
+                <ProfileMenu />
+              </div>
+            </SignedIn>
+
+            {/* Mobile hamburger */}
+            <Drawer.Root
+              direction="right"
+              open={mobileOpen}
+              onOpenChange={setMobileOpen}
+            >
+              <Drawer.Trigger asChild>
+                <button
+                  className="md:hidden w-9 h-9 flex items-center justify-center rounded-lg hover:bg-accent text-foreground"
+                  aria-label="Open menu"
+                >
+                  <Menu className="w-5 h-5" />
+                </button>
+              </Drawer.Trigger>
+              <Drawer.Portal>
+                <Drawer.Overlay className="bg-black/40 backdrop-blur-sm" />
+                <Drawer.Content className="w-[280px] max-w-[85vw] h-full bg-background border-l border-border flex flex-col">
+                  <div className="p-6 flex items-center justify-between border-b border-border">
+                    <span className="font-bold text-foreground">Menu</span>
+                    <Drawer.Close asChild>
+                      <button
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-accent text-muted-foreground"
+                        aria-label="Close menu"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </Drawer.Close>
+                  </div>
+                  <nav className="flex-1 p-6 flex flex-col gap-1">
+                    {navLinks.map(({ href, label }) => (
+                      <Drawer.Close key={href} asChild>
+                        {href.startsWith("/") && !href.startsWith("/#") ? (
+                          <Link
+                            href={href}
+                            className="py-3 px-4 rounded-lg text-foreground hover:bg-accent transition-colors"
+                          >
+                            {label}
+                          </Link>
+                        ) : (
+                          <a
+                            href={href}
+                            className="py-3 px-4 rounded-lg text-foreground hover:bg-accent transition-colors block"
+                          >
+                            {label}
+                          </a>
+                        )}
+                      </Drawer.Close>
+                    ))}
+                  </nav>
+                  <div className="p-6 border-t border-border space-y-3">
+                    <SignedOut>
+                      <Drawer.Close asChild>
+                        <Link href="/sign-in" className="block">
+                          <Button variant="ghost" size="sm" className="w-full justify-center">Sign in</Button>
+                        </Link>
+                      </Drawer.Close>
+                      <Drawer.Close asChild>
+                        <Link href="/sign-up" className="block">
+                          <Button size="sm" className="w-full rounded-full bg-emerald-600 hover:bg-emerald-700 text-white">
+                            Get started
+                          </Button>
+                        </Link>
+                      </Drawer.Close>
+                    </SignedOut>
+                    <SignedIn>
+                      <Drawer.Close asChild>
+                        <Link href="/dashboard" className="block">
+                          <Button variant="ghost" size="sm" className="w-full justify-center">Dashboard</Button>
+                        </Link>
+                      </Drawer.Close>
+                      <button
+                        onClick={() => {
+                          setMobileOpen(false);
+                          signOut({ redirectUrl: "/" });
+                        }}
+                        className="w-full py-2 text-sm text-muted-foreground hover:text-foreground text-left"
+                      >
+                        Sign out
+                      </button>
+                    </SignedIn>
+                  </div>
+                </Drawer.Content>
+              </Drawer.Portal>
+            </Drawer.Root>
+          </div>
+        </div>
+      </header>
+    </>
   );
 }

@@ -131,7 +131,7 @@ export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps
             </p>
             <div className="h-2 bg-muted rounded-full overflow-hidden mb-2">
               <div
-                className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
+                className="h-full bg-emerald-600 rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -147,7 +147,7 @@ export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps
             <p className="text-sm text-muted-foreground mb-6">{error}</p>
             <button
               onClick={() => setRetryKey((k) => k + 1)}
-              className="px-4 py-2 bg-primary text-primary-foreground font-medium rounded-lg hover:opacity-90 transition-opacity"
+              className="px-4 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-opacity"
             >
               Try again
             </button>
@@ -188,7 +188,7 @@ export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps
             </div>
             <button
               onClick={() => setStep("pricing")}
-              className="w-full py-3 px-4 bg-primary text-primary-foreground font-medium rounded-lg hover:opacity-90 transition-opacity"
+              className="w-full py-3 px-4 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-opacity"
             >
               See Your Price
             </button>
@@ -224,7 +224,7 @@ export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps
               Total: ${totalPrice.toLocaleString()}
             </p>
             <button
-              className="w-full py-3 px-4 bg-primary text-primary-foreground font-medium rounded-lg hover:opacity-90 transition-opacity"
+              className="w-full py-3 px-4 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-opacity"
               onClick={() => {
                 const params = new URLSearchParams();
                 if (scanId) params.set("scanId", scanId);

@@ -14,7 +14,7 @@ export function CtaSection() {
         <p className="text-muted-foreground mb-8 max-w-md mx-auto">
           One payment. Your domain. No monthly fees. Scan your site and see your price.
         </p>
-        <Button asChild className="rounded-full bg-foreground text-background hover:bg-foreground/90 px-6">
+        <Button asChild className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white px-6">
           <a href="#scan">Scan your website</a>
         </Button>
       </FadeInSection>

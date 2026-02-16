@@ -20,7 +20,7 @@ const tiers = [
 
 export function PricingSection() {
   return (
-    <section id="pricing" className="py-24 px-6 bg-background">
+    <section id="pricing" className="py-24 px-6 bg-slate-50 dark:bg-slate-950/50">
       <div className="max-w-4xl mx-auto">
         <FadeInSection className="text-center mb-16">
           <h2 className="font-serif text-3xl md:text-4xl text-foreground">Simple pricing</h2>
@@ -35,11 +35,11 @@ export function PricingSection() {
             <div
               key={tier.name}
               className={`relative rounded-xl border bg-card p-6 flex flex-col ${
-                tier.badge ? "border-primary shadow-md" : "border-border"
+                tier.badge ? "border-emerald-500/50 shadow-md shadow-emerald-500/5" : "border-border"
               }`}
             >
               {tier.badge && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 text-xs bg-primary text-primary-foreground rounded-full">
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 text-xs bg-emerald-600 text-white rounded-full">
                   {tier.badge}
                 </span>
               )}
@@ -50,13 +50,18 @@ export function PricingSection() {
               <ul className="mt-6 space-y-3 flex-1">
                 {INCLUDED.map((item) => (
                   <li key={item} className="flex items-center gap-2 text-sm text-foreground">
-                    <Check className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
+                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
                     {item}
                   </li>
                 ))}
               </ul>
 
-              <Button asChild variant={tier.badge ? "default" : "outline"} size="sm" className="w-full mt-6">
+              <Button
+                asChild
+                variant={tier.badge ? "default" : "outline"}
+                size="sm"
+                className={`w-full mt-6 ${tier.badge ? "bg-emerald-600 hover:bg-emerald-700 text-white border-0" : ""}`}
+              >
                 <a href="#scan">Get started</a>
               </Button>
             </div>

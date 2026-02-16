@@ -45,7 +45,7 @@ export function HeroSection({ onScanClick }: HeroSectionProps) {
               />
               <Button
                 onClick={handleScan}
-                className="rounded-full bg-foreground text-background hover:bg-foreground/90 px-6 shrink-0"
+                className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 shrink-0"
               >
                 Scan your site
               </Button>

@@ -88,7 +88,7 @@ export function HowItWorks() {
           <p className="text-muted-foreground max-w-lg mx-auto mb-6">
             Your branded AI chatbot is ready. Add a CNAME record and it goes live at your domain in minutes.
           </p>
-          <Button asChild className="rounded-full bg-foreground text-background hover:bg-foreground/90 px-6">
+          <Button asChild className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white px-6">
             <a href="#scan">Scan your website</a>
           </Button>
         </div>
@@ -152,7 +152,7 @@ function BrandCard() {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm text-foreground">Accent</span>
-            <div className="w-8 h-8 rounded-full bg-primary" />
+            <div className="w-8 h-8 rounded-full bg-emerald-600" />
           </div>
         </div>
     </div>
@@ -171,10 +171,10 @@ function DomainCard() {
           <span className="text-sm text-foreground">mybusiness.com/chat</span>
         </div>
         <div className="mt-2 flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+          <div className="w-4 h-4 rounded-full bg-emerald-600 flex items-center justify-center shrink-0">
             <span className="text-white text-xs">✓</span>
           </div>
-          <span className="text-sm text-green-600 dark:text-green-400">Domain connected</span>
+          <span className="text-sm text-emerald-600">Domain connected</span>
         </div>
     </div>
   );
@@ -184,7 +184,7 @@ function PaymentsCard() {
   return (
     <div className="bg-card rounded-xl p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.1),0_8px_16px_-4px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] border border-border">
         <div className="flex items-center justify-between mb-6">
-          <span className="text-primary font-bold text-xl">One-time payment</span>
+          <span className="text-emerald-600 font-bold text-xl">One-time payment</span>
         </div>
 
         <div className="space-y-3">
@@ -221,7 +221,7 @@ function ChatDemo() {
             <span className="text-sm text-muted-foreground">Chat</span>
             <span className="text-sm text-muted-foreground">About</span>
             <span className="text-sm text-muted-foreground">Pricing</span>
-            <button className="px-3 py-1 text-xs bg-primary text-primary-foreground rounded-full">Sign up</button>
+            <button className="px-3 py-1 text-xs bg-emerald-600 text-white rounded-full">Sign up</button>
           </nav>
         </div>
 
@@ -244,8 +244,8 @@ function ChatDemo() {
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <span>📎</span> 0 Files
                 </div>
-                <button className="w-7 h-7 rounded-full bg-primary flex items-center justify-center">
-                  <span className="text-primary-foreground text-xs">↑</span>
+                <button className="w-7 h-7 rounded-full bg-emerald-600 flex items-center justify-center">
+                  <span className="text-white text-xs">↑</span>
                 </button>
               </div>
             </div>
