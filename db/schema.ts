@@ -74,7 +74,6 @@ export const customers = pgTable("customers", {
   welcomeMessage: text("welcome_message"),
   prepaidUntil: timestamp("prepaid_until", { withTimezone: true }),
   status: text("status").notNull().default("pending"), // pending | content_collection | crawling | indexing | dns_setup | testing | delivered
-  lastCrawledAt: timestamp("last_crawled_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

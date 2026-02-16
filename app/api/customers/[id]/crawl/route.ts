@@ -165,7 +165,7 @@ export async function POST(
   const now = new Date();
   await db
     .update(customers)
-    .set({ status: "dns_setup", lastCrawledAt: now, updatedAt: now })
+    .set({ status: "dns_setup", updatedAt: now })
     .where(eq(customers.id, customerId));
 
   const remaining = adminBypass ? 9999 : (await getCreditBalance(user.userId)).remaining;

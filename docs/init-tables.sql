@@ -48,13 +48,9 @@ CREATE TABLE IF NOT EXISTS "customers" (
   "welcome_message" text,
   "prepaid_until" timestamptz,
   "status" text DEFAULT 'pending' NOT NULL,
-  "last_crawled_at" timestamptz,
   "created_at" timestamptz DEFAULT now() NOT NULL,
   "updated_at" timestamptz DEFAULT now() NOT NULL
 );
-
--- If customers table already exists without last_crawled_at, run:
--- ALTER TABLE customers ADD COLUMN IF NOT EXISTS last_crawled_at timestamptz;
 
 CREATE TABLE IF NOT EXISTS "content" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
