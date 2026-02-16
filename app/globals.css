@@ -90,23 +90,34 @@
     );
   }
 
-  /* Dots behind widget - peeks out from behind card & shadow */
+  /* Dots behind widget only - in outer ring, never under card/shadow */
   .bg-dots-behind-widget {
     background-color: hsl(240 4.8% 96.5%);
     background-image: radial-gradient(
       circle at 1px 1px,
-      hsl(240 4% 75% / 0.45) 1px,
+      hsl(240 4% 75% / 0.5) 1px,
       transparent 0
     );
-    background-size: 20px 20px;
-    background-position: 10px 10px; /* aligned grid */
+    background-size: 12px 12px; /* tighter, closer together */
+    background-position: 6px 6px;
+    /* Mask: transparent center (card+shadow), opaque ring = dots only peek from sides */
+    mask-image: radial-gradient(
+      ellipse 80% 80% at 50% 50%,
+      transparent 55%,
+      black 65%
+    );
+    -webkit-mask-image: radial-gradient(
+      ellipse 80% 80% at 50% 50%,
+      transparent 55%,
+      black 65%
+    );
   }
 
   .dark .bg-dots-behind-widget {
     background-color: hsl(240 3.7% 12%);
     background-image: radial-gradient(
       circle at 1px 1px,
-      hsl(240 4% 45% / 0.25) 1px,
+      hsl(240 4% 45% / 0.3) 1px,
       transparent 0
     );
   }
