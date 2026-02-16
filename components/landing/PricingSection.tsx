@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { FadeInSection } from "@/components/FadeInSection";
 
 const INCLUDED = [
+  "Up to 50 pages included",
   "AI trained on your content",
   "Hosting included",
   "Your domain (chat.yoursite.com or yoursite.com/chat)",

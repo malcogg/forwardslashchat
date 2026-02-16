@@ -197,8 +197,8 @@ function PaymentsCard() {
             <span className="text-sm font-medium text-foreground">$850</span>
           </div>
           <div className="flex items-center justify-between py-2">
-            <span className="text-sm text-foreground">5-Year Bundle</span>
-            <span className="text-sm font-medium text-foreground">$1,950</span>
+            <span className="text-sm text-foreground">3-Year Bundle</span>
+            <span className="text-sm font-medium text-foreground">$1,250</span>
           </div>
         </div>
 
