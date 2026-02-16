@@ -5,6 +5,7 @@ import { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { SignedIn, SignedOut, useUser, SignOutButton } from "@clerk/nextjs";
 import { LayoutDashboard, LogOut } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 function getInitials(user: { firstName?: string | null; lastName?: string | null; fullName?: string | null } | null | undefined) {
   if (!user) return "?";
@@ -71,10 +72,10 @@ function ProfileMenu() {
 export function Header() {
   return (
     <header className="w-full py-4 px-6 flex items-center justify-between max-w-7xl mx-auto">
-      <Link href="/" className="font-serif text-xl italic text-foreground">
-        ForwardSlash.Chat
+      <Link href="/" className="text-xl font-bold text-foreground lowercase shrink-0">
+        forwardslash.chat
       </Link>
-      <nav className="hidden md:flex items-center gap-8">
+      <nav className="hidden md:flex items-center justify-center gap-8 flex-1">
         <a href="#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
           How it works
         </a>
@@ -85,7 +86,8 @@ export function Header() {
           Demo
         </Link>
       </nav>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 shrink-0">
+        <ThemeToggle />
         <SignedOut>
           <Link href="/sign-in">
             <Button variant="ghost" size="sm">Sign in</Button>
