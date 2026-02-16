@@ -237,7 +237,7 @@ function DashboardContent() {
               <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${scanDropdownOpen ? "rotate-180" : ""}`} />
             </button>
             {scanDropdownOpen && (
-              <div className="absolute left-full top-0 ml-2 py-1 min-w-[200px] bg-popover border border-border rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+              <div className="absolute left-full top-0 ml-2 py-1 min-w-[200px] bg-card border border-border rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
                 {myOrders.length === 0 ? (
                   <Link href="/" onClick={() => setScanDropdownOpen(false)} className="block px-3 py-2 text-sm text-foreground hover:bg-accent">
                     Scan new site
