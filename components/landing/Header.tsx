@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { SignedIn, SignedOut, useUser, useClerk, SignOutButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, useUser, useClerk } from "@clerk/nextjs";
 import { LayoutDashboard, LogOut, Menu, X } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Drawer } from "vaul";
@@ -15,7 +15,8 @@ function getInitials(user: { firstName?: string | null; lastName?: string | null
   return "?";
 }
 
-function ProfileMenu() {
+function ProfileMenuWithSignOut() {
+  const { signOut } = useClerk();
   const { user } = useUser();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -46,7 +47,7 @@ function ProfileMenu() {
         )}
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-48 py-1 bg-popover border border-border rounded-lg shadow-lg z-50">
+        <div className="absolute right-0 top-full mt-2 w-48 py-1 bg-popover border border-border rounded-lg shadow-lg z-[100]">
           <Link
             href="/dashboard"
             onClick={() => setOpen(false)}
@@ -55,15 +56,16 @@ function ProfileMenu() {
             <LayoutDashboard className="w-4 h-4" />
             Dashboard
           </Link>
-          <SignOutButton redirectUrl="/">
-            <button
-              onClick={() => setOpen(false)}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground text-left"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign out
-            </button>
-          </SignOutButton>
+          <button
+            onClick={() => {
+              setOpen(false);
+              signOut({ redirectUrl: "/" });
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-accent hover:text-accent-foreground text-left"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign out
+          </button>
         </div>
       )}
     </div>
@@ -79,12 +81,12 @@ const navLinks = [
 
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { signOut } = useClerk();
 
   return (
     <>
+      {/* Fixed liquid glass navbar */}
       <header
-        className="sticky top-0 z-50 w-full backdrop-blur-xl bg-background/80 border-b border-border/50 supports-[backdrop-filter]:bg-background/60"
+        className="fixed top-0 left-0 right-0 z-50 w-full backdrop-blur-xl bg-background/70 dark:bg-background/80 border-b border-border/40 shadow-sm"
       >
         <div className="w-full py-4 px-6 flex items-center justify-between max-w-7xl mx-auto">
           <Link href="/" className="text-xl font-bold text-foreground lowercase shrink-0">
@@ -120,97 +122,100 @@ export function Header() {
             </SignedOut>
             <SignedIn>
               <div className="hidden md:block">
-                <ProfileMenu />
+                <ProfileMenuWithSignOut />
+              </div>
+              {/* Mobile: show profile circle with dropdown when signed in */}
+              <div className="md:hidden">
+                <ProfileMenuWithSignOut />
               </div>
             </SignedIn>
 
-            {/* Mobile hamburger */}
+            {/* Mobile hamburger - nav links only (shown when signed out; when signed in we still need nav so show both) */}
             <Drawer.Root
               direction="right"
               open={mobileOpen}
               onOpenChange={setMobileOpen}
             >
-              <Drawer.Trigger asChild>
-                <button
-                  className="md:hidden w-9 h-9 flex items-center justify-center rounded-lg hover:bg-accent text-foreground"
-                  aria-label="Open menu"
-                >
-                  <Menu className="w-5 h-5" />
-                </button>
-              </Drawer.Trigger>
+              <button
+                onClick={() => setMobileOpen(true)}
+                className="md:hidden w-9 h-9 flex items-center justify-center rounded-lg hover:bg-accent text-foreground touch-manipulation"
+                aria-label="Open menu"
+                type="button"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
               <Drawer.Portal>
-                <Drawer.Overlay className="bg-black/40 backdrop-blur-sm" />
-                <Drawer.Content className="w-[280px] max-w-[85vw] h-full bg-background border-l border-border flex flex-col">
+                <Drawer.Overlay
+                  className="bg-black/40 backdrop-blur-sm"
+                  onClick={() => setMobileOpen(false)}
+                />
+                <Drawer.Content
+                  className="w-[280px] max-w-[85vw] h-full bg-background border-l border-border flex flex-col z-[60]"
+                  onEscapeKeyDown={() => setMobileOpen(false)}
+                >
                   <div className="p-6 flex items-center justify-between border-b border-border">
                     <span className="font-bold text-foreground">Menu</span>
-                    <Drawer.Close asChild>
-                      <button
-                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-accent text-muted-foreground"
-                        aria-label="Close menu"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    </Drawer.Close>
+                    <button
+                      onClick={() => setMobileOpen(false)}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-accent text-muted-foreground touch-manipulation"
+                      aria-label="Close menu"
+                      type="button"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
                   </div>
-                  <nav className="flex-1 p-6 flex flex-col gap-1">
-                    {navLinks.map(({ href, label }) => (
-                      <Drawer.Close key={href} asChild>
-                        {href.startsWith("/") && !href.startsWith("/#") ? (
-                          <Link
-                            href={href}
-                            className="py-3 px-4 rounded-lg text-foreground hover:bg-accent transition-colors"
-                          >
-                            {label}
-                          </Link>
-                        ) : (
-                          <a
-                            href={href}
-                            className="py-3 px-4 rounded-lg text-foreground hover:bg-accent transition-colors block"
-                          >
-                            {label}
-                          </a>
-                        )}
-                      </Drawer.Close>
-                    ))}
+                  <nav className="flex-1 p-6 flex flex-col gap-1 overflow-auto">
+                    {navLinks.map(({ href, label }) =>
+                      href.startsWith("/") && !href.startsWith("/#") ? (
+                        <Link
+                          key={href}
+                          href={href}
+                          onClick={() => setMobileOpen(false)}
+                          className="py-3 px-4 rounded-lg text-foreground hover:bg-accent transition-colors"
+                        >
+                          {label}
+                        </Link>
+                      ) : (
+                        <a
+                          key={href}
+                          href={href}
+                          onClick={() => setMobileOpen(false)}
+                          className="py-3 px-4 rounded-lg text-foreground hover:bg-accent transition-colors block"
+                        >
+                          {label}
+                        </a>
+                      )
+                    )}
                   </nav>
-                  <div className="p-6 border-t border-border space-y-3">
-                    <SignedOut>
-                      <Drawer.Close asChild>
-                        <Link href="/sign-in" className="block">
-                          <Button variant="ghost" size="sm" className="w-full justify-center">Sign in</Button>
-                        </Link>
-                      </Drawer.Close>
-                      <Drawer.Close asChild>
-                        <Link href="/sign-up" className="block">
-                          <Button size="sm" className="w-full rounded-full bg-emerald-600 hover:bg-emerald-700 text-white">
-                            Get started
-                          </Button>
-                        </Link>
-                      </Drawer.Close>
-                    </SignedOut>
-                    <SignedIn>
-                      <Drawer.Close asChild>
-                        <Link href="/dashboard" className="block">
-                          <Button variant="ghost" size="sm" className="w-full justify-center">Dashboard</Button>
-                        </Link>
-                      </Drawer.Close>
-                      <button
-                        onClick={() => {
-                          setMobileOpen(false);
-                          signOut({ redirectUrl: "/" });
-                        }}
-                        className="w-full py-2 text-sm text-muted-foreground hover:text-foreground text-left"
+                  {/* Auth section only when signed out - when signed in, profile dropdown handles it */}
+                  <SignedOut>
+                    <div className="p-6 border-t border-border space-y-3">
+                      <Link
+                        href="/sign-in"
+                        onClick={() => setMobileOpen(false)}
+                        className="block"
                       >
-                        Sign out
-                      </button>
-                    </SignedIn>
-                  </div>
+                        <Button variant="ghost" size="sm" className="w-full justify-center">Sign in</Button>
+                      </Link>
+                      <Link
+                        href="/sign-up"
+                        onClick={() => setMobileOpen(false)}
+                        className="block"
+                      >
+                        <Button size="sm" className="w-full rounded-full bg-emerald-600 hover:bg-emerald-700 text-white">
+                          Get started
+                        </Button>
+                      </Link>
+                    </div>
+                  </SignedOut>
                 </Drawer.Content>
               </Drawer.Portal>
             </Drawer.Root>
           </div>
         </div>
       </header>
+      {/* Spacer so content is not hidden under fixed header */}
+      <div className="h-16 shrink-0" aria-hidden />
     </>
   );
 }
