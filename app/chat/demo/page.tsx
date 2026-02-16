@@ -9,17 +9,17 @@ const PILL_SUGGESTIONS = [
   "What is ForwardSlash.Chat?",
   "How much does it cost?",
   "How does it work?",
-  "Can I see a demo?",
+  "Quick $350 Starter?",
 ];
 
 const QUESTION_SUGGESTIONS = [
-  "What services do you offer?",
-  "Tell me about your products",
-  "How do I get in touch?",
+  "Tell me about the $350 quick site",
+  "What's included in a new build?",
+  "How does the AI chatbot work?",
 ];
 
 const FALLBACK =
-  "Sorry, I'm still learning! Ask me about pricing, how it works, domain setup, scanning your site, or anything else about ForwardSlash.Chat.";
+  "Sorry, I'm still learning! 😊 Ask me about our $350 quick start site, $1,000 new build, $2,000 redesign, AI chatbot, or how we help Florida businesses get online.";
 
 const TYPING_DELAY_MS = 1600;
 
@@ -29,65 +29,59 @@ function getHardcodedResponse(message: string): string | null {
 
   const pairs: { keywords: string[]; answer: string }[] = [
     {
-      keywords: ["what is", "what does forwardslash do", "what is forwardslash.chat"],
-      answer:
-        "ForwardSlash.Chat gives your business a custom AI chatbot trained only on your website content. It lives at chat.yourdomain.com or yourdomain.com/chat, answers 24/7 using just your info — no generic AI, no data sharing. Pay once, no monthly fees. Hosting included.",
-    },
-    {
-      keywords: ["how much", "pricing", "cost", "plans", "bundles", "price"],
-      answer: `One-time payment only — no monthly fees!
-• 1-Year Starter: $550
-• 2-Year Recommended: $850 (save $190)
-• 3-Year: $1,250
-After prepaid period, optional renewal $495/year. Optional $99 DNS help. Scan your site to see your exact price.`,
+      keywords: ["how much", "pricing", "cost", "plans", "price", "how much is it"],
+      answer: `Simple one-time pricing — year 1 hosting included, no monthly fees:
+• Quick WordPress Starter: $350 (10 pages, perfect to get going)
+• Brand New Website Build: $1,000 (full custom + AI chatbot)
+• Website Redesign / Refresh: $2,000 (upgrade your existing site + AI)
+After year 1: move to your own host (free) or renew hosting with us for $200/year (optional).`,
     },
     {
       keywords: ["how does it work", "how to get started", "process", "steps"],
-      answer: `Super easy: Enter your website URL — we scan and train the AI on your content.
-Customize branding (logo, colors).
-Connect your domain (chat.yourdomain.com or yourdomain.com/chat).
-Pay once — we deploy it live in 3–10 days.
-No monthly fees, hosting included.`,
+      answer: `Easy 3 steps:
+1. Tell us your business & goals
+2. We design & build your site (with AI chatbot if chosen)
+3. We launch + host for year 1 — live in days/weeks. One-time payment, no subscriptions.`,
     },
     {
-      keywords: ["scan", "crawl", "add my site", "how to scan"],
+      keywords: ["quick", "starter", "$350", "simple site", "just get started"],
       answer:
-        "Just enter your website URL in the dashboard. We crawl your pages, pull services/FAQs/products/blog, and train your private AI. No tech skills needed — we do everything.",
+        "Our $350 Quick WordPress Starter is perfect if you just want a simple site fast: 10 clean pages, mobile-ready, basic SEO, contact form + map, WordPress dashboard, year 1 hosting included. One-time $350 — no monthly fees. Great for new entrepreneurs!",
     },
     {
-      keywords: ["domain", "subdomain", "chat.mywebsite.com", "mybusiness.com/chat", "custom domain"],
+      keywords: ["new website", "brand new", "$1000", "build"],
       answer:
-        "Your chatbot lives on your own domain — subdomain like chat.mybusiness.com or path like mybusiness.com/chat. Add one DNS record (we can help for $99). It becomes part of your site.",
+        "For $1,000 one-time we build you a full custom modern website (Next.js or WordPress) + built-in AI chatbot trained on your content. Mobile-responsive, fast, SEO-ready, year 1 hosting included. Perfect upgrade for growing businesses.",
     },
     {
-      keywords: ["monthly", "subscription", "fees", "recurring", "is there monthly fee"],
+      keywords: ["redesign", "refresh", "upgrade", "$2000"],
       answer:
-        "No monthly fees — ever. Pay one time for creation + hosting during your chosen period. Optional renewal after that is $495/year if you want us to keep hosting.",
+        "$2,000 one-time redesign/refresh: modern look, speed & SEO upgrades, mobile-responsive, + built-in AI chatbot. We keep your existing content, make it look & work better, host year 1. Ideal if your current site feels outdated.",
     },
     {
-      keywords: ["demo", "see it live", "try it", "test", "demo chat"],
+      keywords: ["ai chatbot", "ai", "chatbot", "what is the ai"],
       answer:
-        "You're chatting with the demo right now! Ask anything about ForwardSlash.Chat — pricing, setup, features — or scan your own site to see a custom version.",
+        "Every plan can include our custom AI chatbot (trained only on your site content). It lives at chat.yourdomain.com or yourdomain.com/chat, answers customer questions 24/7 — services, hours, prices, FAQs — no monthly fees, private & branded.",
     },
     {
-      keywords: ["dashboard", "how to use dashboard", "what is dashboard"],
+      keywords: ["hosting", "host", "year 1", "after year 1", "renew"],
       answer:
-        "After payment, you get a dashboard to track your order, upload extra files, customize branding (logo/colors), view DNS instructions, and see your live chatbot URL once deployed.",
+        "We host your site for the full first year (included in price). After that: move to your own host for free (we give full access) or keep us hosting for $200/year (optional). Your choice — no lock-in.",
     },
     {
-      keywords: ["branding", "customize", "logo", "colors"],
+      keywords: ["florida", "orlando", "local"],
       answer:
-        "In your dashboard, upload your logo/favicon, pick accent/background colors — your chatbot will match your brand perfectly.",
+        "We're based in Orlando, Florida and specialize in helping local businesses like plumbers, shops, restaurants, and contractors get a professional online presence fast — affordable, no-nonsense websites + AI help.",
     },
     {
-      keywords: ["how long", "delivery time", "when will it be ready"],
+      keywords: ["demo", "see it", "try", "test"],
       answer:
-        "We deliver in 3–10 business days after payment and DNS setup. Scan your site first to get started fast!",
+        "You're chatting with the demo right now! Tap any question above or ask anything about our websites, AI chatbot, pricing, or getting started.",
     },
     {
-      keywords: ["help", "support", "contact", "questions"],
+      keywords: ["what is", "what does forwardslash do", "what is forwardslash.chat", "tell me about"],
       answer:
-        "We're here to help! Reply here or email support@forwardslash.chat. For DNS or custom needs, we offer $99 setup help.",
+        "**ForwardSlash.Chat** helps new entrepreneurs and local businesses in Florida get online fast with a professional website + built-in AI chatbot. We build it, host it for year 1, and you pay once — no monthly fees. From a quick $350 starter site to full custom builds.",
     },
   ];
 
