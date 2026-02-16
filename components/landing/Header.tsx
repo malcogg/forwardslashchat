@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { SignedIn, SignedOut, useUser, SignOutButton } from "@clerk/nextjs";
 import { LayoutDashboard, LogOut } from "lucide-react";
 
-function getInitials(user: { firstName?: string | null; lastName?: string | null; fullName?: string | null } | null) {
+function getInitials(user: { firstName?: string | null; lastName?: string | null; fullName?: string | null } | null | undefined) {
   if (!user) return "?";
   if (user.firstName && user.lastName) return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
   if (user.fullName) return user.fullName.slice(0, 2).toUpperCase();
