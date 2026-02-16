@@ -81,7 +81,7 @@ function MarkdownText({ text }: { text: string }) {
 
 export default function DemoChatPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
-  const { messages, input, setInput, append, isLoading } = useChat({
+  const { messages, input, setInput, append, isLoading, error } = useChat({
     api: "/api/chat/demo",
   });
 
@@ -115,6 +115,11 @@ export default function DemoChatPage() {
             <>
               <p className="text-lg font-medium mb-1">Hi! I&apos;m the ForwardSlash demo assistant.</p>
               <p className="text-muted-foreground mb-6">Ask me about our product, pricing, how it works, or what&apos;s included.</p>
+              {error && (
+                <div className="mb-6 px-4 py-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
+                  Couldn&apos;t connect. The demo needs <code className="bg-muted px-1 rounded">OPENAI_API_KEY</code> set in your environment.
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {SUGGESTIONS.map((s) => (
                   <button
@@ -148,6 +153,11 @@ export default function DemoChatPage() {
                   </div>
                 </div>
               ))}
+              {error && (
+                <div className="px-4 py-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
+                  Couldn&apos;t connect. The demo needs <code className="bg-muted px-1 rounded">OPENAI_API_KEY</code> set in your environment.
+                </div>
+              )}
               {isLoading && (
                 <div className="flex justify-start">
                   <div className="inline-block px-4 py-3 rounded-2xl bg-muted/80 text-muted-foreground text-sm">
