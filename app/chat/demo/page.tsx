@@ -307,7 +307,7 @@ export default function DemoChatPage() {
                               <Link
                                 key={p.href + p.label}
                                 href={p.href}
-                                className="inline-flex px-3 py-1.5 rounded-full text-xs font-medium bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
+                                className="inline-flex px-3 py-1.5 rounded-lg text-xs font-medium bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-colors shadow-sm"
                               >
                                 {p.label}
                               </Link>
@@ -336,21 +336,29 @@ export default function DemoChatPage() {
 
       <div className="p-4 border-t shrink-0">
         <div className="max-w-2xl mx-auto">
-          <div className="flex gap-2 rounded-xl border bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+          <div className="border border-border rounded-lg p-3 bg-muted/30 dark:bg-muted/10 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send(input)}
-              placeholder="Ask about ForwardSlash.Chat..."
-              className="flex-1 px-4 py-3 bg-transparent placeholder:text-muted-foreground focus:outline-none text-sm"
+              placeholder="Ask anything"
+              className="w-full text-sm outline-none bg-transparent placeholder:text-muted-foreground focus:outline-none"
             />
-            <button
-              onClick={() => send(input)}
-              disabled={!input.trim() || isLoading}
-              className="p-2 rounded-lg bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
-            >
-              <ArrowUp className="w-4 h-4" />
-            </button>
+            <div className="flex items-center justify-between mt-2">
+              <Link
+                href="/checkout"
+                className="inline-flex px-3 py-1.5 rounded-lg text-xs font-medium bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-colors"
+              >
+                Purchase
+              </Link>
+              <button
+                onClick={() => send(input)}
+                disabled={!input.trim() || isLoading}
+                className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-700 shrink-0"
+              >
+                <ArrowUp className="w-4 h-4" />
+              </button>
+            </div>
           </div>
           <p className="text-xs text-muted-foreground mt-2 text-center">Demo chatbot · Powered by ForwardSlash.Chat</p>
         </div>
