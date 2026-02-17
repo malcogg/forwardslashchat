@@ -17,8 +17,24 @@ export async function POST(req: NextRequest) {
     const evt = await verifyWebhook(req);
 
     if (evt.type === "user.created") {
-      const user = evt.data;
-      const email = user.email_addresses?.[0]?.email_address;
+      const user = evt.data as {
+        email_addresses?: { id: string; email_address: string }[];
+        primary_email_address_id?: string;
+        first_name?: string | null;
+        external_accounts?: { email_address?: string; emailAddress?: string }[];
+      };
+      // Prefer primary email; fallback to first in array (OAuth/Google populates this)
+      let email = user.email_addresses?.find(
+        (e) => e.id === user.primary_email_address_id
+      )?.email_address;
+      if (!email && user.email_addresses?.length) {
+        email = user.email_addresses[0].email_address;
+      }
+      // OAuth providers put email in external_accounts (emailAddress or email_address)
+      if (!email && user.external_accounts?.length) {
+        const ext = user.external_accounts[0];
+        email = ext.emailAddress ?? ext.email_address;
+      }
       const firstName = user.first_name ?? undefined;
 
       if (email) {

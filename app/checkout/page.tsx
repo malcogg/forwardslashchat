@@ -324,7 +324,7 @@ function CheckoutContent() {
               )}
 
               <p className="text-sm text-muted-foreground mt-3 text-center">
-                After payment, email <a href="mailto:michael@forwardslash.chat" className="text-primary hover:underline">michael@forwardslash.chat</a> with your business name, website URL, and order details to start setup.
+                After payment, email <a href="mailto:hello@forwardslash.chat" className="text-primary hover:underline">hello@forwardslash.chat</a> with your business name, website URL, and order details to start setup.
               </p>
 
               <Link
