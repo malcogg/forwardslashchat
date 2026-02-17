@@ -3,8 +3,12 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SignedIn, SignedOut } from "@clerk/nextjs";
+import Link from "next/link";
 
-type ModalStep = "scanning" | "already-scanned" | "results" | "pricing" | "error" | null;
+export const PENDING_SCAN_URL_KEY = "forwardslash_pending_scan_url";
+
+type ModalStep = "signup-prompt" | "scanning" | "already-scanned" | "results" | "pricing" | "error" | null;
 
 const SCAN_MESSAGES = [
   "Reading your homepage...",
@@ -29,7 +33,7 @@ interface ScanModalProps {
 }
 
 export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps) {
-  const [step, setStep] = useState<ModalStep>("scanning");
+  const [step, setStep] = useState<ModalStep>("signup-prompt");
   const [scanMessageIndex, setScanMessageIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [pageCount, setPageCount] = useState(0);
@@ -42,62 +46,19 @@ export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps
 
   useEffect(() => {
     if (!open || !url) return;
-
-    setStep("scanning");
+    // Spec: No full crawl until after signup. Avoid burning Firecrawl credits on non-paying users.
+    setStep("signup-prompt");
     setError(null);
-    setProgress(0);
+  }, [open, url]);
 
-    const msgInterval = setInterval(
-      () => setScanMessageIndex((i) => (i + 1) % SCAN_MESSAGES.length),
-      800
-    );
-
-    const startTime = Date.now();
-    const progressInterval = setInterval(() => {
-      const elapsed = (Date.now() - startTime) / 1000;
-      setProgress((p) => Math.min(90, Math.floor(90 * (1 - Math.exp(-elapsed / 90)))));
-    }, 500);
-
-    const forceRescan = retryKey > 0;
-    fetch("/api/scan", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url, forceRescan }),
-    })
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? "Scan failed");
-        setProgress(100);
-        setPageCount(data.pageCount);
-        setScanId(data.scanId ?? null);
-        onScanComplete?.(data.url ? (data.url.startsWith("http") ? data.url : `https://${data.url}`) : url);
-        setCategories(
-          (data.categories ?? []).map((c: { label: string; count: number }) => ({
-            ...c,
-            on: true,
-          }))
-        );
-        if (data.fromExistingScan) {
-          setScannedAt(data.scannedAt ?? null);
-          setStep("already-scanned");
-        } else {
-          setStep("results");
-        }
-      })
-      .catch((e) => {
-        setError(e.message ?? "Something went wrong. Please try again.");
-        setStep("error");
-      })
-      .finally(() => {
-        clearInterval(msgInterval);
-        clearInterval(progressInterval);
-      });
-
-    return () => {
-      clearInterval(msgInterval);
-      clearInterval(progressInterval);
-    };
-  }, [open, url, retryKey]);
+  const handleContinueToScan = () => {
+    if (!url) return;
+    try {
+      sessionStorage.setItem(PENDING_SCAN_URL_KEY, url);
+    } catch {
+      /* ignore */
+    }
+  };
 
   const toggleCategory = (label: string) => {
     setCategories((prev) =>
@@ -126,6 +87,40 @@ export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps
         >
           <X className="w-5 h-5" />
         </button>
+
+        {step === "signup-prompt" && (
+          <div className="p-10 text-center">
+            <div className="w-14 h-14 mx-auto mb-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
+              <span className="text-2xl">🔍</span>
+            </div>
+            <h2 className="text-xl font-semibold text-foreground mb-3">
+              Ready to scan {url.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+            </h2>
+            <p className="text-muted-foreground mb-6 leading-relaxed">
+              This scan may take a while depending on site size. You&apos;ll see the full status and AI chatbot after signing up.
+              <br />
+              <span className="font-medium text-foreground">Create a free account to continue and get your results.</span>
+            </p>
+            <SignedOut>
+              <Link
+                href="/sign-up"
+                onClick={handleContinueToScan}
+                className="inline-flex items-center justify-center w-full py-3 px-6 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-opacity"
+              >
+                Create free account
+              </Link>
+            </SignedOut>
+            <SignedIn>
+              <Link
+                href="/dashboard"
+                onClick={handleContinueToScan}
+                className="inline-flex items-center justify-center w-full py-3 px-6 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-opacity"
+              >
+                Continue to dashboard
+              </Link>
+            </SignedIn>
+          </div>
+        )}
 
         {step === "scanning" && (
           <div className="p-12 text-center">

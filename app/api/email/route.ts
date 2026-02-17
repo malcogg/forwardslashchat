@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { resend, FROM_EMAIL } from "@/lib/resend";
 import { OrderConfirmationEmail } from "@/components/emails/order-confirmation";
+import { WelcomeEmail } from "@/components/emails/welcome";
 
 /**
  * POST /api/email
- * Send order confirmation or other transactional emails via Resend.
+ * Send order confirmation, welcome, or other transactional emails via Resend.
  * Body: { type, to, ...payload }
  */
 export async function POST(request: Request) {
@@ -21,6 +22,21 @@ export async function POST(request: Request) {
 
     if (!to || typeof to !== "string") {
       return NextResponse.json({ error: "`to` email is required" }, { status: 400 });
+    }
+
+    if (type === "welcome") {
+      const { firstName } = body;
+      const { data, error } = await resend.emails.send({
+        from: FROM_EMAIL,
+        to: [to],
+        subject: "Welcome to ForwardSlash.Chat",
+        react: WelcomeEmail({ firstName: typeof firstName === "string" ? firstName : undefined }),
+      });
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      return NextResponse.json(data);
     }
 
     if (type === "order-confirmation") {

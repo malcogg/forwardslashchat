@@ -93,6 +93,17 @@ export async function POST(
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
   }
 
+  // No crawl before payment (admins bypass)
+  const { sessionClaims } = await auth();
+  const userEmail = sessionClaims?.email as string | undefined;
+  const adminBypass = isAdmin(userEmail);
+  if (!adminBypass && order.status !== "paid") {
+    return NextResponse.json(
+      { error: "Payment required to run the scan. Complete checkout first.", paymentRequired: true },
+      { status: 402 }
+    );
+  }
+
   const apiKey = process.env.FIRECRAWL_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: "Crawl not configured" }, { status: 503 });
@@ -118,11 +129,7 @@ export async function POST(
     );
   }
 
-  // Credit check: admins bypass
-  const { sessionClaims } = await auth();
-  const userEmail = sessionClaims?.email as string | undefined;
-  const adminBypass = isAdmin(userEmail);
-
+  // Credit check: admins bypass (adminBypass already set above)
   if (!adminBypass) {
     const CRAWL_LIMIT = 50;
     const creditsNeeded = CRAWL_LIMIT;

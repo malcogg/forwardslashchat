@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, Suspense, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { PENDING_SCAN_URL_KEY } from "@/components/ScanModal";
 import { UserButton, useUser } from "@clerk/nextjs";
 import { Globe, Check, ChevronDown, X, Monitor, Tablet, Smartphone, Copy, ExternalLink } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -27,10 +28,38 @@ function getInitials(name: string): string {
 
 function DashboardContent() {
   const { user } = useUser();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
 
   const displayName = getDisplayName(user);
+
+  // Spec: After signup, user arrives with pending scan URL. Create project and redirect.
+  useEffect(() => {
+    try {
+      const pendingUrl = sessionStorage.getItem(PENDING_SCAN_URL_KEY);
+      if (!pendingUrl || orderId) return;
+      sessionStorage.removeItem(PENDING_SCAN_URL_KEY);
+      fetch("/api/scan-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: pendingUrl }),
+        credentials: "include",
+      })
+        .then(async (res) => {
+          const json = await res.json();
+          if (!res.ok) throw new Error(json.error ?? "Failed");
+          if (json.orderId) {
+            router.replace(`/dashboard?orderId=${encodeURIComponent(json.orderId)}`);
+          }
+        })
+        .catch(() => {
+          sessionStorage.setItem(PENDING_SCAN_URL_KEY, pendingUrl);
+        });
+    } catch {
+      /* ignore */
+    }
+  }, [orderId, router]);
   const initials = getInitials(displayName);
 
   const [activePanel, setActivePanel] = useState<"design" | "domains">("design");
@@ -113,6 +142,13 @@ function DashboardContent() {
 
   const handleCrawl = () => {
     if (!data?.customer?.id) return;
+    // No crawl before payment: redirect unpaid users to checkout
+    if (data.order?.status !== "paid") {
+      router.push(
+        `/checkout?plan=chatbot&url=${encodeURIComponent(data.customer?.websiteUrl ?? "")}&orderId=${encodeURIComponent(data.order?.id ?? "")}`
+      );
+      return;
+    }
     setCrawlError(null);
     setCrawling(true);
     fetch(`/api/customers/${data.customer.id}/crawl`, { method: "POST" })
@@ -353,6 +389,18 @@ function DashboardContent() {
         <div className={`border-r border-border overflow-y-auto shrink-0 ${activePanel === "design" ? "w-64 p-4" : "min-w-[280px] flex-1 max-w-md p-6"}`}>
           {activePanel === "design" && (
             <>
+              {hasOrder && !isPaid && contentCount > 0 && (
+                <div className="mb-6 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                  <p className="text-sm font-medium text-foreground mb-1">Scraping complete! We have {contentCount} pages of data ready.</p>
+                  <p className="text-sm text-muted-foreground mb-3">Payment unlocks full training of your custom AI chatbot. We use your scraped data to fine-tune and deploy a ready-to-use chatbot at chat.yourdomain.com.</p>
+                  <Link
+                    href={`/checkout?plan=chatbot&url=${encodeURIComponent(customer?.websiteUrl ?? "")}&orderId=${encodeURIComponent(order?.id ?? "")}`}
+                    className="inline-block px-4 py-2 text-sm font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-opacity"
+                  >
+                    Pay to unlock training →
+                  </Link>
+                </div>
+              )}
               {hasOrder && (
                 <div className="mb-6 space-y-2">
                   <h4 className="text-xs font-medium text-muted-foreground uppercase">Status</h4>
@@ -438,10 +486,10 @@ function DashboardContent() {
                       )}
                       <button
                         onClick={handleCrawl}
-                        disabled={crawling || (credits !== null && credits.remaining < 1) || (isPaid && !canRescan && contentCount > 0)}
+                        disabled={crawling || (isPaid && credits !== null && credits.remaining < 1) || (isPaid && !canRescan && contentCount > 0)}
                         className="w-full px-3 py-2 text-sm bg-primary text-primary-foreground rounded hover:opacity-90 disabled:opacity-50"
                       >
-                        {crawling ? "Crawling..." : contentCount ? (isPaid && !canRescan ? "Rescan (7-day cooldown)" : "Rescan site") : "Build my chatbot"}
+                        {crawling ? "Crawling..." : !isPaid ? "Pay to scan" : contentCount ? (canRescan ? "Rescan site" : "Rescan (7-day cooldown)") : "Build my chatbot"}
                       </button>
                       {crawlError && <p className="text-xs text-destructive">{crawlError}</p>}
                     </div>
