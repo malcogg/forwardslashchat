@@ -128,7 +128,7 @@ function CheckoutContent() {
 
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
           {/* Left column: Add-ons + form */}
-          <div className="space-y-8 order-2 lg:order-1">
+          <div className="space-y-8 order-2 lg:order-1 min-w-0">
             <div className="rounded-xl border border-border bg-card p-6">
               <h2 className="font-serif text-lg font-medium text-foreground mb-1">Enhance Your Package</h2>
               <p className="text-sm text-muted-foreground mb-4">
@@ -143,15 +143,15 @@ function CheckoutContent() {
                   return (
                     <label
                       key={addOn.id}
-                      className={`flex gap-4 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      className={`flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                         checked
                           ? "border-emerald-500/50 bg-emerald-500/5 dark:bg-emerald-500/10"
                           : "border-border hover:border-muted-foreground/30"
                       }`}
                     >
-                      <span className="flex items-start gap-3 shrink-0 mt-0.5">
+                      <div className="flex gap-3 min-w-0 flex-1">
                         <span
-                          className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 ${
+                          className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 mt-0.5 ${
                             checked
                               ? "bg-emerald-600 border-emerald-600 text-white"
                               : "border-muted-foreground/50"
@@ -159,16 +159,16 @@ function CheckoutContent() {
                         >
                           {checked ? <Check className="w-3 h-3" /> : null}
                         </span>
-                        <div className="flex-1 min-w-0">
-                          <span className="text-sm font-medium text-foreground block">
+                        <div className="min-w-0 flex-1">
+                          <span className="text-sm font-medium text-foreground block break-words">
                             {addOn.label}
                           </span>
-                          <span className="text-xs text-muted-foreground mt-0.5 block">
+                          <span className="text-xs text-muted-foreground mt-0.5 block break-words">
                             {addOn.description}
                           </span>
                         </div>
-                      </span>
-                      <span className="text-sm font-medium text-foreground shrink-0">
+                      </div>
+                      <span className="text-sm font-medium text-foreground shrink-0 sm:pl-2">
                         +${addOn.price.toLocaleString()}
                       </span>
                       <input
@@ -184,17 +184,19 @@ function CheckoutContent() {
                   href={CAL_LINK}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex gap-4 p-3 rounded-lg border border-border hover:border-muted-foreground/30 hover:bg-accent/50 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 p-3 rounded-lg border border-border hover:border-muted-foreground/30 hover:bg-accent/50 transition-colors"
                 >
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm font-medium text-foreground block">
-                      Extra Pages — Contact Us
-                    </span>
-                    <span className="text-xs text-muted-foreground mt-0.5 block">
-                      Need more pages? Message us for a custom quote.
-                    </span>
+                  <div className="flex min-w-0 flex-1">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-sm font-medium text-foreground block break-words">
+                        Extra Pages — Contact Us
+                      </span>
+                      <span className="text-xs text-muted-foreground mt-0.5 block break-words">
+                        Need more pages? Message us for a custom quote.
+                      </span>
+                    </div>
                   </div>
-                  <span className="text-sm text-primary shrink-0">→</span>
+                  <span className="text-sm text-primary shrink-0 sm:pl-2">→</span>
                 </a>
               </div>
             </div>
