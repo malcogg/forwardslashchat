@@ -48,25 +48,49 @@ const PLANS: Record<PlanSlug, { name: string; price: number; description: string
   },
 };
 
-type AddOnId =
-  | "dns"
-  | "ai-chatbot"
-  | "year2-hosting"
-  | "logo"
-  | "seo"
-  | "extra-pages"
-  | "priority"
-  | "blog";
+const CAL_LINK = process.env.NEXT_PUBLIC_STRATEGY_CALL_URL || "https://cal.com/forwardslash/30min";
 
-const ADD_ONS: { id: AddOnId; label: string; price: number; forPlans?: PlanSlug[]; tooltip?: string }[] = [
-  { id: "dns", label: "DNS setup help", price: 99, tooltip: "We'll help you add the CNAME record to connect your domain." },
-  { id: "ai-chatbot", label: "AI Chatbot add-on", price: 200, forPlans: ["starter"], tooltip: "Add our custom AI trained on your site content. Chat at chat.yourdomain.com." },
-  { id: "year2-hosting", label: "Year 2 hosting (optional)", price: 200, tooltip: "Extend hosting for another year after your initial period." },
-  { id: "logo", label: "Logo design", price: 150, tooltip: "Custom logo creation to match your brand." },
-  { id: "seo", label: "Advanced SEO", price: 150, tooltip: "On-page optimization, meta tags, and schema markup." },
-  { id: "extra-pages", label: "Extra 5 pages", price: 75, tooltip: "Five additional pages beyond your plan's included count." },
-  { id: "priority", label: "Priority delivery (5-day turnaround)", price: 100, tooltip: "Jump the queue — delivered within 5 business days." },
-  { id: "blog", label: "Blog setup", price: 100, tooltip: "Blog section with categories and RSS." },
+type AddOnId = "dns" | "ai-chatbot" | "logo" | "seo" | "blog";
+
+const ADD_ONS: {
+  id: AddOnId;
+  label: string;
+  price: number;
+  description: string;
+  forPlans?: PlanSlug[];
+}[] = [
+  {
+    id: "dns",
+    label: "DNS Setup Help",
+    price: 99,
+    description: "We handle the DNS records for you.",
+  },
+  {
+    id: "ai-chatbot",
+    label: "AI Chatbot Add-On",
+    price: 550,
+    description: "Add your custom AI assistant trained on your content — answers 24/7 on chat.yourdomain.com.",
+    forPlans: ["starter"],
+  },
+  {
+    id: "logo",
+    label: "Logo Design",
+    price: 150,
+    description: "Custom logo + favicon (up to 5 concepts) to make your site look professional.",
+  },
+  {
+    id: "seo",
+    label: "Advanced SEO",
+    price: 400,
+    description: "For existing sites: keyword research, on-page optimizations, local schema. (New sites include basic SEO.)",
+    forPlans: ["redesign", "chatbot", "chatbot-1y", "chatbot-2y", "chatbot-3y"],
+  },
+  {
+    id: "blog",
+    label: "Blog Setup",
+    price: 365,
+    description: "Full blog setup + 365 AI-generated posts ($1 per post). First-time customers only.",
+  },
 ];
 
 function CheckoutContent() {
@@ -106,9 +130,9 @@ function CheckoutContent() {
           {/* Left column: Add-ons + form */}
           <div className="space-y-8 order-2 lg:order-1">
             <div className="rounded-xl border border-border bg-card p-6">
-              <h2 className="font-serif text-lg font-medium text-foreground mb-4">Add-on services</h2>
+              <h2 className="font-serif text-lg font-medium text-foreground mb-1">Enhance Your Package</h2>
               <p className="text-sm text-muted-foreground mb-4">
-                Enhance your package with these optional services.
+                Optional one-time add-ons — pick what fits.
               </p>
               <div className="space-y-3">
                 {ADD_ONS.map((addOn) => {
@@ -119,14 +143,13 @@ function CheckoutContent() {
                   return (
                     <label
                       key={addOn.id}
-                      title={addOn.tooltip}
-                      className={`flex items-center justify-between gap-4 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      className={`flex gap-4 p-3 rounded-lg border cursor-pointer transition-colors ${
                         checked
                           ? "border-emerald-500/50 bg-emerald-500/5 dark:bg-emerald-500/10"
                           : "border-border hover:border-muted-foreground/30"
                       }`}
                     >
-                      <span className="flex items-center gap-3">
+                      <span className="flex items-start gap-3 shrink-0 mt-0.5">
                         <span
                           className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 ${
                             checked
@@ -136,9 +159,16 @@ function CheckoutContent() {
                         >
                           {checked ? <Check className="w-3 h-3" /> : null}
                         </span>
-                        <span className="text-sm font-medium text-foreground">{addOn.label}</span>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium text-foreground block">
+                            {addOn.label}
+                          </span>
+                          <span className="text-xs text-muted-foreground mt-0.5 block">
+                            {addOn.description}
+                          </span>
+                        </div>
                       </span>
-                      <span className="text-sm font-medium text-foreground">
+                      <span className="text-sm font-medium text-foreground shrink-0">
                         +${addOn.price.toLocaleString()}
                       </span>
                       <input
@@ -150,6 +180,22 @@ function CheckoutContent() {
                     </label>
                   );
                 })}
+                <a
+                  href={CAL_LINK}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex gap-4 p-3 rounded-lg border border-border hover:border-muted-foreground/30 hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium text-foreground block">
+                      Extra Pages — Contact Us
+                    </span>
+                    <span className="text-xs text-muted-foreground mt-0.5 block">
+                      Need more pages? Message us for a custom quote.
+                    </span>
+                  </div>
+                  <span className="text-sm text-primary shrink-0">→</span>
+                </a>
               </div>
             </div>
 
