@@ -5,6 +5,8 @@ import Link from "next/link";
 import { ArrowUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+const CAL_LINK = process.env.NEXT_PUBLIC_STRATEGY_CALL_URL || "https://cal.com/forwardslash/30min";
+
 const PILL_SUGGESTIONS = [
   "What is ForwardSlash.Chat?",
   "How much does it cost?",
@@ -19,49 +21,60 @@ const QUESTION_SUGGESTIONS = [
 ];
 
 const FALLBACK =
-  "Sorry, I'm still learning! 😊 Ask me about our $350 quick start site, $1,000 new build, $2,000 redesign, AI chatbot, or how we help Florida businesses get online.";
+  "Sorry, I'm still learning! 😊 Ask me about our $350 quick start site, $1,000 new build, $2,000 redesign, AI chatbot, or how we help Florida businesses get online. Or [contact us](" +
+  CAL_LINK +
+  ") directly.";
 
 const TYPING_DELAY_MS = 1600;
 
-function getHardcodedResponse(message: string): string | null {
+type ResponseResult = { text: string; pills?: { label: string; href: string }[] };
+
+function getHardcodedResponse(message: string): ResponseResult | null {
   const q = message.toLowerCase().trim();
   if (!q) return null;
 
-  const pairs: { keywords: string[]; answer: string }[] = [
+  const pairs: { keywords: string[]; answer: string; pills?: { label: string; href: string }[] }[] = [
     {
       keywords: ["how much", "pricing", "cost", "plans", "price", "how much is it"],
-      answer: `Simple one-time pricing — year 1 hosting included, no monthly fees:
-• Quick WordPress Starter: $350 (10 pages, perfect to get going)
-• Brand New Website Build: $1,000 (full custom + AI chatbot)
-• Website Redesign / Refresh: $2,000 (upgrade your existing site + AI)
-After year 1: move to your own host (free) or renew hosting with us for $200/year (optional).`,
+      answer: `Simple one-time pricing — year 1 hosting included, no monthly fees ever.
+After year 1: move to your own host (free) or renew hosting with us for $200/year (optional).
+Tap a plan below to go straight to checkout — full details on [our services page](/services).`,
+      pills: [
+        { label: "Quick $350 Starter", href: "/checkout?plan=starter" },
+        { label: "$1,000 New Build", href: "/checkout?plan=new-build" },
+        { label: "$2,000 Redesign", href: "/checkout?plan=redesign" },
+      ],
     },
     {
       keywords: ["how does it work", "how to get started", "process", "steps"],
       answer: `Easy 3 steps:
 1. Tell us your business & goals
 2. We design & build your site (with AI chatbot if chosen)
-3. We launch + host for year 1 — live in days/weeks. One-time payment, no subscriptions.`,
+3. We launch + host for year 1 — live in days/weeks.
+One-time payment, no subscriptions. See the full [How it Works](/services#how-it-works) page.`,
     },
     {
       keywords: ["quick", "starter", "$350", "simple site", "just get started"],
       answer:
         "Our $350 Quick WordPress Starter is perfect if you just want a simple site fast: 10 clean pages, mobile-ready, basic SEO, contact form + map, WordPress dashboard, year 1 hosting included. One-time $350 — no monthly fees. Great for new entrepreneurs!",
+      pills: [{ label: "Get Your $350 Site Now", href: "/checkout?plan=starter" }],
     },
     {
       keywords: ["new website", "brand new", "$1000", "build"],
       answer:
         "For $1,000 one-time we build you a full custom modern website (Next.js or WordPress) + built-in AI chatbot trained on your content. Mobile-responsive, fast, SEO-ready, year 1 hosting included. Perfect upgrade for growing businesses.",
+      pills: [{ label: "Start $1,000 Build", href: "/checkout?plan=new-build" }],
     },
     {
       keywords: ["redesign", "refresh", "upgrade", "$2000"],
       answer:
         "$2,000 one-time redesign/refresh: modern look, speed & SEO upgrades, mobile-responsive, + built-in AI chatbot. We keep your existing content, make it look & work better, host year 1. Ideal if your current site feels outdated.",
+      pills: [{ label: "Start $2,000 Redesign", href: "/checkout?plan=redesign" }],
     },
     {
       keywords: ["ai chatbot", "ai", "chatbot", "what is the ai"],
       answer:
-        "Every plan can include our custom AI chatbot (trained only on your site content). It lives at chat.yourdomain.com or yourdomain.com/chat, answers customer questions 24/7 — services, hours, prices, FAQs — no monthly fees, private & branded.",
+        "Every plan can include our custom AI chatbot (trained only on your site content). It lives at chat.yourdomain.com or yourdomain.com/chat, answers customer questions 24/7 — services, hours, prices, FAQs — no monthly fees, private & branded. See it in action on the [Demo](/chat/demo).",
     },
     {
       keywords: ["hosting", "host", "year 1", "after year 1", "renew"],
@@ -70,24 +83,47 @@ After year 1: move to your own host (free) or renew hosting with us for $200/yea
     },
     {
       keywords: ["florida", "orlando", "local"],
-      answer:
-        "We're based in Orlando, Florida and specialize in helping local businesses like plumbers, shops, restaurants, and contractors get a professional online presence fast — affordable, no-nonsense websites + AI help.",
+      answer: `We're based in Orlando, Florida and specialize in helping local businesses like plumbers, shops, restaurants, and contractors get a professional online presence fast — affordable, no-nonsense websites + AI help.
+[Book a chat with Michael Francis](${CAL_LINK})`,
     },
     {
       keywords: ["demo", "see it", "try", "test"],
+      answer: `You're chatting with the demo right now! Tap any pill above or ask about our websites, AI chatbot, pricing, or getting started.
+Want to see more? Visit the full [Demo](/chat/demo).`,
+    },
+    {
+      keywords: ["dashboard", "how to use dashboard", "what is dashboard"],
       answer:
-        "You're chatting with the demo right now! Tap any question above or ask anything about our websites, AI chatbot, pricing, or getting started.",
+        "After payment, you get a dashboard to track your order, upload extra files, customize branding (logo/colors), view DNS instructions, and see your live site/chatbot URL once deployed. Super simple — no tech skills needed.",
+    },
+    {
+      keywords: ["branding", "customize", "logo", "colors"],
+      answer:
+        "In your dashboard, upload your logo/favicon, pick accent/background colors — your website and AI chatbot will match your brand perfectly. Easy drag-and-drop.",
+    },
+    {
+      keywords: ["how long", "delivery time", "when will it be ready", "timeline"],
+      answer:
+        "Most sites launch in days to a few weeks depending on plan. Quick $350 starter is fastest. We aim for 3–10 business days after you approve the design.",
+    },
+    {
+      keywords: ["help", "support", "contact", "questions"],
+      answer: `We're here for you! Reach out to Michael Francis anytime:
+Email: michael@forwardslash.chat
+[Book a quick chat](${CAL_LINK})
+We're based in Orlando, Florida and reply fast.`,
     },
     {
       keywords: ["what is", "what does forwardslash do", "what is forwardslash.chat", "tell me about"],
-      answer:
-        "**ForwardSlash.Chat** helps new entrepreneurs and local businesses in Florida get online fast with a professional website + built-in AI chatbot. We build it, host it for year 1, and you pay once — no monthly fees. From a quick $350 starter site to full custom builds.",
+      answer: `**ForwardSlash.Chat** helps new entrepreneurs and local businesses in Florida get online fast with a professional website + built-in AI chatbot. We build it, host it for year 1, and you pay once — no monthly fees.
+From a quick [starter site for $350](/services#pricing) to full custom builds.
+Check the [demo](/chat/demo) or see [how it works](/services#how-it-works).`,
     },
   ];
 
-  for (const { keywords, answer } of pairs) {
+  for (const { keywords, answer, pills } of pairs) {
     for (const kw of keywords) {
-      if (q.includes(kw)) return answer;
+      if (q.includes(kw)) return { text: answer, pills };
     }
   }
   return null;
@@ -134,11 +170,21 @@ function MarkdownText({ text }: { text: string }) {
         );
       }
       if (type === "link") {
-        parts.push(
-          <a key={key++} href={match[2]} target="_blank" rel="noopener noreferrer" className="text-primary underline">
-            {match[1]}
-          </a>
-        );
+        const href = match[2];
+        const isInternal = href.startsWith("/") && !href.startsWith("//");
+        if (isInternal) {
+          parts.push(
+            <Link key={key++} href={href} className="text-primary underline hover:underline">
+              {match[1]}
+            </Link>
+          );
+        } else {
+          parts.push(
+            <a key={key++} href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+              {match[1]}
+            </a>
+          );
+        }
       } else if (type === "bold") {
         parts.push(<strong key={key++}>{match[1]}</strong>);
       } else if (type === "code") {
@@ -160,7 +206,7 @@ function MarkdownText({ text }: { text: string }) {
   return <>{parts}</>;
 }
 
-type Message = { role: "user" | "assistant"; content: string; id?: string };
+type Message = { role: "user" | "assistant"; content: string; id?: string; pills?: { label: string; href: string }[] };
 
 export default function DemoChatPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -180,8 +226,13 @@ export default function DemoChatPage() {
     setIsLoading(true);
 
     setTimeout(() => {
-      const reply = getHardcodedResponse(t) ?? FALLBACK;
-      setMessages((prev) => [...prev, { role: "assistant", content: reply, id: `a-${Date.now()}` }]);
+      const result = getHardcodedResponse(t);
+      const content = result?.text ?? FALLBACK;
+      const pills = result?.pills;
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content, pills, id: `a-${Date.now()}` },
+      ]);
       setIsLoading(false);
     }, TYPING_DELAY_MS);
   };
@@ -246,9 +297,24 @@ export default function DemoChatPage() {
                     }`}
                   >
                     {m.role === "assistant" ? (
-                      <div className="prose prose-sm dark:prose-invert max-w-none">
-                        <MarkdownText text={m.content} />
-                      </div>
+                      <>
+                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                          <MarkdownText text={m.content} />
+                        </div>
+                        {m.pills && m.pills.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {m.pills.map((p) => (
+                              <Link
+                                key={p.href + p.label}
+                                href={p.href}
+                                className="inline-flex px-3 py-1.5 rounded-full text-xs font-medium bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
+                              >
+                                {p.label}
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </>
                     ) : (
                       m.content
                     )}
