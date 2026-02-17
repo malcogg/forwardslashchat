@@ -8,7 +8,7 @@ import { Footer } from "@/components/landing/Footer";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
 
-type PlanSlug = "starter" | "new-build" | "redesign" | "chatbot";
+type PlanSlug = "starter" | "new-build" | "redesign" | "chatbot" | "chatbot-1y" | "chatbot-2y" | "chatbot-3y";
 
 const PLANS: Record<PlanSlug, { name: string; price: number; description: string }> = {
   starter: {
@@ -31,6 +31,21 @@ const PLANS: Record<PlanSlug, { name: string; price: number; description: string
     price: 550,
     description: "Custom AI trained on your site, chat.yourdomain.com, year 1 hosting",
   },
+  "chatbot-1y": {
+    name: "AI Chatbot (1-Year Starter)",
+    price: 550,
+    description: "Custom AI trained on your site, chat.yourdomain.com, year 1 hosting",
+  },
+  "chatbot-2y": {
+    name: "AI Chatbot (2-Year Bundle)",
+    price: 850,
+    description: "Custom AI trained on your site, 2-year hosting included",
+  },
+  "chatbot-3y": {
+    name: "AI Chatbot (3-Year Bundle)",
+    price: 1250,
+    description: "Custom AI trained on your site, 3-year hosting included",
+  },
 };
 
 type AddOnId =
@@ -43,15 +58,15 @@ type AddOnId =
   | "priority"
   | "blog";
 
-const ADD_ONS: { id: AddOnId; label: string; price: number; forPlans?: PlanSlug[] }[] = [
-  { id: "dns", label: "DNS setup help", price: 99 },
-  { id: "ai-chatbot", label: "AI Chatbot add-on", price: 200, forPlans: ["starter"] },
-  { id: "year2-hosting", label: "Year 2 hosting (optional)", price: 200 },
-  { id: "logo", label: "Logo design", price: 150 },
-  { id: "seo", label: "Advanced SEO", price: 150 },
-  { id: "extra-pages", label: "Extra 5 pages", price: 75 },
-  { id: "priority", label: "Priority delivery (5-day turnaround)", price: 100 },
-  { id: "blog", label: "Blog setup", price: 100 },
+const ADD_ONS: { id: AddOnId; label: string; price: number; forPlans?: PlanSlug[]; tooltip?: string }[] = [
+  { id: "dns", label: "DNS setup help", price: 99, tooltip: "We'll help you add the CNAME record to connect your domain." },
+  { id: "ai-chatbot", label: "AI Chatbot add-on", price: 200, forPlans: ["starter"], tooltip: "Add our custom AI trained on your site content. Chat at chat.yourdomain.com." },
+  { id: "year2-hosting", label: "Year 2 hosting (optional)", price: 200, tooltip: "Extend hosting for another year after your initial period." },
+  { id: "logo", label: "Logo design", price: 150, tooltip: "Custom logo creation to match your brand." },
+  { id: "seo", label: "Advanced SEO", price: 150, tooltip: "On-page optimization, meta tags, and schema markup." },
+  { id: "extra-pages", label: "Extra 5 pages", price: 75, tooltip: "Five additional pages beyond your plan's included count." },
+  { id: "priority", label: "Priority delivery (5-day turnaround)", price: 100, tooltip: "Jump the queue — delivered within 5 business days." },
+  { id: "blog", label: "Blog setup", price: 100, tooltip: "Blog section with categories and RSS." },
 ];
 
 function CheckoutContent() {
@@ -60,9 +75,11 @@ function CheckoutContent() {
   const plan = PLANS[planSlug] ?? PLANS.starter;
 
   const [addOns, setAddOns] = useState<Set<AddOnId>>(new Set());
-  const [businessName, setBusinessName] = useState("");
-  const [domain, setDomain] = useState("");
-  const [websiteUrl, setWebsiteUrl] = useState("");
+  const urlParam = searchParams.get("url") ?? searchParams.get("websiteUrl");
+  const initialUrl = urlParam ? (urlParam.startsWith("http") ? urlParam : `https://${urlParam}`) : "";
+  const [businessName, setBusinessName] = useState(searchParams.get("businessName") ?? "");
+  const [domain, setDomain] = useState(searchParams.get("domain") ?? urlParam?.replace(/^https?:\/\//, "").replace(/\/$/, "") ?? "");
+  const [websiteUrl, setWebsiteUrl] = useState(initialUrl);
 
   const toggleAddOn = (id: AddOnId) => {
     const addOn = ADD_ONS.find((a) => a.id === id);
@@ -102,6 +119,7 @@ function CheckoutContent() {
                   return (
                     <label
                       key={addOn.id}
+                      title={addOn.tooltip}
                       className={`flex items-center justify-between gap-4 p-3 rounded-lg border cursor-pointer transition-colors ${
                         checked
                           ? "border-emerald-500/50 bg-emerald-500/5 dark:bg-emerald-500/10"
@@ -241,7 +259,7 @@ function CheckoutContent() {
         <div className="mt-12 pt-8 border-t border-border">
           <p className="text-sm text-muted-foreground mb-3">Switch to a different plan:</p>
           <div className="flex flex-wrap gap-3">
-            {(["starter", "new-build", "redesign", "chatbot"] as const).map((slug) => {
+            {(["starter", "new-build", "redesign", "chatbot", "chatbot-1y", "chatbot-2y", "chatbot-3y"] as PlanSlug[]).map((slug) => {
               const p = PLANS[slug];
               const active = planSlug === slug;
               return (

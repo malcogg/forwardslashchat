@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { UserButton, useUser } from "@clerk/nextjs";
-import { Globe, Check, ChevronDown, X, Monitor, Tablet, Smartphone } from "lucide-react";
+import { Globe, Check, ChevronDown, X, Monitor, Tablet, Smartphone, Copy, ExternalLink } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CustomerChat } from "@/components/CustomerChat";
 
@@ -58,6 +58,7 @@ function DashboardContent() {
       subdomain: string;
       websiteUrl: string;
       prepaidUntil: string | null;
+      lastCrawledAt: string | null;
       status: string;
       primaryColor: string | null;
     } | null;
@@ -68,6 +69,8 @@ function DashboardContent() {
   const [error, setError] = useState<string | null>(null);
   const [crawling, setCrawling] = useState(false);
   const [credits, setCredits] = useState<{ remaining: number; creditsLimit: number } | null>(null);
+  const [crawlError, setCrawlError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -110,11 +113,15 @@ function DashboardContent() {
 
   const handleCrawl = () => {
     if (!data?.customer?.id) return;
+    setCrawlError(null);
     setCrawling(true);
     fetch(`/api/customers/${data.customer.id}/crawl`, { method: "POST" })
       .then(async (res) => {
         const json = await res.json();
-        if (!res.ok) throw new Error(json.error ?? "Crawl failed");
+        if (!res.ok) {
+          setCrawlError(json.error ?? "Crawl failed");
+          return;
+        }
         const [dashRes, creditsRes] = await Promise.all([
           fetch(`/api/dashboard${orderId ? `?orderId=${encodeURIComponent(orderId)}` : ""}`),
           fetch("/api/credits"),
@@ -122,8 +129,16 @@ function DashboardContent() {
         if (dashRes.ok) setData(await dashRes.json());
         if (creditsRes.ok) setCredits(await creditsRes.json());
       })
-      .catch(() => {})
+      .catch(() => setCrawlError("Crawl failed"))
       .finally(() => setCrawling(false));
+  };
+
+  const copyCname = () => {
+    const cname = `Type: CNAME\nHost: ${customer?.subdomain ?? "chat"}\nValue: cname.forwardslash.chat`;
+    navigator.clipboard.writeText(cname).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   };
 
   if (loading) {
@@ -137,8 +152,20 @@ function DashboardContent() {
             <UserButton afterSignOutUrl="/" />
           </div>
         </div>
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-muted-foreground">Loading...</p>
+        <div className="flex h-[calc(100vh-52px)]">
+          <aside className="w-56 border-r border-border bg-muted/20 p-4 animate-pulse">
+            <div className="h-8 w-8 rounded-lg bg-muted mb-6" />
+            <div className="h-4 w-32 bg-muted rounded mb-4" />
+            <div className="space-y-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-6 bg-muted rounded" />
+              ))}
+            </div>
+          </aside>
+          <div className="flex-1 p-6 space-y-6">
+            <div className="h-6 w-48 bg-muted rounded" />
+            <div className="h-32 bg-muted rounded" />
+          </div>
         </div>
       </main>
     );
@@ -193,6 +220,21 @@ function DashboardContent() {
   const customer = data?.customer;
   const hasOrder = !!order;
   const contentCount = data?.contentCount ?? 0;
+
+  const RESCAN_DAYS = 7;
+  const lastCrawled = customer?.lastCrawledAt ? new Date(customer.lastCrawledAt) : null;
+  const nextCrawlAvailable = lastCrawled
+    ? new Date(lastCrawled.getTime() + RESCAN_DAYS * 24 * 60 * 60 * 1000)
+    : null;
+  const canRescan = !lastCrawled || !nextCrawlAvailable || new Date() >= nextCrawlAvailable;
+  const isPaid = order?.status === "paid";
+
+  const STATUS_STEPS = [
+    { key: "payment", label: "Payment confirmed", done: ["paid", "processing", "delivered"].includes(order?.status ?? "") },
+    { key: "content", label: "Content & training", done: (contentCount ?? 0) > 0 || ["dns_setup", "testing", "delivered"].includes(customer?.status ?? "") },
+    { key: "dns", label: "DNS setup", done: ["testing", "delivered"].includes(customer?.status ?? "") },
+    { key: "live", label: "Chatbot live", done: customer?.status === "delivered" },
+  ];
 
   return (
     <main className="min-h-screen bg-background">
@@ -311,6 +353,21 @@ function DashboardContent() {
         <div className={`border-r border-border overflow-y-auto shrink-0 ${activePanel === "design" ? "w-64 p-4" : "min-w-[280px] flex-1 max-w-md p-6"}`}>
           {activePanel === "design" && (
             <>
+              {hasOrder && (
+                <div className="mb-6 space-y-2">
+                  <h4 className="text-xs font-medium text-muted-foreground uppercase">Status</h4>
+                  <div className="space-y-1">
+                    {STATUS_STEPS.map((s) => (
+                      <div key={s.key} className="flex items-center gap-2 text-sm">
+                        <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${s.done ? "bg-emerald-600 text-white" : "border border-muted-foreground/50"}`}>
+                          {s.done ? <Check className="w-2.5 h-2.5" /> : null}
+                        </span>
+                        <span className={s.done ? "text-foreground" : "text-muted-foreground"}>{s.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <h3 className="font-medium text-foreground mb-6">Design</h3>
 
               {!hasOrder ? (
@@ -321,7 +378,7 @@ function DashboardContent() {
                   <Link href="/" className="block w-full px-3 py-2 text-sm text-center border border-border rounded hover:bg-muted">
                     Scan your site
                   </Link>
-                  <Link href="/checkout" className="block w-full px-3 py-2 text-sm text-center bg-primary text-primary-foreground rounded hover:opacity-90">
+                  <Link href="/checkout?plan=chatbot" className="block w-full px-3 py-2 text-sm text-center bg-primary text-primary-foreground rounded hover:opacity-90">
                     Get started →
                   </Link>
                   <p className="text-xs text-muted-foreground">
@@ -369,10 +426,25 @@ function DashboardContent() {
                       ))}
                     </div>
                   </div>
-                  {customer && ["content_collection", "crawling", "indexing"].includes(customer.status) && (
-                    <button onClick={handleCrawl} disabled={crawling || (credits !== null && credits.remaining < 1)} className="w-full px-3 py-2 text-sm bg-primary text-primary-foreground rounded hover:opacity-90 disabled:opacity-50">
-                      {crawling ? "Crawling..." : contentCount ? "Refresh content" : "Build my chatbot"}
-                    </button>
+                  {customer && (["content_collection", "crawling", "indexing"].includes(customer.status) || (contentCount > 0 && ["dns_setup", "testing", "delivered"].includes(customer.status))) && (
+                    <div className="space-y-2">
+                      {lastCrawled && (
+                        <p className="text-xs text-muted-foreground">
+                          Last scanned: {lastCrawled.toLocaleDateString()}
+                          {isPaid && !canRescan && nextCrawlAvailable && (
+                            <span className="block">Rescan in {Math.ceil((nextCrawlAvailable.getTime() - Date.now()) / (24 * 60 * 60 * 1000))} days</span>
+                          )}
+                        </p>
+                      )}
+                      <button
+                        onClick={handleCrawl}
+                        disabled={crawling || (credits !== null && credits.remaining < 1) || (isPaid && !canRescan && contentCount > 0)}
+                        className="w-full px-3 py-2 text-sm bg-primary text-primary-foreground rounded hover:opacity-90 disabled:opacity-50"
+                      >
+                        {crawling ? "Crawling..." : contentCount ? (isPaid && !canRescan ? "Rescan (7-day cooldown)" : "Rescan site") : "Build my chatbot"}
+                      </button>
+                      {crawlError && <p className="text-xs text-destructive">{crawlError}</p>}
+                    </div>
                   )}
                 </div>
               )}
@@ -392,9 +464,18 @@ function DashboardContent() {
               {customer ? (
                 <>
                   <p className="text-sm text-muted-foreground mb-4">Add this CNAME record to your DNS:</p>
-                  <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto border border-border">
-                    {`Type: CNAME\nHost: ${customer.subdomain}\nValue: cname.forwardslash.chat`}
-                  </pre>
+                  <div className="relative">
+                    <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto border border-border pr-12">
+                      {`Type: CNAME\nHost: ${customer.subdomain}\nValue: cname.forwardslash.chat`}
+                    </pre>
+                    <button
+                      onClick={copyCname}
+                      className="absolute top-3 right-3 p-2 rounded-md border border-border bg-background hover:bg-accent text-muted-foreground hover:text-foreground"
+                      title="Copy to clipboard"
+                    >
+                      {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
                   <p className="text-xs text-muted-foreground mt-4">
                     <a href="https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-cname-record/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Cloudflare</a>
                     {" · "}
@@ -416,10 +497,21 @@ function DashboardContent() {
                       Chatbot is live
                     </button>
                   )}
+                  {customer.status === "delivered" && (
+                    <a
+                      href={`https://${customer.subdomain}.${customer.domain}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-4 flex items-center justify-center gap-2 w-full px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Test your chatbot
+                    </a>
+                  )}
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Complete checkout to set up your domain. <Link href="/checkout" className="text-primary hover:underline">Go to checkout</Link>
+                  Complete checkout to set up your domain. <Link href="/checkout?plan=chatbot" className="text-primary hover:underline">Go to checkout</Link>
                 </p>
               )}
             </>
@@ -481,7 +573,7 @@ function DashboardContent() {
               <p className="text-sm text-muted-foreground text-center mb-6">
                 Complete checkout to preview your chatbot.
               </p>
-              <Link href="/checkout" className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded hover:opacity-90">
+              <Link href="/checkout?plan=chatbot" className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded hover:opacity-90">
                 Go to checkout
               </Link>
             </div>

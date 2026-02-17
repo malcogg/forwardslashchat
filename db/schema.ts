@@ -73,6 +73,7 @@ export const customers = pgTable("customers", {
   logoUrl: text("logo_url"),
   welcomeMessage: text("welcome_message"),
   prepaidUntil: timestamp("prepaid_until", { withTimezone: true }),
+  lastCrawledAt: timestamp("last_crawled_at", { withTimezone: true }), // for 7-day rescan cooldown
   status: text("status").notNull().default("pending"), // pending | content_collection | crawling | indexing | dns_setup | testing | delivered
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

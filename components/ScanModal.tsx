@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type ModalStep = "scanning" | "results" | "pricing" | "error" | null;
+type ModalStep = "scanning" | "already-scanned" | "results" | "pricing" | "error" | null;
 
 const SCAN_MESSAGES = [
   "Reading your homepage...",
@@ -38,6 +38,7 @@ export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps
   const [error, setError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
   const [scanId, setScanId] = useState<string | null>(null);
+  const [scannedAt, setScannedAt] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !url) return;
@@ -57,10 +58,11 @@ export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps
       setProgress((p) => Math.min(90, Math.floor(90 * (1 - Math.exp(-elapsed / 90)))));
     }, 500);
 
+    const forceRescan = retryKey > 0;
     fetch("/api/scan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({ url, forceRescan }),
     })
       .then(async (res) => {
         const data = await res.json();
@@ -75,7 +77,12 @@ export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps
             on: true,
           }))
         );
-        setStep("results");
+        if (data.fromExistingScan) {
+          setScannedAt(data.scannedAt ?? null);
+          setStep("already-scanned");
+        } else {
+          setStep("results");
+        }
       })
       .catch((e) => {
         setError(e.message ?? "Something went wrong. Please try again.");
@@ -138,6 +145,32 @@ export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps
             <p className="text-xs text-muted-foreground">
               Typically 2–8 minutes for most sites
             </p>
+          </div>
+        )}
+
+        {step === "already-scanned" && (
+          <div className="p-8">
+            <h2 className="text-xl font-semibold text-foreground mb-2">
+              We&apos;ve already scanned this site
+            </h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              We found a recent scan for {url.replace(/^https?:\/\//, "").replace(/\/$/, "")} with {pageCount} pages.
+              {scannedAt && ` Scanned ${new Date(scannedAt).toLocaleDateString()}.`}
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => setStep("results")}
+                className="w-full py-3 px-4 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-opacity"
+              >
+                Use existing results
+              </button>
+              <button
+                onClick={() => setRetryKey((k) => k + 1)}
+                className="w-full py-3 px-4 border border-border rounded-lg text-foreground font-medium hover:bg-accent transition-colors"
+              >
+                Rescan anyway
+              </button>
+            </div>
           </div>
         )}
 

@@ -68,7 +68,8 @@ async function runFirecrawlCrawl(apiKey: string, url: string): Promise<{ success
 
 export async function POST(request: Request) {
   try {
-    const { url } = await request.json();
+    const body = (await request.json().catch(() => ({}))) as { url?: string; forceRescan?: boolean };
+    const { url, forceRescan = false } = body;
     if (!url || typeof url !== "string") {
       return NextResponse.json({ error: "URL is required" }, { status: 400 });
     }
@@ -84,9 +85,9 @@ export async function POST(request: Request) {
     }
 
     // Check if we already have content for this URL (saves Firecrawl credits)
-    if (db) {
-      const { customers, content } = await import("@/db/schema");
-      const { eq, count } = await import("drizzle-orm");
+    if (db && !forceRescan) {
+      const { customers, content, scans } = await import("@/db/schema");
+      const { eq, count, and, gte, sql } = await import("drizzle-orm");
       let host: string;
       try {
         host = new URL(normalized).hostname.replace(/^www\./, "");
@@ -117,6 +118,35 @@ export async function POST(request: Request) {
               fromCache: true,
             });
           }
+        }
+
+        // Check scans table for recent anonymous scan (within 30 days)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const recentScans = await db
+          .select()
+          .from(scans)
+          .where(and(gte(scans.createdAt, thirtyDaysAgo)))
+          .orderBy(sql`${scans.createdAt} DESC`)
+          .limit(50);
+        const existingScan = recentScans.find((s) => {
+          try {
+            const sHost = new URL(s.url).hostname.replace(/^www\./, "");
+            return sHost === host;
+          } catch {
+            return false;
+          }
+        });
+        if (existingScan) {
+          const categories = Array.isArray(existingScan.categories) ? existingScan.categories : [];
+          return NextResponse.json({
+            pageCount: existingScan.pageCount,
+            categories: categories.length ? categories : [{ label: "Pages", count: existingScan.pageCount }],
+            url: normalized.replace(/^https?:\/\//, "").replace(/\/$/, ""),
+            scanId: existingScan.id,
+            fromExistingScan: true,
+            scannedAt: existingScan.createdAt,
+          });
         }
       }
     }

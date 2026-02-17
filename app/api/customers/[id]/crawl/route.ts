@@ -98,12 +98,25 @@ export async function POST(
     return NextResponse.json({ error: "Crawl not configured" }, { status: 503 });
   }
 
-  // Check existing content - avoid duplicate crawl if recent
-  const [contentRow] = await db
-    .select({ count: count() })
-    .from(content)
-    .where(eq(content.customerId, customerId));
-  const existingPages = contentRow?.count ?? 0;
+  // 7-day rescan cooldown for paid users (admins bypass)
+  const RESCAN_COOLDOWN_DAYS = 7;
+  const isPaid = order?.status === "paid";
+  const lastCrawled = customer.lastCrawledAt ? new Date(customer.lastCrawledAt) : null;
+  const nextCrawlAvailable = lastCrawled
+    ? new Date(lastCrawled.getTime() + RESCAN_COOLDOWN_DAYS * 24 * 60 * 60 * 1000)
+    : null;
+  const canRescan = !lastCrawled || !nextCrawlAvailable || new Date() >= nextCrawlAvailable;
+
+  if (isPaid && !canRescan) {
+    return NextResponse.json(
+      {
+        error: `Rescan available in ${Math.ceil((nextCrawlAvailable!.getTime() - Date.now()) / (24 * 60 * 60 * 1000))} days. Last scanned: ${lastCrawled!.toLocaleDateString()}.`,
+        lastCrawledAt: customer.lastCrawledAt,
+        nextCrawlAvailable: nextCrawlAvailable?.toISOString(),
+      },
+      { status: 429 }
+    );
+  }
 
   // Credit check: admins bypass
   const { sessionClaims } = await auth();
@@ -165,7 +178,7 @@ export async function POST(
   const now = new Date();
   await db
     .update(customers)
-    .set({ status: "dns_setup", updatedAt: now })
+    .set({ status: "dns_setup", updatedAt: now, lastCrawledAt: now })
     .where(eq(customers.id, customerId));
 
   const remaining = adminBypass ? 9999 : (await getCreditBalance(user.userId)).remaining;

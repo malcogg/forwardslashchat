@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FadeInSection } from "@/components/FadeInSection";
@@ -13,9 +14,9 @@ const INCLUDED = [
 ];
 
 const tiers = [
-  { name: "1-Year Starter", price: 550, years: 1 },
-  { name: "2-Year Bundle", price: 850, years: 2, badge: "Recommended" },
-  { name: "3-Year Bundle", price: 1250, years: 3 },
+  { name: "1-Year Starter", price: 550, years: 1, plan: "chatbot-1y" },
+  { name: "2-Year Bundle", price: 850, years: 2, badge: "Recommended", plan: "chatbot-2y" },
+  { name: "3-Year Bundle", price: 1250, years: 3, plan: "chatbot-3y" },
 ];
 
 export function PricingSection() {
@@ -62,7 +63,7 @@ export function PricingSection() {
                 size="sm"
                 className={`w-full mt-6 ${tier.badge ? "bg-emerald-600 hover:bg-emerald-700 text-white border-0" : ""}`}
               >
-                <a href="#scan">Get started</a>
+                <Link href={`/checkout?plan=${tier.plan}`}>Get started</Link>
               </Button>
             </div>
           ))}

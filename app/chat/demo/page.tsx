@@ -27,13 +27,13 @@ const FALLBACK =
 
 const TYPING_DELAY_MS = 1600;
 
-type ResponseResult = { text: string; pills?: { label: string; href: string }[] };
+type ResponseResult = { text: string; pills?: { label: string; href: string }[]; followUps?: string[] };
 
 function getHardcodedResponse(message: string): ResponseResult | null {
   const q = message.toLowerCase().trim();
   if (!q) return null;
 
-  const pairs: { keywords: string[]; answer: string; pills?: { label: string; href: string }[] }[] = [
+  const pairs: { keywords: string[]; answer: string; pills?: { label: string; href: string }[]; followUps?: string[] }[] = [
     {
       keywords: ["how much", "pricing", "cost", "plans", "price", "how much is it"],
       answer: `Simple one-time pricing — year 1 hosting included, no monthly fees ever.
@@ -44,6 +44,7 @@ Tap a plan below to go straight to checkout — full details on [our services pa
         { label: "$1,000 New Build", href: "/checkout?plan=new-build" },
         { label: "$2,000 Redesign", href: "/checkout?plan=redesign" },
       ],
+      followUps: ["How does it work?", "What's included in a new build?"],
     },
     {
       keywords: ["how does it work", "how to get started", "process", "steps"],
@@ -52,29 +53,34 @@ Tap a plan below to go straight to checkout — full details on [our services pa
 2. We design & build your site (with AI chatbot if chosen)
 3. We launch + host for year 1 — live in days/weeks.
 One-time payment, no subscriptions. See the full [How it Works](/services#how-it-works) page.`,
+      followUps: ["How much does it cost?", "Quick $350 Starter?"],
     },
     {
       keywords: ["quick", "starter", "$350", "simple site", "just get started"],
       answer:
         "Our $350 Quick WordPress Starter is perfect if you just want a simple site fast: 10 clean pages, mobile-ready, basic SEO, contact form + map, WordPress dashboard, year 1 hosting included. One-time $350 — no monthly fees. Great for new entrepreneurs!",
       pills: [{ label: "Get Your $350 Site Now", href: "/checkout?plan=starter" }],
+      followUps: ["What's included in a new build?", "How much does it cost?"],
     },
     {
       keywords: ["new website", "brand new", "$1000", "build"],
       answer:
         "For $1,000 one-time we build you a full custom modern website (Next.js or WordPress) + built-in AI chatbot trained on your content. Mobile-responsive, fast, SEO-ready, year 1 hosting included. Perfect upgrade for growing businesses.",
       pills: [{ label: "Start $1,000 Build", href: "/checkout?plan=new-build" }],
+      followUps: ["How does the AI chatbot work?", "Tell me about redesign"],
     },
     {
       keywords: ["redesign", "refresh", "upgrade", "$2000"],
       answer:
         "$2,000 one-time redesign/refresh: modern look, speed & SEO upgrades, mobile-responsive, + built-in AI chatbot. We keep your existing content, make it look & work better, host year 1. Ideal if your current site feels outdated.",
       pills: [{ label: "Start $2,000 Redesign", href: "/checkout?plan=redesign" }],
+      followUps: ["How does the AI chatbot work?", "How much does it cost?"],
     },
     {
       keywords: ["ai chatbot", "ai", "chatbot", "what is the ai"],
       answer:
         "Every plan can include our custom AI chatbot (trained only on your site content). It lives at chat.yourdomain.com or yourdomain.com/chat, answers customer questions 24/7 — services, hours, prices, FAQs — no monthly fees, private & branded. See it in action on the [Demo](/chat/demo).",
+      followUps: ["How much does it cost?", "What's included in a new build?"],
     },
     {
       keywords: ["hosting", "host", "year 1", "after year 1", "renew"],
@@ -121,9 +127,9 @@ Check the [demo](/chat/demo) or see [how it works](/services#how-it-works).`,
     },
   ];
 
-  for (const { keywords, answer, pills } of pairs) {
+  for (const { keywords, answer, pills, followUps } of pairs) {
     for (const kw of keywords) {
-      if (q.includes(kw)) return { text: answer, pills };
+      if (q.includes(kw)) return { text: answer, pills, followUps };
     }
   }
   return null;
@@ -206,7 +212,7 @@ function MarkdownText({ text }: { text: string }) {
   return <>{parts}</>;
 }
 
-type Message = { role: "user" | "assistant"; content: string; id?: string; pills?: { label: string; href: string }[] };
+type Message = { role: "user" | "assistant"; content: string; id?: string; pills?: { label: string; href: string }[]; followUps?: string[] };
 
 export default function DemoChatPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -229,9 +235,10 @@ export default function DemoChatPage() {
       const result = getHardcodedResponse(t);
       const content = result?.text ?? FALLBACK;
       const pills = result?.pills;
+      const followUps = result?.followUps;
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content, pills, id: `a-${Date.now()}` },
+        { role: "assistant", content, pills, followUps, id: `a-${Date.now()}` },
       ]);
       setIsLoading(false);
     }, TYPING_DELAY_MS);
@@ -239,6 +246,10 @@ export default function DemoChatPage() {
 
   return (
     <div className="flex flex-col h-dvh bg-background">
+      <div className="bg-emerald-500/10 border-b border-emerald-500/20 px-4 py-2 text-center text-sm text-foreground">
+        This is a demo chatbot.{" "}
+        <Link href="/" className="font-medium text-emerald-600 hover:underline">Get your own at forwardslash.chat</Link>
+      </div>
       <header className="flex items-center justify-between px-4 py-3 border-b shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
@@ -301,6 +312,19 @@ export default function DemoChatPage() {
                         <div className="prose prose-sm dark:prose-invert max-w-none">
                           <MarkdownText text={m.content} />
                         </div>
+                                        {m.followUps && m.followUps.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {m.followUps.map((f) => (
+                              <button
+                                key={f}
+                                onClick={() => send(f)}
+                                className="inline-flex px-3 py-1.5 rounded-lg text-xs font-medium bg-muted hover:bg-muted/80 text-foreground transition-colors"
+                              >
+                                {f}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                         {m.pills && m.pills.length > 0 && (
                           <div className="mt-3 flex flex-wrap gap-2">
                             {m.pills.map((p) => (
