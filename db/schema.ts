@@ -79,6 +79,21 @@ export const customers = pgTable("customers", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+// Checkout leads - form data collected before payment
+export const checkoutLeads = pgTable("checkout_leads", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  firstName: text("first_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  businessName: text("business_name").notNull(),
+  domain: text("domain").notNull().default(""),
+  websiteUrl: text("website_url").notNull().default(""),
+  planSlug: text("plan_slug").notNull(),
+  addOns: jsonb("add_ons").$type<string[]>().notNull().default([]),
+  amountCents: integer("amount_cents").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Content - per-customer crawled pages for chat retrieval
 export const content = pgTable("content", {
   id: uuid("id").primaryKey().defaultRandom(),
