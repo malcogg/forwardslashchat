@@ -117,7 +117,7 @@ export function sanitizeChatMessage(value: string): string {
     .slice(0, LIMITS.chatMessage);
 }
 
-export function sanitizeGenericText(value: string, max = LIMITS.genericText): string {
+export function sanitizeGenericText(value: string, max: number = LIMITS.genericText): string {
   return stripControlChars(value)
     .trim()
     .slice(0, max);
