@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ParticlesBackground } from "@/components/ParticlesBackground";
+import { Analytics } from "@vercel/analytics/next";
 
 import "./globals.css";
 
@@ -47,6 +48,7 @@ export default function RootLayout({
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
             <ParticlesBackground />
             {children}
+            <Analytics />
           </ThemeProvider>
         </body>
       </html>
