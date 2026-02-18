@@ -437,14 +437,14 @@ export function ScanModal({ open, onClose, url, onScanComplete, origin = "homepa
                   )}
                   <Link
                     href={`/?pages=${roastData.estimatedPages ?? 25}${effectiveUrl ? `&url=${encodeURIComponent(effectiveUrl)}` : ""}#pricing`}
-                    onClick={handleContinueToScan}
+                    onClick={() => handleContinueToScan()}
                     className="py-2.5 px-4 text-center text-sm font-medium rounded-2xl rounded-bl-md bg-muted/60 border border-border hover:bg-muted/80 hover:border-muted-foreground/30 transition-colors"
                   >
                     {roastData.estimatedPages ? `See your price (~${roastData.estimatedPages} pages)` : "See pricing (default ~25 pages)"}
                   </Link>
                   <Link
                     href={`/checkout?plan=chatbot-2y${roastData.estimatedPages ? `&pages=${roastData.estimatedPages}` : "&pages=25"}${effectiveUrl ? `&url=${encodeURIComponent(effectiveUrl)}` : ""}`}
-                    onClick={handleContinueToScan}
+                    onClick={() => handleContinueToScan()}
                     className="py-2.5 px-4 text-center text-sm font-medium rounded-2xl rounded-bl-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
                   >
                     Get started →
@@ -479,7 +479,7 @@ export function ScanModal({ open, onClose, url, onScanComplete, origin = "homepa
                 <SignedOut>
                   <Link
                     href="/sign-up"
-                    onClick={handleContinueToScan}
+                    onClick={() => handleContinueToScan()}
                     className="inline-flex items-center justify-center w-full py-3 px-6 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-opacity"
                   >
                     Create free account
@@ -488,7 +488,7 @@ export function ScanModal({ open, onClose, url, onScanComplete, origin = "homepa
                 <SignedIn>
                   <Link
                     href="/dashboard"
-                    onClick={handleContinueToScan}
+                    onClick={() => handleContinueToScan()}
                     className="inline-flex items-center justify-center w-full py-3 px-6 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-opacity"
                   >
                     Continue to dashboard
@@ -516,7 +516,7 @@ export function ScanModal({ open, onClose, url, onScanComplete, origin = "homepa
             <SignedOut>
               <Link
                 href="/sign-up"
-                onClick={handleContinueToScan}
+                onClick={() => handleContinueToScan()}
                 className="inline-flex items-center justify-center w-full py-3 px-6 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-opacity"
               >
                 Create free account
@@ -525,7 +525,7 @@ export function ScanModal({ open, onClose, url, onScanComplete, origin = "homepa
             <SignedIn>
               <Link
                 href="/dashboard"
-                onClick={handleContinueToScan}
+                onClick={() => handleContinueToScan()}
                 className="inline-flex items-center justify-center w-full py-3 px-6 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-opacity"
               >
                 Continue to dashboard
