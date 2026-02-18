@@ -56,7 +56,7 @@ interface ScanModalProps {
   /** When "dashboard", shows URL input when url is empty and "Add to my projects" CTA */
   origin?: "homepage" | "dashboard";
   /** Called when user clicks "Add to my projects" (dashboard only). Create project and redirect. */
-  onAddToDashboard?: (url: string) => void;
+  onAddToDashboard?: (url: string, estimatedPages?: number) => void;
 }
 
 export function ScanModal({ open, onClose, url, onScanComplete, origin = "homepage", onAddToDashboard }: ScanModalProps) {
@@ -426,7 +426,7 @@ export function ScanModal({ open, onClose, url, onScanComplete, origin = "homepa
                   {origin === "dashboard" && onAddToDashboard && (
                     <button
                       onClick={() => {
-                        onAddToDashboard(effectiveUrl);
+                        onAddToDashboard?.(effectiveUrl, roastData.estimatedPages);
                         onClose();
                       }}
                       className="py-2.5 px-4 text-center text-sm font-medium rounded-2xl rounded-bl-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors order-first sm:order-first"

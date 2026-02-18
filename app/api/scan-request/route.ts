@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: { url?: string };
+  let body: { url?: string; estimatedPages?: number };
   try {
     body = await request.json();
   } catch {
@@ -30,6 +30,9 @@ export async function POST(request: Request) {
   }
 
   const rawUrl = body.url;
+  const estimatedPages = typeof body.estimatedPages === "number" && body.estimatedPages > 0
+    ? Math.min(9999, Math.round(body.estimatedPages))
+    : null;
   if (!rawUrl || typeof rawUrl !== "string") {
     return NextResponse.json({ error: "url is required" }, { status: 400 });
   }
@@ -72,6 +75,7 @@ export async function POST(request: Request) {
         domain,
         subdomain: "chat",
         websiteUrl: url,
+        estimatedPages,
         prepaidUntil,
         status: "content_collection",
       })

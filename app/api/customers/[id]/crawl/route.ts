@@ -129,8 +129,9 @@ export async function POST(
     );
   }
 
-  // Credit check: admins bypass (adminBypass already set above)
-  if (!adminBypass) {
+  // Credit check: skip for paid orders and admins (paid customers get crawl as part of their purchase)
+  const skipCredits = adminBypass || order.status === "paid";
+  if (!skipCredits) {
     const CRAWL_LIMIT = 50;
     const creditsNeeded = CRAWL_LIMIT;
     const balance = await getCreditBalance(user.userId);
@@ -175,7 +176,7 @@ export async function POST(
   }
 
   const pagesCrawled = result.data.length;
-  if (!adminBypass) {
+  if (!skipCredits) {
     const deducted = await deductCredits(user.userId, pagesCrawled);
     if (!deducted.ok) {
       return NextResponse.json({ error: "Credit deduction failed" }, { status: 500 });
@@ -188,7 +189,7 @@ export async function POST(
     .set({ status: "dns_setup", updatedAt: now, lastCrawledAt: now })
     .where(eq(customers.id, customerId));
 
-  const remaining = adminBypass ? 9999 : (await getCreditBalance(user.userId)).remaining;
+  const remaining = skipCredits ? 9999 : (await getCreditBalance(user.userId)).remaining;
   return NextResponse.json({
     success: true,
     pages: pagesCrawled,

@@ -69,6 +69,7 @@ export const customers = pgTable("customers", {
   domain: text("domain").notNull(),
   subdomain: text("subdomain").notNull().default("chat"),
   websiteUrl: text("website_url").notNull(),
+  estimatedPages: integer("estimated_pages"), // from roast; used for pricing before crawl
   primaryColor: text("primary_color").default("#000000"),
   logoUrl: text("logo_url"),
   welcomeMessage: text("welcome_message"),

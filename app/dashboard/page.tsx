@@ -3,18 +3,14 @@
 import { useState, useEffect, Suspense, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { PENDING_SCAN_URL_KEY } from "@/components/ScanModal";
 import { UserButton, useUser } from "@clerk/nextjs";
-import { Globe, Check, ChevronDown, X, Monitor, Tablet, Smartphone, Copy, ExternalLink } from "lucide-react";
+import { Globe, Check, ChevronDown, X, Monitor, Tablet, Smartphone, Copy, ExternalLink, Trash2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CustomerChat } from "@/components/CustomerChat";
 import { ScanModal } from "@/components/ScanModal";
-
-const ACCENT_COLORS = [
-  "#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6", "#06b6d4",
-  "#3b82f6", "#8b5cf6", "#ec4899", "#f43f5e", "#0ea5e9", "#6366f1",
-  "#a855f7", "#d946ef", "#1e293b", "#374151", "#4b5563", "#6b7280",
-];
+import { getPriceFromPagesAndYears } from "@/lib/pricing";
 
 function getDisplayName(user: { firstName?: string | null; lastName?: string | null; fullName?: string | null } | null | undefined): string {
   if (!user) return "Michael Francis";
@@ -67,7 +63,6 @@ function DashboardContent() {
   const [scanDropdownOpen, setScanDropdownOpen] = useState(false);
   const [scanNewSiteModalOpen, setScanNewSiteModalOpen] = useState(false);
   const [upsellModalOpen, setUpsellModalOpen] = useState(false);
-  const [dnsModalOpen, setDnsModalOpen] = useState(false);
   const [previewView, setPreviewView] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const scanDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -95,11 +90,18 @@ function DashboardContent() {
     } | null;
     contentCount?: number;
   } | null>(null);
-  const [myOrders, setMyOrders] = useState<{ order: { id: string }; customer: { businessName: string; websiteUrl: string } | null }[]>([]);
+  const [myOrders, setMyOrders] = useState<{
+    order: { id: string };
+    customer: { businessName: string; websiteUrl: string } | null;
+    contentCount: number;
+    estimatedPages: number;
+  }[]>([]);
+  const [cartModalOpen, setCartModalOpen] = useState(false);
+  const [cartSelectedIds, setCartSelectedIds] = useState<Set<string>>(new Set());
+  const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [crawling, setCrawling] = useState(false);
-  const [credits, setCredits] = useState<{ remaining: number; creditsLimit: number } | null>(null);
   const [crawlError, setCrawlError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -138,9 +140,36 @@ function DashboardContent() {
     fetch("/api/orders/me").then((res) => (res.ok ? res.json() : [])).then(setMyOrders).catch(() => {});
   }, []);
 
-  useEffect(() => {
-    fetch("/api/credits").then((res) => (res.ok ? res.json() : null)).then(setCredits).catch(() => {});
-  }, []);
+  const handleDeleteSite = async (orderIdToDelete: string) => {
+    if (deletingOrderId) return;
+    setDeletingOrderId(orderIdToDelete);
+    try {
+      const res = await fetch(`/api/orders/${orderIdToDelete}`, { method: "DELETE", credentials: "include" });
+      if (res.ok) {
+        setCartSelectedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(orderIdToDelete);
+          return next;
+        });
+        setMyOrders((prev) => prev.filter((o) => o.order.id !== orderIdToDelete));
+        if (orderId === orderIdToDelete && myOrders.length > 1) {
+          const remaining = myOrders.find((o) => o.order.id !== orderIdToDelete);
+          if (remaining) router.push(`/dashboard?orderId=${remaining.order.id}`);
+        } else if (orderId === orderIdToDelete) {
+          router.push("/dashboard");
+        }
+      }
+    } finally {
+      setDeletingOrderId(null);
+    }
+  };
+
+  const openCartModal = () => {
+    if (myOrders.length > 0 && cartSelectedIds.size === 0) {
+      setCartSelectedIds(new Set(myOrders.map((o) => o.order.id)));
+    }
+    setCartModalOpen(true);
+  };
 
   const handleCrawl = () => {
     if (!data?.customer?.id) return;
@@ -160,12 +189,12 @@ function DashboardContent() {
           setCrawlError(json.error ?? "Crawl failed");
           return;
         }
-        const [dashRes, creditsRes] = await Promise.all([
+        const [dashRes, ordersRes] = await Promise.all([
           fetch(`/api/dashboard${orderId ? `?orderId=${encodeURIComponent(orderId)}` : ""}`),
-          fetch("/api/credits"),
+          fetch("/api/orders/me"),
         ]);
         if (dashRes.ok) setData(await dashRes.json());
-        if (creditsRes.ok) setCredits(await creditsRes.json());
+        if (ordersRes.ok) setMyOrders(await ordersRes.json());
       })
       .catch(() => setCrawlError("Crawl failed"))
       .finally(() => setCrawling(false));
@@ -306,7 +335,7 @@ function DashboardContent() {
             <span className="text-sm font-medium text-foreground truncate">{displayName}</span>
           </div>
 
-          <div className="relative mb-4" ref={scanDropdownRef}>
+          <div className="mb-2" ref={scanDropdownRef}>
             <button
               onClick={() => setScanDropdownOpen((o) => !o)}
               className="w-full flex items-center justify-between gap-2 px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted/50 rounded hover:text-foreground"
@@ -317,7 +346,7 @@ function DashboardContent() {
               <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${scanDropdownOpen ? "rotate-180" : ""}`} />
             </button>
             {scanDropdownOpen && (
-              <div className="absolute left-full top-0 ml-2 py-1 min-w-[200px] bg-card border border-border rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+              <div className="mt-1 py-2 px-2 space-y-0.5 border-l-2 border-muted ml-2 pl-3">
                 {myOrders.length === 0 ? (
                   <button
                     type="button"
@@ -325,23 +354,40 @@ function DashboardContent() {
                       setScanDropdownOpen(false);
                       setScanNewSiteModalOpen(true);
                     }}
-                    className="block w-full text-left px-3 py-2 text-sm text-foreground hover:bg-accent"
+                    className="block w-full text-left px-3 py-2 text-sm text-foreground hover:bg-accent rounded"
                   >
                     Scan new site
                   </button>
                 ) : (
                   <>
-                    {myOrders.map(({ order: o, customer: c }) => (
-                      <Link
+                    {myOrders.map(({ order: o, customer: c, estimatedPages: ep }) => (
+                      <div
                         key={o.id}
-                        href={`/dashboard?orderId=${o.id}`}
-                        onClick={() => setScanDropdownOpen(false)}
-                        className={`block px-3 py-2 text-sm truncate ${
+                        className={`flex items-center gap-2 px-3 py-2 rounded group ${
                           orderId === o.id ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-accent"
                         }`}
                       >
-                        {c?.websiteUrl?.replace(/^https?:\/\//, "").replace(/\/$/, "") ?? c?.businessName ?? "Order"}
-                      </Link>
+                        <Link
+                          href={`/dashboard?orderId=${o.id}`}
+                          onClick={() => setScanDropdownOpen(false)}
+                          className="flex-1 min-w-0 truncate text-sm"
+                        >
+                          {c?.websiteUrl?.replace(/^https?:\/\//, "").replace(/\/$/, "") ?? c?.businessName ?? "Order"}
+                        </Link>
+                        <span className="text-xs text-muted-foreground shrink-0">~{ep} pg</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleDeleteSite(o.id);
+                          }}
+                          disabled={deletingOrderId === o.id}
+                          className="p-1 rounded text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                          aria-label="Delete site"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     ))}
                     <button
                       type="button"
@@ -349,7 +395,7 @@ function DashboardContent() {
                         setScanDropdownOpen(false);
                         setScanNewSiteModalOpen(true);
                       }}
-                      className="block w-full text-left px-3 py-2 text-sm text-primary hover:bg-accent border-t border-border mt-1 pt-2"
+                      className="block w-full text-left px-3 py-2 text-sm text-primary hover:bg-accent rounded mt-1 pt-2 border-t border-border"
                     >
                       + Scan new site
                     </button>
@@ -370,11 +416,7 @@ function DashboardContent() {
             </button>
             <button onClick={() => setActivePanel("domains")} className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded text-left ${activePanel === "domains" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`}>
               <span className="w-5 shrink-0">{[ "testing", "delivered" ].includes(customer?.status ?? "") ? <Check className="w-4 h-4 text-green-500" /> : <span className="text-muted-foreground/50">○</span>}</span>
-              Domains
-            </button>
-            <button onClick={() => setDnsModalOpen(true)} className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted/50 rounded hover:text-foreground text-left">
-              <span className="w-5 shrink-0">○</span>
-              DNS
+              Domain
             </button>
           </nav>
 
@@ -389,10 +431,45 @@ function DashboardContent() {
           </button>
 
           <div className="pt-6 border-t border-border mt-4">
-            <div className="text-xs text-muted-foreground">Content pages</div>
-            <div className="text-sm text-foreground">{hasOrder ? contentCount : "0"} crawled</div>
-            {credits && <div className="text-xs text-primary mt-1">{credits.remaining} / {credits.creditsLimit} credits</div>}
-            <div className="flex items-center gap-2 mt-4">
+            {(() => {
+              const totalPages = myOrders.reduce((s, o) => s + (o.estimatedPages ?? 25), 0);
+              const totalCrawled = myOrders.reduce((s, o) => s + (o.contentCount ?? 0), 0);
+              const selectedPages = myOrders
+                .filter((o) => cartSelectedIds.has(o.order.id))
+                .reduce((s, o) => s + (o.estimatedPages ?? 25), 0);
+              const cartPrice = getPriceFromPagesAndYears(selectedPages, 2);
+              const hasSites = myOrders.length > 0;
+              return (
+                <>
+                  <div className="text-xs text-muted-foreground">Content pages</div>
+                  <div className="text-sm font-medium text-red-500 dark:text-red-400">
+                    {totalCrawled} / {totalPages > 0 ? totalPages : "—"} crawled
+                  </div>
+                  {hasSites && (
+                    <motion.button
+                      type="button"
+                      onClick={openCartModal}
+                      className="w-full mt-3 flex items-center justify-center gap-2 rounded-xl py-3 px-4 text-sm font-semibold text-white overflow-hidden"
+                      style={{
+                        background: "linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%)",
+                        boxShadow: "0 0 24px rgba(16,185,129,0.4)",
+                      }}
+                      animate={{
+                        boxShadow: [
+                          "0 0 24px rgba(16,185,129,0.4)",
+                          "0 0 40px rgba(16,185,129,0.6)",
+                          "0 0 24px rgba(16,185,129,0.4)",
+                        ],
+                      }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      <span>Get AI chatbot for all — ${cartPrice?.toLocaleString() ?? "—"}</span>
+                    </motion.button>
+                  )}
+                </>
+              );
+            })()}
+            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
               <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0">
                 <span className="text-foreground text-xs font-medium">{initials}</span>
               </div>
@@ -455,39 +532,40 @@ function DashboardContent() {
                     <label className="text-sm text-muted-foreground">Display name</label>
                     <div className="text-sm text-foreground mt-1">{customer?.businessName ?? "—"}</div>
                   </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Logo</label>
-                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center mt-1">
-                      <span className="text-foreground text-sm font-medium">{(customer?.businessName ?? "?")[0]}</span>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm text-muted-foreground">Logo</label>
+                      <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center mt-1">
+                        <span className="text-foreground text-sm font-medium">{(customer?.businessName ?? "?")[0]}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm text-muted-foreground">Favicon</label>
+                      <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center mt-1">
+                        <span className="text-primary-foreground text-xs">✦</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="bg-muted/50 rounded-lg p-4 border border-border">
+                  <div className="bg-muted/50 rounded-lg p-3 border border-border">
                     <div className="flex items-center gap-2">
-                      <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shrink-0">
-                        <span className="text-primary-foreground text-xs">{initials}</span>
+                      <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center shrink-0" style={{ backgroundColor: customer?.primaryColor ?? "#000" }}>
+                        <span className="text-white text-xs">{initials}</span>
                       </div>
-                      <div>
-                        <div className="text-sm font-medium text-foreground">{displayName}</div>
-                        <div className="text-xs text-muted-foreground">{customer?.businessName ?? "Chatbot"}</div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-foreground truncate">{displayName}</div>
+                        <div className="text-xs text-muted-foreground truncate">{customer?.businessName ?? "Chatbot"}</div>
                       </div>
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm text-muted-foreground">Favicon</label>
-                    <div className="w-6 h-6 rounded bg-primary flex items-center justify-center mt-1">
-                      <span className="text-primary-foreground text-xs">✦</span>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Accent</label>
-                    <div className="w-6 h-6 rounded-full mt-1 border border-border" style={{ backgroundColor: customer?.primaryColor ?? "#000" }} />
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Heading</label>
-                    <div className="flex flex-wrap gap-1.5 mt-1">
-                      {ACCENT_COLORS.map((c) => (
-                        <div key={c} className="w-5 h-5 rounded-full" style={{ backgroundColor: c }} />
-                      ))}
+                    <label className="text-sm text-muted-foreground block mb-2">Accent</label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        defaultValue={customer?.primaryColor ?? "#000000"}
+                        className="w-10 h-10 rounded-lg cursor-pointer border border-border bg-transparent p-0.5"
+                      />
+                      <span className="text-xs text-muted-foreground">Pick your brand color</span>
                     </div>
                   </div>
                   {customer && (["content_collection", "crawling", "indexing"].includes(customer.status) || (contentCount > 0 && ["dns_setup", "testing", "delivered"].includes(customer.status))) && (
@@ -502,7 +580,7 @@ function DashboardContent() {
                       )}
                       <button
                         onClick={handleCrawl}
-                        disabled={crawling || (isPaid && credits !== null && credits.remaining < 1) || (isPaid && !canRescan && contentCount > 0)}
+                        disabled={crawling || (isPaid && !canRescan && contentCount > 0)}
                         className="w-full px-3 py-2 text-sm bg-primary text-primary-foreground rounded hover:opacity-90 disabled:opacity-50"
                       >
                         {crawling ? "Crawling..." : !isPaid ? "Pay to scan" : contentCount ? (canRescan ? "Rescan site" : "Rescan (7-day cooldown)") : "Build my chatbot"}
@@ -524,7 +602,7 @@ function DashboardContent() {
 
           {activePanel === "domains" && (
             <>
-              <h2 className="text-lg font-semibold text-foreground mb-4">DNS Setup</h2>
+              <h2 className="text-lg font-semibold text-foreground mb-4">Domain</h2>
               {customer ? (
                 <>
                   <p className="text-sm text-muted-foreground mb-4">Add this CNAME record to your DNS:</p>
@@ -685,12 +763,12 @@ function DashboardContent() {
         onClose={() => setScanNewSiteModalOpen(false)}
         url=""
         origin="dashboard"
-        onAddToDashboard={async (urlToAdd) => {
+        onAddToDashboard={async (urlToAdd, estimatedPages) => {
           try {
             const res = await fetch("/api/scan-request", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ url: urlToAdd }),
+              body: JSON.stringify({ url: urlToAdd, estimatedPages }),
               credentials: "include",
             });
             const json = await res.json();
@@ -703,46 +781,113 @@ function DashboardContent() {
         }}
       />
 
-      {/* DNS modal */}
-      {dnsModalOpen && (
+      {/* Cart modal: sites with checkboxes, price, checkout */}
+      {cartModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-          onClick={() => setDnsModalOpen(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md"
+          onClick={() => setCartModalOpen(false)}
         >
           <div
-            className="relative w-full max-w-md bg-white dark:bg-white rounded-2xl shadow-2xl p-8 text-gray-900"
+            className="relative w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              onClick={() => setDnsModalOpen(false)}
-              className="absolute top-4 right-4 p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-              aria-label="Close"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <h3 className="text-xl font-semibold mb-4">DNS Setup</h3>
-            <p className="text-gray-600 mb-4">
-              To put your chatbot live at your domain, add a CNAME record in your DNS provider:
-            </p>
-            <pre className="bg-gray-100 p-4 rounded-lg text-sm overflow-x-auto mb-4">
-              {`Type: CNAME
-Host: ${customer?.subdomain ?? "chat"}
-Value: cname.forwardslash.chat`}
-            </pre>
-            <p className="text-sm text-gray-600 mb-6">
-              Need help? We can do it for you—just book a quick call.
-            </p>
-            <a
-              href={process.env.NEXT_PUBLIC_STRATEGY_CALL_URL || "https://cal.com/forwardslash/30min"}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full py-3 px-6 text-center font-semibold bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors"
-            >
-              Let us help with DNS
-            </a>
+            <div className="p-6 border-b border-border">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-foreground">Your sites</h3>
+                <button
+                  onClick={() => setCartModalOpen(false)}
+                  className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Uncheck sites to remove from your bundle. Price updates below.
+              </p>
+            </div>
+            <div className="max-h-64 overflow-y-auto p-4 space-y-2">
+              {myOrders.map(({ order, customer, contentCount, estimatedPages }) => {
+                const checked = cartSelectedIds.has(order.id);
+                const displayUrl = customer?.websiteUrl?.replace(/^https?:\/\//, "").replace(/\/$/, "") ?? "Site";
+                return (
+                  <label
+                    key={order.id}
+                    className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                      checked ? "border-emerald-500/50 bg-emerald-500/5" : "border-border bg-muted/30 opacity-60"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        setCartSelectedIds((prev) => {
+                          const next = new Set(prev);
+                          if (e.target.checked) next.add(order.id);
+                          else next.delete(order.id);
+                          return next;
+                        });
+                      }}
+                      className="w-4 h-4 rounded border-border text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-foreground truncate">{displayUrl}</div>
+                      <div className="text-xs text-muted-foreground">
+                        ~{estimatedPages} pages
+                        {contentCount > 0 && (
+                          <span className="text-emerald-600 ml-1">• {contentCount} crawled</span>
+                        )}
+                      </div>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+            {(() => {
+              const selected = myOrders.filter((o) => cartSelectedIds.has(o.order.id));
+              const totalPages = selected.reduce((s, o) => s + (o.estimatedPages ?? 25), 0);
+              const price = getPriceFromPagesAndYears(totalPages, 2);
+              return (
+                <div className="p-6 border-t border-border bg-muted/20">
+                  <div className="flex items-center justify-between text-sm mb-4">
+                    <span className="text-muted-foreground">
+                      {selected.length} site{selected.length !== 1 ? "s" : ""} • ~{totalPages} pages
+                    </span>
+                    <span className="font-semibold text-foreground">
+                      ${price?.toLocaleString() ?? "Contact us"} one-time
+                    </span>
+                  </div>
+                  <Link
+                    href={`/checkout?plan=chatbot-2y&pages=${totalPages || 25}`}
+                    onClick={() => setCartModalOpen(false)}
+                    className="block w-full"
+                  >
+                    <motion.button
+                      type="button"
+                      className="w-full flex items-center justify-center gap-2 rounded-xl py-3 px-4 text-sm font-semibold text-white"
+                      style={{
+                        background: "linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%)",
+                        boxShadow: "0 0 24px rgba(16,185,129,0.4)",
+                      }}
+                      animate={{
+                        boxShadow: [
+                          "0 0 24px rgba(16,185,129,0.4)",
+                          "0 0 40px rgba(16,185,129,0.6)",
+                          "0 0 24px rgba(16,185,129,0.4)",
+                        ],
+                      }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      Get AI chatbot for all — ${price?.toLocaleString() ?? "—"}
+                    </motion.button>
+                  </Link>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
+
     </main>
   );
 }
