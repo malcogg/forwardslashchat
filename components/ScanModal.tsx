@@ -5,6 +5,7 @@ import { X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SignedIn, SignedOut } from "@clerk/nextjs";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 
 export const PENDING_SCAN_URL_KEY = "forwardslash_pending_scan_url";
 
@@ -19,13 +20,12 @@ type ModalStep =
   | "error"
   | null;
 
-const ROASTING_MESSAGES = [
+const TYPING_BUBBLES = [
   "Scanning your site...",
-  "Reading the homepage...",
-  "Detecting tech stack...",
-  "Analyzing signals...",
-  "Almost there...",
+  "Finding your classic vibes...",
+  "Preparing your roast...",
 ];
+const TYPEWRITER_MS_PER_CHAR = 40;
 
 const PAGE_TIERS = [
   { min: 0, max: 300, tier: "Small", price: 550, years: 1 },
@@ -59,7 +59,7 @@ interface ScanModalProps {
 
 export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps) {
   const [step, setStep] = useState<ModalStep>("roasting");
-  const [roastMessageIndex, setRoastMessageIndex] = useState(0);
+  const [typingElapsedMs, setTypingElapsedMs] = useState(0);
   const [roastData, setRoastData] = useState<RoastData>(null);
   const [visibleReasonIndex, setVisibleReasonIndex] = useState(0);
   const [roastLevelVisible, setRoastLevelVisible] = useState(false);
@@ -91,17 +91,17 @@ export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps
     setRoastData(null);
     setVisibleReasonIndex(0);
     setRoastLevelVisible(false);
-    setRoastMessageIndex(0);
+    setTypingElapsedMs(0);
     setError(null);
   }, [open, url]);
 
-  // Roasting: cycle messages + call API
+  // Roasting: typing ticker + call API
   useEffect(() => {
     if (step !== "roasting" || !url) return;
 
-    const msgInterval = setInterval(() => {
-      setRoastMessageIndex((i) => (i + 1) % ROASTING_MESSAGES.length);
-    }, 1800);
+    const ticker = setInterval(() => {
+      setTypingElapsedMs((m) => Math.min(m + 50, 15000)); // cap at 15s
+    }, 50);
 
     const start = Date.now();
     const normalized = url.startsWith("http") ? url : `https://${url}`;
@@ -148,7 +148,7 @@ export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps
         setStep("roast-results");
       });
 
-    return () => clearInterval(msgInterval);
+    return () => clearInterval(ticker);
   }, [step, url, displayUrl]);
 
   // Roast results: sequential bullet reveals
@@ -200,74 +200,154 @@ export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps
           <X className="w-5 h-5" />
         </button>
 
-        {/* Roasting: scanning animation */}
-        {step === "roasting" && (
-          <div className="p-10 text-center">
-            <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
-              <div className="flex gap-1.5 items-end">
-                <span className="w-2 h-4 bg-emerald-500 rounded-full animate-pulse" style={{ animationDelay: "0ms" }} />
-                <span className="w-2 h-6 bg-emerald-500 rounded-full animate-pulse" style={{ animationDelay: "150ms" }} />
-                <span className="w-2 h-5 bg-emerald-500 rounded-full animate-pulse" style={{ animationDelay: "300ms" }} />
+        {/* Roasting: pulsating orb + typing bubbles */}
+        <AnimatePresence mode="wait">
+          {step === "roasting" && (
+            <motion.div
+              key="roasting"
+              initial={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4 }}
+              className="relative p-6 sm:p-10 pb-10 sm:pb-12 min-h-[280px] sm:min-h-[320px] flex flex-col items-center justify-center overflow-hidden"
+              style={{
+                background: "radial-gradient(circle at 50% 35%, rgba(16,185,129,0.08) 0%, transparent 55%)",
+              }}
+            >
+              {/* Pulsating orb */}
+              <motion.div
+                className="w-[100px] h-[100px] sm:w-[120px] sm:h-[120px] rounded-full shrink-0 mb-6 sm:mb-8"
+                style={{
+                  background: "linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%)",
+                  boxShadow: "0 0 60px rgba(16,185,129,0.5)",
+                }}
+                animate={{
+                  scale: [1, 1.15, 1],
+                  opacity: [0.75, 1, 0.75],
+                }}
+                transition={{
+                  duration: 2.5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              />
+              {/* Typing bubbles */}
+              <div className="w-full max-w-sm space-y-2 flex flex-col items-start">
+                {TYPING_BUBBLES.map((text, i) => {
+                  const startMs = TYPING_BUBBLES.slice(0, i).reduce((s, t) => s + t.length * TYPEWRITER_MS_PER_CHAR, 0);
+                  const charsToShow = Math.max(
+                    0,
+                    Math.min(
+                      text.length,
+                      Math.floor((typingElapsedMs - startMs) / TYPEWRITER_MS_PER_CHAR)
+                    )
+                  );
+                  const visible = charsToShow > 0;
+                  const displayText = text.slice(0, charsToShow);
+                  if (!visible) return null;
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="px-4 py-2.5 rounded-2xl rounded-bl-md bg-muted/60 border border-border text-sm text-foreground text-left max-w-[85%]"
+                    >
+                      {displayText}
+                      {charsToShow < text.length && (
+                        <span className="inline-block w-2 h-4 ml-0.5 bg-emerald-500 animate-pulse align-middle" />
+                      )}
+                    </motion.div>
+                  );
+                })}
               </div>
-            </div>
-            <p className="text-lg font-medium text-foreground mb-2">
-              {ROASTING_MESSAGES[roastMessageIndex]}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Analyzing {displayUrl}
-            </p>
-          </div>
-        )}
-
-        {/* Roast results: sequential reveals */}
-        {step === "roast-results" && roastData && (
-          <div className="p-8">
-            <h2 className="text-xl font-semibold text-foreground mb-1">
-              We peeked at your site...
-            </h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              Here&apos;s what we noticed:
-            </p>
-
-            {/* Bullets with checkmarks (sequential) */}
-            <div className="space-y-2 mb-6">
-              {roastData.reasons.slice(0, visibleReasonIndex + 1).map((reason, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    "flex items-center gap-3 p-3 rounded-lg border border-border transition-all duration-300",
-                    i === visibleReasonIndex ? "bg-emerald-500/5 border-emerald-500/30" : "bg-muted/30"
-                  )}
-                >
-                  <span className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                    <Check className="w-3.5 h-3.5" />
-                  </span>
-                  <span className="text-sm text-foreground">{reason}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Roast level */}
-            {roastLevelVisible && (
-              <div
-                className="mb-6 p-4 rounded-xl bg-muted/50 border border-border animate-in fade-in slide-in-from-bottom-2 duration-500"
-              >
-                <p className="text-sm font-medium text-foreground">
-                  {roastData.roastEmoji} {roastData.roastLevel}
-                </p>
-              </div>
-            )}
-
-            {/* Value prop - AI chatbot focus */}
-            {roastLevelVisible && (
-              <p className="text-sm text-muted-foreground mb-6 animate-in fade-in duration-300">
-                Don&apos;t worry — old sites work great. We just make them smarter by adding our custom AI chatbot that knows your company.
+              <p className="text-xs text-muted-foreground mt-6">
+                Analyzing {displayUrl}
               </p>
-            )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-            {/* CTA buttons */}
-            {roastLevelVisible && (
-              <div className="space-y-3 mb-6 animate-in fade-in duration-300">
+        {/* Roast results: sequential reveals with stagger */}
+        <AnimatePresence mode="wait">
+          {step === "roast-results" && roastData && (
+            <motion.div
+              key="roast-results"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4 }}
+              className="p-8"
+            >
+              <motion.h2
+                className="text-xl font-semibold text-foreground mb-1"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.3 }}
+              >
+                We peeked at your site...
+              </motion.h2>
+              <motion.p
+                className="text-sm text-muted-foreground mb-6"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.3 }}
+              >
+                Here&apos;s what we noticed:
+              </motion.p>
+
+              {/* Bullets with checkmarks (sequential) */}
+              <div className="space-y-2 mb-6">
+                {roastData.reasons.slice(0, visibleReasonIndex + 1).map((reason, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 + i * 0.08, duration: 0.3 }}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-lg border border-border transition-all duration-300",
+                      i === visibleReasonIndex ? "bg-emerald-500/5 border-emerald-500/30" : "bg-muted/30"
+                    )}
+                  >
+                    <span className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                      <Check className="w-3.5 h-3.5" />
+                    </span>
+                    <span className="text-sm text-foreground">{reason}</span>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Roast level */}
+              {roastLevelVisible && (
+                <motion.div
+                  className="mb-6 p-4 rounded-xl bg-muted/50 border border-border"
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <p className="text-sm font-medium text-foreground">
+                    {roastData.roastEmoji} {roastData.roastLevel}
+                  </p>
+                </motion.div>
+              )}
+
+              {/* Value prop - AI chatbot focus */}
+              {roastLevelVisible && (
+                <motion.p
+                  className="text-sm text-muted-foreground mb-6"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.1, duration: 0.3 }}
+                >
+                  Don&apos;t worry — old sites work great. We just make them smarter by adding our custom AI chatbot that knows your company.
+                </motion.p>
+              )}
+
+              {/* CTA buttons */}
+              {roastLevelVisible && (
+                <motion.div
+                  className="space-y-3 mb-6"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15, duration: 0.3 }}
+                >
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                   Add an AI chatbot to your site
                 </p>
@@ -283,19 +363,29 @@ export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps
                     </Link>
                   ))}
                 </div>
-              </div>
+              </motion.div>
             )}
 
             {/* Disclaimer */}
             {roastLevelVisible && (
-              <p className="text-xs text-muted-foreground text-center mb-6 animate-in fade-in duration-300">
+              <motion.p
+                className="text-xs text-muted-foreground text-center mb-6"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2, duration: 0.3 }}
+              >
                 Just having fun with tech signals — your business is awesome.
-              </p>
+              </motion.p>
             )}
 
             {/* Signup CTA */}
             {roastLevelVisible && (
-              <div className="pt-4 border-t border-border animate-in fade-in duration-300">
+              <motion.div
+                className="pt-4 border-t border-border"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.25, duration: 0.3 }}
+              >
                 <p className="text-sm text-muted-foreground text-center mb-3">
                   Create a free account to see your full scan and get your AI chatbot.
                 </p>
@@ -317,10 +407,11 @@ export function ScanModal({ open, onClose, url, onScanComplete }: ScanModalProps
                     Continue to dashboard
                   </Link>
                 </SignedIn>
-              </div>
+              </motion.div>
             )}
-          </div>
-        )}
+          </motion.div>
+          )}
+        </AnimatePresence>
 
         {step === "signup-prompt" && (
           <div className="p-10 text-center">
