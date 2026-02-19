@@ -13,6 +13,11 @@ export async function GET(
     return NextResponse.json({ error: "Order ID required" }, { status: 400 });
   }
 
+  const user = await getOrCreateUser();
+  if (!user?.userId) {
+    return NextResponse.json({ error: "Sign in required" }, { status: 401 });
+  }
+
   if (!db) {
     return NextResponse.json(
       { error: "Database not configured" },
@@ -24,6 +29,10 @@ export async function GET(
 
   if (!order) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  }
+
+  if (!order.userId || order.userId !== user.userId) {
+    return NextResponse.json({ error: "Access denied" }, { status: 403 });
   }
 
   return NextResponse.json(order);

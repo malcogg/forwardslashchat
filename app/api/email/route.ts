@@ -14,9 +14,22 @@ import {
 /**
  * POST /api/email
  * Send order confirmation, welcome, or other transactional emails via Resend.
+ * Requires Authorization: Bearer EMAIL_API_SECRET (internal/cron only).
  * Body: { type, to, ...payload }
  */
 export async function POST(request: Request) {
+  const authHeader = request.headers.get("authorization");
+  const secret = process.env.EMAIL_API_SECRET;
+  if (!secret) {
+    return NextResponse.json(
+      { error: "Email API not configured. Add EMAIL_API_SECRET." },
+      { status: 503 }
+    );
+  }
+  if (authHeader !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   if (!resend) {
     return NextResponse.json(
       { error: "Email not configured. Add RESEND_API_KEY." },
