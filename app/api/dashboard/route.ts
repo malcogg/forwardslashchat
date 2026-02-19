@@ -4,6 +4,8 @@ import { orders, customers, content } from "@/db/schema";
 import { eq, desc, count } from "drizzle-orm";
 import { getOrCreateUser } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/dashboard?orderId=xxx
  * Returns order + customer. Requires auth.
