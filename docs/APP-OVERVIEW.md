@@ -175,6 +175,7 @@ Add-ons: DNS help +$99, AI chatbot (Starter plan), Advanced SEO, Logo, Blog.
 ## Reference Docs
 
 - [TECH-SPEC.md](./TECH-SPEC.md) – Technical spec: stack, schema, API reference
+- [RESEND-RECEIVING-SETUP.md](./RESEND-RECEIVING-SETUP.md) – Receive emails at hello@forwardslash.chat
 - [SECURITY-AND-API-AUDIT.md](./SECURITY-AND-API-AUDIT.md) – Security audit, endpoint auth, action items
 - [FIRST-ORDER-READINESS.md](./FIRST-ORDER-READINESS.md) – Pre-launch checklist
 - [PRODUCTION-READINESS-CHECKLIST.md](./PRODUCTION-READINESS-CHECKLIST.md) – DONE vs TODO (may be outdated)

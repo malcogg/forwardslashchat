@@ -34,7 +34,8 @@
     "zod": "^3.24.0",
     "stripe": "^17.0.0",
     "resend": "^4.0.0",
-    "framer-motion": "^11.11.0"
+    "framer-motion": "^11.11.0",
+    "svix": "^1.40.0"
   },
   "devDependencies": {
     "drizzle-kit": "^0.28.0",
