@@ -1,7 +1,8 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { Header } from "@/components/landing/Header";
 import { Footer } from "@/components/landing/Footer";
@@ -112,6 +113,14 @@ const ADD_ONS: {
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
+  const { isSignedIn } = useUser();
+
+  useEffect(() => {
+    if (isSignedIn) {
+      fetch("/api/checkout/visit", { method: "POST", credentials: "include" }).catch(() => {});
+    }
+  }, [isSignedIn]);
+
   const planSlug = (searchParams.get("plan") ?? "starter") as PlanSlug;
   const basePlan = PLANS[planSlug] ?? PLANS.starter;
   const pagesParam = searchParams.get("pages");

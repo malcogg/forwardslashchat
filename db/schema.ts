@@ -80,6 +80,12 @@ export const customers = pgTable("customers", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+// Checkout visits - signed-in users who viewed /checkout (for abandonment emails)
+export const checkoutVisits = pgTable("checkout_visits", {
+  userId: uuid("user_id").references(() => users.id).notNull().primaryKey(),
+  visitedAt: timestamp("visited_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Checkout leads - form data collected before payment
 export const checkoutLeads = pgTable("checkout_leads", {
   id: uuid("id").primaryKey().defaultRandom(),

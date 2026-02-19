@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { customers, content, orders } from "@/db/schema";
-import { eq, count } from "drizzle-orm";
+import { customers, content, orders, users } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { getOrCreateUser } from "@/lib/auth";
 import { auth } from "@clerk/nextjs/server";
 import { getCreditBalance, deductCredits } from "@/lib/credits";
+import { resend, FROM_EMAIL } from "@/lib/resend";
+import { CrawlCompleteEmail } from "@/components/emails/crawl-complete";
+import { DnsInstructionsEmail } from "@/components/emails/dns-instructions";
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
   .split(",")
@@ -188,6 +191,43 @@ export async function POST(
     .update(customers)
     .set({ status: "dns_setup", updatedAt: now, lastCrawledAt: now })
     .where(eq(customers.id, customerId));
+
+  // Send crawl complete + DNS instructions emails
+  if (resend && user?.userId) {
+    const [userRow] = await db.select().from(users).where(eq(users.id, user.userId));
+    const toEmail = userRow?.email ?? user.email;
+    const firstName = userRow?.name?.split(" ")[0] ?? undefined;
+    if (toEmail) {
+      try {
+        await resend.emails.send({
+          from: FROM_EMAIL,
+          to: [toEmail],
+          subject: "Your chatbot content is ready",
+          react: CrawlCompleteEmail({
+            firstName,
+            businessName: customer.businessName,
+            domain: customer.domain,
+            subdomain: customer.subdomain,
+            websiteUrl: customer.websiteUrl,
+            pagesCrawled,
+          }),
+        });
+        await resend.emails.send({
+          from: FROM_EMAIL,
+          to: [toEmail],
+          subject: "Add this CNAME to go live",
+          react: DnsInstructionsEmail({
+            firstName,
+            businessName: customer.businessName,
+            domain: customer.domain,
+            subdomain: customer.subdomain,
+          }),
+        });
+      } catch (e) {
+        console.error("Crawl/DNS email failed:", e);
+      }
+    }
+  }
 
   const remaining = skipCredits ? 9999 : (await getCreditBalance(user.userId)).remaining;
   return NextResponse.json({

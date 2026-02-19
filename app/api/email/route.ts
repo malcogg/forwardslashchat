@@ -3,6 +3,7 @@ import { resend, FROM_EMAIL } from "@/lib/resend";
 import { OrderConfirmationEmail } from "@/components/emails/order-confirmation";
 import { WelcomeEmail } from "@/components/emails/welcome";
 import { PaymentReminderEmail } from "@/components/emails/payment-reminder";
+import { ChatbotDeliveredEmail } from "@/components/emails/chatbot-delivered";
 import {
   isValidEmail,
   sanitizeFirstName,
@@ -109,6 +110,33 @@ export async function POST(request: Request) {
         }),
       });
 
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      return NextResponse.json(data);
+    }
+
+    if (type === "chatbot-delivered") {
+      const { firstName, businessName, chatUrl } = body;
+      if (typeof businessName !== "string" || typeof chatUrl !== "string") {
+        return NextResponse.json(
+          { error: "chatbot-delivered requires businessName, chatUrl" },
+          { status: 400 }
+        );
+      }
+      const safeFirstName = typeof firstName === "string" ? sanitizeFirstName(firstName) : undefined;
+      const safeBusinessName = sanitizeBusinessName(businessName);
+      const safeChatUrl = sanitizeGenericText(chatUrl, 500);
+      const { data, error } = await resend.emails.send({
+        from: FROM_EMAIL,
+        to: [safeTo],
+        subject: "Your chatbot is live",
+        react: ChatbotDeliveredEmail({
+          firstName: safeFirstName,
+          businessName: safeBusinessName,
+          chatUrl: safeChatUrl,
+        }),
+      });
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
