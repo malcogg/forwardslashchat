@@ -2,27 +2,33 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import { Search, Palette, Globe, CreditCard, Rocket } from "lucide-react";
 
 const CARDS = [
   {
     title: "1. Scan Your Site",
     description: "Enter your URL — we crawl and extract your content instantly.",
+    icon: Search,
   },
   {
     title: "2. Add Your Brand",
     description: "Upload logo, colors & voice — AI trains on your real content.",
+    icon: Palette,
   },
   {
     title: "3. Connect Domain",
     description: "Set chat.yourbrand.com — fully branded, seamless integration.",
+    icon: Globe,
   },
   {
     title: "4. Pay Once",
     description: "From $379 — hosting included, zero monthly fees forever.",
+    icon: CreditCard,
   },
   {
     title: "5. Go Live!",
     description: "Deploy instantly — your AI starts answering visitors 24/7.",
+    icon: Rocket,
   },
 ] as const;
 
@@ -63,7 +69,9 @@ export function HowItWorks() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 md:gap-8">
-          {CARDS.map((card, index) => (
+          {CARDS.map((card, index) => {
+            const Icon = card.icon;
+            return (
             <div
               key={card.title}
               data-index={index}
@@ -72,8 +80,8 @@ export function HowItWorks() {
               }`}
               style={{ transitionDelay: visibleCards.has(index) ? `${index * 80}ms` : "0ms" }}
             >
-              <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-muted/30 flex items-center justify-center text-3xl text-muted-foreground">
-                Icon
+              <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-muted/30 flex items-center justify-center text-muted-foreground">
+                <Icon className="w-8 h-8" />
               </div>
               <h3 className="text-2xl font-semibold text-foreground text-center mb-3">
                 {card.title}
@@ -82,7 +90,7 @@ export function HowItWorks() {
                 {card.description}
               </p>
             </div>
-          ))}
+          );})}
         </div>
 
         <div className="mt-12 text-center">
