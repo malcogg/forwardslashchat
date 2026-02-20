@@ -3,6 +3,8 @@
 import { useRef } from "react";
 import Link from "next/link";
 import { motion, useInView } from "framer-motion";
+
+const MotionPath = motion.path;
 import { Search, Palette, Globe, CreditCard, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -49,7 +51,7 @@ export function HowItWorks() {
             {/* Desktop: horizontal line at center, draws left-to-right on scroll */}
             <div className="hidden lg:block absolute inset-0 flex items-center">
               <svg className="w-full h-2" viewBox="0 0 100 2" preserveAspectRatio="none">
-                <motion.path
+                <MotionPath
                   d="M 0 1 L 100 1"
                   stroke="#10b981"
                   strokeWidth="0.5"
@@ -57,7 +59,7 @@ export function HowItWorks() {
                   strokeLinecap="round"
                   initial={{ pathLength: 0, opacity: 0.6 }}
                   animate={inView ? { pathLength: 1, opacity: 0.8 } : { pathLength: 0, opacity: 0.6 }}
-                  transition={{ pathLength: { duration: 1.2, ease: "easeInOut" }, opacity: { duration: 0.3 } }
+                  transition={{ pathLength: { duration: 1.2, ease: "easeInOut" }, opacity: { duration: 0.3 } }}
                 />
               </svg>
             </div>
