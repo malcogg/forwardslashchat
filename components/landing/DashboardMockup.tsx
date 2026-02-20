@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Globe, Check } from "lucide-react";
 
 const ACCENT_COLORS = [
@@ -13,8 +13,29 @@ const ACCENT_COLORS = [
 export function DashboardMockup() {
   const { theme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const mockupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const items = mockupRef.current?.querySelectorAll(".animate-on-scroll");
+    if (!items?.length) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry, i) => {
+          if (entry.isIntersecting) {
+            const el = entry.target as HTMLElement;
+            const index = Number(el.dataset.index ?? 0);
+            setTimeout(() => el.classList.add("visible"), index * 120);
+          }
+        });
+      },
+      { threshold: 0.2 }
+    );
+    items.forEach((item) => observer.observe(item));
+    return () => observer.disconnect();
+  }, [mounted]);
 
   // Invert: light page → dark mockup, dark page → light mockup (contrast)
   const darkMockup = !mounted || theme !== "dark";
@@ -40,7 +61,8 @@ export function DashboardMockup() {
       };
 
   return (
-    <div className={`w-full max-w-5xl mx-auto rounded-xl shadow-2xl overflow-hidden mt-12 border ${base.border} ${base.bg}`}>
+    <div ref={mockupRef} className="relative w-full max-w-5xl mx-auto rounded-xl shadow-2xl overflow-hidden mt-12 border border-border dashboard-mockup-wrapper">
+    <div className={`w-full max-w-5xl mx-auto rounded-xl overflow-hidden border ${base.border} ${base.bg}`}>
       <div className={`flex items-center gap-2 px-4 py-3 border-b ${base.border} ${base.bar}`}>
         <div className="flex gap-1.5">
           <div className="w-3 h-3 rounded-full bg-red-400" />
@@ -62,6 +84,9 @@ export function DashboardMockup() {
               <span className={`text-xs font-medium ${darkMockup ? "text-zinc-100" : "text-white"}`}>MF</span>
             </div>
             <span className={`text-sm font-medium ${base.text} truncate`}>Michael Francis</span>
+            <span className="pro-badge shrink-0 bg-gradient-to-r from-amber-400 to-amber-500 text-black font-bold text-[11px] px-2.5 py-0.5 rounded-full ml-1 shadow-sm">
+              PRO
+            </span>
           </div>
 
           <div className="mb-4">
@@ -70,36 +95,30 @@ export function DashboardMockup() {
             </div>
           </div>
 
-          <nav className="space-y-0.5 flex-1">
-            <div className={`flex items-center gap-2 px-2 py-1.5 text-sm ${base.muted}`}>
-              <Check className="w-4 h-4 text-green-500 shrink-0" />
-              Training
+          <nav className="space-y-0.5 flex-1 dashboard-mockup-nav">
+            <div className="nav-item animate-on-scroll flex items-center gap-2 px-2 py-1.5 text-sm rounded transition-all duration-500" data-index={0}>
+              <span className="checkmark inline-block w-5 h-5 shrink-0 flex items-center justify-center">
+                <Check className="w-4 h-4 text-green-500" />
+              </span>
+              <span className={base.muted}>Training</span>
             </div>
-            <div className={`flex items-center gap-2 px-2 py-1.5 text-sm ${darkMockup ? "bg-zinc-600/50 text-zinc-100" : "bg-gray-200 text-gray-900"} rounded`}>
-              <Check className="w-4 h-4 text-green-500 shrink-0" />
-              Design
+            <div className={`nav-item selected animate-on-scroll flex items-center gap-2 px-2 py-1.5 text-sm rounded transition-all duration-500 ${darkMockup ? "bg-zinc-600/50 text-zinc-100" : "bg-gray-200 text-gray-900"}`} data-index={1}>
+              <span className="checkmark inline-block w-5 h-5 shrink-0 flex items-center justify-center">
+                <Check className="w-4 h-4 text-green-500" />
+              </span>
+              <span>Design</span>
             </div>
-            <div className={`flex items-center gap-2 px-2 py-1.5 text-sm ${base.muted}`}>
-              <span className="text-gray-400">○</span>
-              Domains
-            </div>
-            <div className={`flex items-center gap-2 px-2 py-1.5 text-sm ${base.muted}`}>
-              <span className="text-gray-400">○</span>
-              DNS
-            </div>
-            <div className={`flex items-center gap-2 px-2 py-1.5 text-sm ${base.muted}`}>
-              <span className="text-gray-400">○</span>
-              Users
-            </div>
-            <div className={`flex items-center gap-2 px-2 py-1.5 text-sm ${base.muted}`}>
-              <span className="text-gray-400">○</span>
-              Settings
+            <div className={`nav-item animate-on-scroll flex items-center gap-2 px-2 py-1.5 text-sm rounded transition-all duration-500 ${base.muted}`} data-index={2}>
+              <span className="checkmark inline-block w-5 h-5 shrink-0 flex items-center justify-center">
+                <span className="text-gray-400">○</span>
+              </span>
+              <span>Domain</span>
             </div>
           </nav>
 
           <div className={`pt-6 border-t ${base.border}`}>
             <div className={`text-xs ${base.muted}`}>Content pages</div>
-            <div className={`text-sm ${base.text}`}>12 crawled</div>
+            <div className={`text-sm font-medium ${darkMockup ? "text-red-400" : "text-red-500"}`}>12 / 25 crawled</div>
             <div className="flex items-center gap-2 mt-4">
               <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${darkMockup ? "bg-zinc-600" : "bg-gray-200"}`}>
                 <span className={`text-xs font-medium ${base.text}`}>MF</span>
@@ -162,6 +181,7 @@ export function DashboardMockup() {
           <ChatPreview dark={darkMockup} />
         </div>
       </div>
+    </div>
     </div>
   );
 }
