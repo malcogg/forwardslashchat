@@ -19,12 +19,12 @@ End-to-end paths through the product:
 5. **Checkout** → User lands with plan + pages + optional url. Form: name, email, phone, business, domain, website. If **signed in**: `POST /api/checkout/visit` fires (for abandonment reminder). “Pay” → `POST /api/checkout/lead` (saves to `checkout_leads`) → redirect to **PayPal.me** with amount + description. **No order created yet.**
 6. **PayPal** → User pays externally. **No webhook.** You confirm payment then create/link order manually (see Post-payment below).
 
-### Path B: Visitor → Roast → Sign up → Dashboard (pending project)
+### Path B: Visitor → Roast → Sign up → Dashboard (no payment required)
 
 1. Same as Path A through **Roast results**.
 2. User clicks “Create free account” → **Clerk sign-up** → After sign-up, redirect to `/dashboard`. `PENDING_SCAN_URL_KEY` in sessionStorage holds `{ url, estimatedPages }`.
-3. **Dashboard load** → `GET /api/dashboard?orderId=…` (or no orderId). If sessionStorage has pending URL and no `orderId`, `POST /api/scan-request` runs (creates **pending** order + customer, signed-in user). Redirect to `/dashboard?orderId=…`.
-4. **Dashboard** shows order/customer; status “Payment pending”. User can “Build my chatbot” only after order is **paid** (manual mark in Neon or Stripe webhook).
+3. **Dashboard load** → Any signed-in user can load the dashboard (payment not required). `GET /api/dashboard` and `GET /api/orders/me` return their data or empty. If sessionStorage has pending URL and no `orderId`, `POST /api/scan-request` runs (creates **pending** order + customer). Redirect to `/dashboard?orderId=…`.
+4. **Dashboard** shows their project(s); status “Payment pending”. They can scan more sites, see their list, etc. **Payment is only required to run “Build my chatbot”** (crawl + go live). Until then they stay on the dashboard with pending order(s).
 
 ### Path C: Signed-in user with paid order → Build chatbot → Chat live
 
@@ -42,10 +42,10 @@ End-to-end paths through the product:
 ## 2. Flow summary (one-line list)
 
 - **Homepage** → URL → **Scan modal** (roasting → roast results → Pay CTA or Sign up / Dashboard).
+- **Sign up** → Clerk → **Dashboard** (no payment required). Pending URL → **scan-request** → pending **order + customer**; user sees their project(s).
 - **Checkout** → Form → **Lead** (`POST /api/checkout/lead`) → **PayPal** redirect (no order created).
-- **Sign up** → Clerk → **Dashboard**; pending URL → **scan-request** → pending **order + customer**.
 - **Mark order paid** (Neon or Stripe webhook) → **Cron** sends “Payment confirmed – build your chatbot” (once per order).
-- **Dashboard** → **Build my chatbot** → **Crawl** → **Crawl complete + DNS emails** → **Chat** at `/chat/c/[customerId]`.
+- **Dashboard** → **Build my chatbot** (only when paid) → **Crawl** → **Crawl complete + DNS emails** → **Chat** at `/chat/c/[customerId]`.
 - **Public chat** → `/chat/c/[customerId]` → load customer → RAG chat.
 
 ---

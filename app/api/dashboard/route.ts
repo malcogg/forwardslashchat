@@ -8,9 +8,10 @@ export const dynamic = "force-dynamic";
 
 /**
  * GET /api/dashboard?orderId=xxx
- * Returns order + customer. Requires auth.
+ * Returns order + customer for the signed-in user. No payment required to load dashboard.
+ * - Any signed-in user can reach the dashboard (paid or not).
  * - If orderId: load that order, link to user if unclaimed, validate ownership
- * - If no orderId: return user's first order (or empty)
+ * - If no orderId: return user's first order (or empty). New users get { order: null, customer: null }.
  */
 export async function GET(request: Request) {
   try {

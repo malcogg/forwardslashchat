@@ -31,10 +31,23 @@ function DashboardContent() {
 
   const displayName = getDisplayName(user);
 
-  // Spec: After signup, user arrives with pending scan URL. Create project and redirect.
-  // Only run after Clerk has loaded so the session cookie is available (avoids 401 on scan-request).
+  // Call dashboard/orders only when we have a signed-in user (avoids 401 after redirect).
+  // Dashboard is for all signed-in users; payment is only required to run "Build my chatbot".
+  const canCallApi = clerkLoaded && !!user;
+
+  // If Clerk loaded and still no user after a short wait (signed out / session expired), show sign-in.
   useEffect(() => {
-    if (!clerkLoaded || orderId) return;
+    if (!clerkLoaded || user) return;
+    const t = setTimeout(() => {
+      setLoading(false);
+      setError("Sign in required");
+    }, 2000);
+    return () => clearTimeout(t);
+  }, [clerkLoaded, user]);
+
+  // Spec: After signup, user arrives with pending scan URL. Create project and redirect.
+  useEffect(() => {
+    if (!canCallApi || orderId) return;
     try {
       const raw = sessionStorage.getItem(PENDING_SCAN_URL_KEY);
       if (!raw) return;
@@ -71,7 +84,7 @@ function DashboardContent() {
     } catch {
       /* ignore */
     }
-  }, [orderId, router, clerkLoaded]);
+  }, [orderId, router, canCallApi]);
   const initials = getInitials(displayName);
 
   const [activePanel, setActivePanel] = useState<"design" | "domains">("design");
@@ -120,11 +133,11 @@ function DashboardContent() {
   const [crawlError, setCrawlError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Wait for Clerk to resolve session before calling API (avoids 401 race after sign-in redirect)
+  // Wait for signed-in user so session cookie is ready before calling API (avoids 401 after Google redirect)
   useEffect(() => {
-    if (!clerkLoaded) return;
+    if (!canCallApi) return;
     let mounted = true;
-    const load = (retries = 1) => {
+    const load = (retries = 2) => {
       fetch(`/api/dashboard${orderId ? `?orderId=${encodeURIComponent(orderId)}` : ""}`, { credentials: "include", cache: "no-store" })
         .then(async (res) => {
           if (res.ok) {
@@ -134,9 +147,9 @@ function DashboardContent() {
             return;
           }
           const err = await res.json().catch(() => ({}));
-          // Retry on 401 once (session may not be ready yet after sign-in redirect)
+          // Retry on 401 (session may not be ready yet after sign-in redirect)
           if (res.status === 401 && retries > 0) {
-            setTimeout(() => load(retries - 1), 1000);
+            setTimeout(() => load(retries - 1), 1200);
             return;
           }
           if (res.status === 401) {
@@ -157,19 +170,29 @@ function DashboardContent() {
     // Delay so the first request has the session cookie attached after redirect (avoids 401)
     const t = setTimeout(() => { if (mounted) load(); }, 400);
     return () => { clearTimeout(t); mounted = false; };
-  }, [orderId, clerkLoaded]);
+  }, [orderId, canCallApi]);
 
   useEffect(() => {
-    if (!clerkLoaded) return;
-    // Delay slightly so session is ready (avoids 401 when dashboard/scan-request also fire)
-    const t = setTimeout(() => {
+    if (!canCallApi) return;
+    let mounted = true;
+    const loadOrders = (retries = 1) => {
       fetch("/api/orders/me", { credentials: "include" })
-        .then((res) => (res.ok ? res.json() : []))
-        .then(setMyOrders)
+        .then(async (res) => {
+          if (res.ok) {
+            const json = await res.json();
+            if (mounted) setMyOrders(json);
+            return;
+          }
+          if (res.status === 401 && retries > 0) {
+            setTimeout(() => loadOrders(retries - 1), 1200);
+            return;
+          }
+        })
         .catch(() => {});
-    }, 500);
-    return () => clearTimeout(t);
-  }, [clerkLoaded]);
+    };
+    const t = setTimeout(() => { if (mounted) loadOrders(); }, 600);
+    return () => { clearTimeout(t); mounted = false; };
+  }, [canCallApi]);
 
   // Poll when current order is pending so user sees status = 'paid' soon after you set it in Neon
   useEffect(() => {
