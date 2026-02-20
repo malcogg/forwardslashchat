@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { getPriceFromPagesAndYears } from "@/lib/pricing";
@@ -15,33 +16,14 @@ const FEATURES = [
 ] as const;
 
 const TIERS = [
-  {
-    key: "starter",
-    name: "Starter",
-    pages: "Up to 50 pages",
-    pageCount: 25,
-    years: 2 as const,
-    popular: false,
-  },
-  {
-    key: "growth",
-    name: "Growth",
-    pages: "51–200 pages",
-    pageCount: 125,
-    years: 2 as const,
-    popular: true,
-  },
-  {
-    key: "pro",
-    name: "Pro",
-    pages: "201–500+ pages",
-    pageCount: 350,
-    years: 2 as const,
-    popular: false,
-  },
+  { key: "starter", name: "Starter", pages: "Up to 50 pages", pageCount: 25, popular: false },
+  { key: "growth", name: "Growth", pages: "51–200 pages", pageCount: 125, popular: true },
+  { key: "pro", name: "Pro", pages: "201–500+ pages", pageCount: 350, popular: false },
 ] as const;
 
 export function PricingSection() {
+  const [years, setYears] = useState<1 | 2>(2);
+
   return (
     <section id="pricing" className="py-24 px-6 bg-slate-50 dark:bg-slate-950/50">
       <div className="max-w-7xl mx-auto">
@@ -52,13 +34,36 @@ export function PricingSection() {
           <p className="mt-4 text-base text-muted-foreground max-w-xl mx-auto">
             Based on your site size. Hosting included. No monthly fees.
           </p>
+          <div className="mt-6 flex items-center justify-center gap-2">
+            <span className="text-sm text-muted-foreground">Term:</span>
+            <div className="inline-flex rounded-lg border border-border bg-background p-0.5">
+              <button
+                type="button"
+                onClick={() => setYears(1)}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  years === 1 ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                1 yr
+              </button>
+              <button
+                type="button"
+                onClick={() => setYears(2)}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  years === 2 ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                2 yr
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
           {TIERS.map((tier) => {
             const price = tier.pageCount >= 500
               ? null
-              : getPriceFromPagesAndYears(tier.pageCount, tier.years);
+              : getPriceFromPagesAndYears(tier.pageCount, years);
 
             return (
               <div
@@ -88,7 +93,7 @@ export function PricingSection() {
                         ${price.toLocaleString()}
                       </p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        One-time payment · {tier.years} years hosting included
+                        One-time payment · {years} year{years > 1 ? "s" : ""} hosting included
                       </p>
                     </>
                   ) : (
@@ -104,7 +109,7 @@ export function PricingSection() {
                 <ul className="space-y-3 flex-1 mb-8">
                   {FEATURES.map((feature, i) => (
                     <li key={feature} className="flex items-center gap-2 text-sm text-foreground">
-                      <Check className={`w-4 h-4 shrink-0 ${i === FEATURES.length - 1 ? "text-primary" : "text-muted-foreground"}`} />
+                      <Check className="w-4 h-4 shrink-0 text-emerald-600" />
                       <span className={i === FEATURES.length - 1 ? "font-semibold" : ""}>
                         {feature}
                       </span>
@@ -114,7 +119,7 @@ export function PricingSection() {
 
                 {price !== null ? (
                   <Link
-                    href={`/checkout?plan=chatbot-${tier.years}y&pages=${tier.pageCount}`}
+                    href={`/checkout?plan=chatbot-${years}y&pages=${tier.pageCount}`}
                     className="block w-full py-3 px-6 rounded-full bg-primary text-primary-foreground font-medium text-center hover:opacity-90 transition-opacity"
                   >
                     Get Started — ${price.toLocaleString()}
