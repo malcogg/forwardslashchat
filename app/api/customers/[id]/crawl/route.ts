@@ -201,6 +201,7 @@ export async function POST(
     const firstName = userRow?.name?.split(" ")[0] ?? undefined;
     if (toEmail) {
       try {
+        const chatBase = process.env.NEXT_PUBLIC_APP_URL ?? "https://forwardslash.chat";
         await resend.emails.send({
           from: FROM_EMAIL,
           to: [toEmail],
@@ -212,6 +213,7 @@ export async function POST(
             subdomain: customer.subdomain,
             websiteUrl: customer.websiteUrl,
             pagesCrawled,
+            chatUrl: `${chatBase}/chat/c/${customerId}`,
           }),
         });
         await resend.emails.send({

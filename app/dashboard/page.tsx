@@ -24,7 +24,7 @@ function getInitials(name: string): string {
 }
 
 function DashboardContent() {
-  const { user } = useUser();
+  const { user, isLoaded: clerkLoaded } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
@@ -118,7 +118,9 @@ function DashboardContent() {
   const [crawlError, setCrawlError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // Wait for Clerk to resolve session before calling API (avoids 401 race after sign-in redirect)
   useEffect(() => {
+    if (!clerkLoaded) return;
     let mounted = true;
     const load = (retries = 2) => {
       fetch(`/api/dashboard${orderId ? `?orderId=${encodeURIComponent(orderId)}` : ""}`, { credentials: "include", cache: "no-store" })
@@ -135,6 +137,11 @@ function DashboardContent() {
             setTimeout(() => load(retries - 1), 800);
             return;
           }
+          if (res.status === 401 && retries === 0) {
+            // Session still not valid after retries – reload to re-run middleware and get fresh session
+            if (mounted) window.location.reload();
+            return;
+          }
           if (mounted) setError((err as { error?: string }).error ?? "Could not load dashboard");
           if (mounted) setLoading(false);
         })
@@ -147,11 +154,37 @@ function DashboardContent() {
     setError(null);
     load();
     return () => { mounted = false; };
-  }, [orderId]);
+  }, [orderId, clerkLoaded]);
 
   useEffect(() => {
+    if (!clerkLoaded) return;
     fetch("/api/orders/me", { credentials: "include" }).then((res) => (res.ok ? res.json() : [])).then(setMyOrders).catch(() => {});
-  }, []);
+  }, [clerkLoaded]);
+
+  // Poll when current order is pending so user sees status = 'paid' soon after you set it in Neon
+  useEffect(() => {
+    const isPending = data?.order?.status && data.order.status !== "paid";
+    if (!isPending) return;
+    const currentOrderId = orderId ?? data?.order?.id;
+    const interval = setInterval(() => {
+      const url = currentOrderId
+        ? `/api/dashboard?orderId=${encodeURIComponent(currentOrderId)}`
+        : "/api/dashboard";
+      fetch(url, { credentials: "include", cache: "no-store" })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((json) => {
+          if (json?.order?.status === "paid") {
+            setData(json);
+            fetch("/api/orders/me", { credentials: "include" })
+              .then((r) => (r.ok ? r.json() : []))
+              .then(setMyOrders)
+              .catch(() => {});
+          }
+        })
+        .catch(() => {});
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [orderId, data?.order?.status, data?.order?.id]);
 
   const handleDeleteSite = async (orderIdToDelete: string) => {
     if (deletingOrderId) return;

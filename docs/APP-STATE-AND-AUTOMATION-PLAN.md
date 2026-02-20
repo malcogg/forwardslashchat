@@ -228,3 +228,56 @@ Chat already works; the work is DNS, domain mapping, and Vercel domain setup.
 - **DNS automation:** Add DoH-based CNAME verification and a “Verify DNS” flow.
 - **Go-live automation:** Add domain mapping and Vercel API calls; no fork required if we stay multi-tenant.
 - **Fork approach:** Only needed if you want fully separate apps per customer; more complex than extending our existing app.
+
+---
+
+## Current specifics (for targeted implementation advice)
+
+### Middleware
+
+**File:** `middleware.ts` (root). Today it only does Clerk auth — no domain → customer resolution yet.
+
+```ts
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+
+const isProtectedRoute = createRouteMatcher(["/dashboard(.*)", "/admin(.*)"]);
+const isPublicRoute = createRouteMatcher(["/", "/chat/demo", "/checkout", "/services", "/sign-in(.*)", "/sign-up(.*)", "/api/webhooks(.*)", "/api/cron(.*)"]);
+
+export default clerkMiddleware(async (auth, req) => {
+  const { pathname } = req.nextUrl;
+  if (isProtectedRoute(req) && !isPublicRoute(req)) {
+    await auth.protect();
+  }
+});
+
+export const config = {
+  matcher: [
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/(api|trpc)(.*)",
+  ],
+};
+```
+
+- **Not yet:** Host-based routing; skip for `/api/`, `/_next/`, `/dashboard`, `/checkout`, etc.; lookup `host` → `customerId`; rewrite to `/chat/c/[customerId]`.
+- Chat is already at `/chat/c/[customerId]`; middleware would only need to resolve custom host → `customerId` and rewrite.
+
+### DB schema (domains)
+
+**Relevant tables:** `db/schema.ts`
+
+- **`customers`** has: `domain`, `subdomain` (e.g. `business.com`, `chat` for chat.business.com). No `custom_domain` (full host like `chat.business.com`), no `dns_verified_at`, no `custom_domain_added_at`.
+- **`orders`** has: `status` (`pending` | `paid` | …), `paymentProvider`, `paymentId`.
+- **No** `customer_domains` (or similar) table yet for domain → customer mapping.
+
+Planned additions (from plan): `customers.dns_verified_at`, and either `customers.custom_domain` or a `customer_domains` table for middleware lookup.
+
+### PayPal integration status
+
+| Item | Status |
+|------|--------|
+| Checkout UI | User fills form → `POST /api/checkout/lead` (saves to `checkout_leads`) → redirect to PayPal.me with amount + description. No order created at payment time. |
+| Order creation | Orders are created by: (1) `POST /api/scan-request` when user adds project (pending order + customer), or (2) `POST /api/admin/orders` (admin creates order + customer, status `paid` for testing). No automatic order from PayPal. |
+| Mark paid | **Not implemented.** Admin can list orders at `GET /api/admin/orders` and create new orders via `POST /api/admin/orders`, but there is no PATCH/PUT to set an existing order to `status = 'paid'` (e.g. after confirming payment against a checkout lead). |
+| PayPal webhook | None. Docs say PayPal IPN/webhook is planned; Stripe webhook exists at `POST /api/webhooks/stripe` and sets `orders.status = 'paid'`. |
+
+So: **PayPal = redirect only.** To get to “mark paid” without a webhook: need admin UI that lists checkout leads + orders, and an endpoint like `PATCH /api/admin/orders/[id]` with `{ status: 'paid', paymentId?, paymentProvider: 'paypal' }` (and optionally link lead → order when creating order from lead).
