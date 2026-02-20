@@ -199,7 +199,7 @@ export function Header({
                 <Button variant="ghost" size="sm">Sign in</Button>
               </Link>
               <Link href="/sign-up" className="hidden md:inline-block">
-                <Button size="sm" className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white">
+                <Button variant="cta" size="sm">
                   Get started
                 </Button>
               </Link>
@@ -269,7 +269,7 @@ export function Header({
             </nav>
             <div className="p-6 border-t border-border shrink-0">
               <Link href="/sign-up" onClick={() => setMobileDrawerOpen(false)} className="block">
-                <Button size="sm" className="w-full rounded-full bg-emerald-600 hover:bg-emerald-700 text-white">
+                <Button variant="cta" size="sm" className="w-full">
                   Get started
                 </Button>
               </Link>

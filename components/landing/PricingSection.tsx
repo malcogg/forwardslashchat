@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { getPriceFromPagesAndYears } from "@/lib/pricing";
 
 const CAL_LINK = process.env.NEXT_PUBLIC_STRATEGY_CALL_URL || "https://cal.com/forwardslash/30min";
@@ -118,21 +119,17 @@ export function PricingSection() {
                 </ul>
 
                 {price !== null ? (
-                  <Link
-                    href={`/checkout?plan=chatbot-${years}y&pages=${tier.pageCount}`}
-                    className="block w-full py-3 px-6 rounded-full bg-primary text-primary-foreground font-medium text-center hover:opacity-90 transition-opacity"
-                  >
-                    Get Started — ${price.toLocaleString()}
-                  </Link>
+                  <Button asChild variant="cta" size="lg" className="w-full">
+                    <Link href={`/checkout?plan=chatbot-${years}y&pages=${tier.pageCount}`}>
+                      Get Started — ${price.toLocaleString()}
+                    </Link>
+                  </Button>
                 ) : (
-                  <a
-                    href={CAL_LINK}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block w-full py-3 px-6 rounded-full bg-primary text-primary-foreground font-medium text-center hover:opacity-90 transition-opacity"
-                  >
-                    Contact us for a quote
-                  </a>
+                  <Button asChild variant="cta" size="lg" className="w-full">
+                    <a href={CAL_LINK} target="_blank" rel="noopener noreferrer">
+                      Contact us for a quote
+                    </a>
+                  </Button>
                 )}
               </div>
             );

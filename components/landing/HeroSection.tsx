@@ -111,8 +111,10 @@ export function HeroSection({ onScanClick }: HeroSectionProps) {
                 </datalist>
               </div>
               <Button
+                variant="cta"
+                size="lg"
                 onClick={handleScan}
-                className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 shrink-0"
+                className="shrink-0"
               >
                 Scan your site
               </Button>
