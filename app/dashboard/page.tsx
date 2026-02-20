@@ -321,6 +321,7 @@ function DashboardContent() {
   const customerStatus = customer?.status ?? "";
   const isLive = customerStatus === "delivered";
   const isTestingOrLive = ["testing", "delivered"].includes(customerStatus);
+  const isWebsiteOrder = order?.planSlug && ["starter", "new-build", "redesign"].includes(order.planSlug);
 
   const notifications = useMemo(() => {
     type Config = { id: string; title: string; body: string };
@@ -445,7 +446,6 @@ function DashboardContent() {
     : null;
   const canRescan = !lastCrawled || !nextCrawlAvailable || new Date() >= nextCrawlAvailable;
 
-  const isWebsiteOrder = order?.planSlug && ["starter", "new-build", "redesign"].includes(order.planSlug);
   const WEBSITE_PLAN_NAMES: Record<string, string> = {
     starter: "Quick WordPress Starter",
     "new-build": "Brand New Website Build",
