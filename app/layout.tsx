@@ -36,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   // Clerk publishableKey - must be set in Vercel env vars for deploy
-  const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
   return (
     <ClerkProvider publishableKey={clerkKey}>
       <html lang="en" suppressHydrationWarning>

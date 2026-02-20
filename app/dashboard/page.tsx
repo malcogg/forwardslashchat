@@ -231,9 +231,9 @@ function DashboardContent() {
   }, [orderId, data?.order?.status, data?.order?.id]);
 
   useEffect(() => {
-    if (!canCallApi || loading || error) return;
+    if (typeof window === "undefined" || !canCallApi || loading || error) return;
     try {
-      if (!localStorage.getItem(ONBOARDING_SEEN_KEY)) setShowOnboardingModal(true);
+      if (!window.localStorage.getItem(ONBOARDING_SEEN_KEY)) setShowOnboardingModal(true);
     } catch {
       /* ignore */
     }
@@ -1126,7 +1126,12 @@ function DashboardContent() {
       {showOnboardingModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-          onClick={(e) => e.target === e.currentTarget && (localStorage.setItem(ONBOARDING_SEEN_KEY, "1"), setShowOnboardingModal(false), setOnboardingStep(0))}
+          onClick={(e) => {
+            if (e.target !== e.currentTarget) return;
+            try { localStorage.setItem(ONBOARDING_SEEN_KEY, "1"); } catch {}
+            setShowOnboardingModal(false);
+            setOnboardingStep(0);
+          }}
         >
           <div
             className="relative w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl p-6"
