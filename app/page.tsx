@@ -3,6 +3,7 @@
 import { useState, Suspense, useEffect, useCallback } from "react";
 import { Header } from "@/components/landing/Header";
 import { HeroSection } from "@/components/landing/HeroSection";
+import { BenefitsSection } from "@/components/landing/BenefitsSection";
 import { HowItWorks } from "@/components/landing/HowItWorks";
 import { PricingSection } from "@/components/landing/PricingSection";
 import { FaqSection } from "@/components/landing/FaqSection";
@@ -53,6 +54,7 @@ export default function HomePage() {
     <main className="min-h-screen bg-background">
       <Header lastScan={lastScan} onOpenLastScan={handleOpenLastScan} />
       <HeroSection onScanClick={handleScanClick} />
+      <BenefitsSection />
       <HowItWorks />
       <Suspense
         fallback={

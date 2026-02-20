@@ -1,183 +1,146 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Check, Minus, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { FadeInSection } from "@/components/FadeInSection";
-import {
-  getPriceFromPagesAndYears,
-  getTierFromPages,
-  TIER_LABELS,
-  type TierKey,
-} from "@/lib/pricing";
+import { Check } from "lucide-react";
+import { getPriceFromPagesAndYears } from "@/lib/pricing";
 
 const CAL_LINK = process.env.NEXT_PUBLIC_STRATEGY_CALL_URL || "https://cal.com/forwardslash/30min";
 
-const INCLUDED = [
+const FEATURES = [
   "AI trained on your content",
+  "Custom domain (chat.yoursite.com)",
   "Hosting included",
-  "Your domain (chat.yoursite.com or yoursite.com/chat)",
+  "Unlimited queries",
   "No monthly fees",
-];
+] as const;
 
-const TIER_OPTIONS: { key: TierKey; pages: number; label: string }[] = [
-  { key: "under50", pages: 25, label: "Up to 50 pages" },
-  { key: "50-200", pages: 125, label: "51–200 pages" },
-  { key: "200-500", pages: 350, label: "201–500 pages" },
-  { key: "500+", pages: 500, label: "500+ pages" },
-];
+const TIERS = [
+  {
+    key: "starter",
+    name: "Starter",
+    pages: "Up to 50 pages",
+    pageCount: 25,
+    years: 2 as const,
+    popular: false,
+  },
+  {
+    key: "growth",
+    name: "Growth",
+    pages: "51–200 pages",
+    pageCount: 125,
+    years: 2 as const,
+    popular: true,
+  },
+  {
+    key: "pro",
+    name: "Pro",
+    pages: "201–500+ pages",
+    pageCount: 350,
+    years: 2 as const,
+    popular: false,
+  },
+] as const;
 
 export function PricingSection() {
-  const searchParams = useSearchParams();
-  const pagesParam = searchParams.get("pages");
-  const initialPages = pagesParam ? Math.min(500, Math.max(1, parseInt(pagesParam, 10) || 25)) : 25;
-
-  const [years, setYears] = useState<1 | 2>(2);
-  const [pages, setPages] = useState(initialPages);
-  const [tierKey, setTierKey] = useState<TierKey>("under50");
-
-  useEffect(() => {
-    if (pagesParam) {
-      const p = Math.min(500, Math.max(1, parseInt(pagesParam, 10) || 25));
-      setPages(p);
-      if (p >= 500) setTierKey("500+");
-      else if (p > 200) setTierKey("200-500");
-      else if (p > 50) setTierKey("50-200");
-      else setTierKey("under50");
-    }
-  }, [pagesParam]);
-
-  const handleTierChange = (opt: (typeof TIER_OPTIONS)[number]) => {
-    if (opt.key === "500+") {
-      setTierKey("500+");
-      setPages(500);
-    } else {
-      setTierKey(opt.key);
-      setPages(opt.pages);
-    }
-  };
-
-  const isContactUs = pages >= 500;
-  const price = !isContactUs ? getPriceFromPagesAndYears(pages, years) : null;
-
   return (
     <section id="pricing" className="py-24 px-6 bg-slate-50 dark:bg-slate-950/50">
-      <div className="max-w-2xl mx-auto">
-        <FadeInSection className="text-center mb-12">
-          <h2 className="font-serif text-3xl md:text-4xl text-foreground">Simple pricing</h2>
-          <p className="mt-4 text-muted-foreground">
-            One upfront payment. Hosting included. Price based on your site size.
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-12 md:mb-16">
+          <h2 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold text-foreground">
+            One-Time Payment Plans
+          </h2>
+          <p className="mt-4 text-base text-muted-foreground max-w-xl mx-auto">
+            Based on your site size. Hosting included. No monthly fees.
           </p>
-        </FadeInSection>
+        </div>
 
-        <FadeInSection delay={100}>
-          <div className="relative rounded-xl border-2 border-emerald-500/50 bg-card p-8 shadow-lg shadow-emerald-500/5">
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 text-xs bg-emerald-600 text-white rounded-full">
-              AI Chatbot
-            </span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+          {TIERS.map((tier) => {
+            const price = tier.pageCount >= 500
+              ? null
+              : getPriceFromPagesAndYears(tier.pageCount, tier.years);
 
-            {/* Years selector */}
-            <div className="flex items-center justify-center gap-4 mb-6">
-              <span className="text-sm font-medium text-muted-foreground">Years</span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setYears(1)}
-                  disabled={years <= 1}
-                  className="w-10 h-10 rounded-full border border-border bg-background flex items-center justify-center text-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  aria-label="1 year"
-                >
-                  <Minus className="w-4 h-4" />
-                </button>
-                <span className="w-12 text-center font-semibold text-foreground">{years}</span>
-                <button
-                  type="button"
-                  onClick={() => setYears(2)}
-                  disabled={years >= 2}
-                  className="w-10 h-10 rounded-full border border-border bg-background flex items-center justify-center text-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  aria-label="2 years"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-              <span className="text-sm text-muted-foreground">year{years > 1 ? "s" : ""}</span>
-            </div>
+            return (
+              <div
+                key={tier.key}
+                className={`relative rounded-xl border border-border bg-card p-6 md:p-8 flex flex-col ${
+                  tier.popular ? "ring-2 ring-primary/30 border-primary/30 md:-my-2 md:py-10 md:z-10 md:shadow-lg" : ""
+                }`}
+              >
+                {tier.popular && (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 text-xs font-semibold bg-primary text-primary-foreground rounded-full">
+                    Most Popular
+                  </span>
+                )}
 
-            {/* Page tier selector */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-muted-foreground mb-3">
-                Site size (pages)
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {TIER_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.key}
-                    type="button"
-                    onClick={() => handleTierChange(opt)}
-                    className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                      tierKey === opt.key
-                        ? "border-emerald-500 bg-emerald-500/10 text-foreground"
-                        : "border-border bg-background text-muted-foreground hover:bg-accent"
-                    }`}
+                <div className="mb-6">
+                  <h3 className="text-xl font-semibold text-foreground">{tier.name}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">{tier.pages}</p>
+                  {tier.popular && (
+                    <p className="text-xs font-medium text-muted-foreground mt-0.5">Best value</p>
+                  )}
+                </div>
+
+                <div className="mb-6">
+                  {price !== null ? (
+                    <>
+                      <p className="text-4xl md:text-5xl font-bold text-foreground">
+                        ${price.toLocaleString()}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        One-time payment · {tier.years} years hosting included
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-2xl md:text-3xl font-bold text-foreground">Custom</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Contact us for a quote
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                <ul className="space-y-3 flex-1 mb-8">
+                  {FEATURES.map((feature, i) => (
+                    <li key={feature} className="flex items-center gap-2 text-sm text-foreground">
+                      <Check className={`w-4 h-4 shrink-0 ${i === FEATURES.length - 1 ? "text-primary" : "text-muted-foreground"}`} />
+                      <span className={i === FEATURES.length - 1 ? "font-semibold" : ""}>
+                        {feature}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+
+                {price !== null ? (
+                  <Link
+                    href={`/checkout?plan=chatbot-${tier.years}y&pages=${tier.pageCount}`}
+                    className="block w-full py-3 px-6 rounded-full bg-primary text-primary-foreground font-medium text-center hover:opacity-90 transition-opacity"
                   >
-                    {opt.label}
-                  </button>
-                ))}
+                    Get Started — ${price.toLocaleString()}
+                  </Link>
+                ) : (
+                  <a
+                    href={CAL_LINK}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full py-3 px-6 rounded-full bg-primary text-primary-foreground font-medium text-center hover:opacity-90 transition-opacity"
+                  >
+                    Contact us for a quote
+                  </a>
+                )}
               </div>
-            </div>
+            );
+          })}
+        </div>
 
-            {/* Price */}
-            <div className="text-center mb-6">
-              {isContactUs ? (
-                <p className="text-lg font-medium text-muted-foreground">
-                  500+ pages — <span className="text-foreground">Contact us for a quote</span>
-                </p>
-              ) : (
-                <>
-                  <p className="text-3xl font-bold text-foreground">${price?.toLocaleString()}</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    one-time · {years} year{years > 1 ? "s" : ""} hosting
-                  </p>
-                </>
-              )}
-            </div>
-
-            <ul className="space-y-3 mb-6">
-              {INCLUDED.map((item) => (
-                <li key={item} className="flex items-center gap-2 text-sm text-foreground">
-                  <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-
-            {isContactUs ? (
-              <Button asChild className="w-full rounded-full bg-emerald-600 hover:bg-emerald-700 text-white">
-                <a href={CAL_LINK} target="_blank" rel="noopener noreferrer">
-                  Contact us for a quote
-                </a>
-              </Button>
-            ) : (
-              <Button asChild className="w-full rounded-full bg-emerald-600 hover:bg-emerald-700 text-white">
-                <Link
-                  href={`/checkout?plan=chatbot-${years}y&pages=${pages}&amountCents=${(price ?? 0) * 100}`}
-                >
-                  Get started — ${price?.toLocaleString()}
-                </Link>
-              </Button>
-            )}
-          </div>
-
-          <p className="text-center text-sm text-muted-foreground mt-6">
-            +$99 optional: Help with DNS setup.{" "}
-            <Link href="/#scan" className="text-emerald-600 hover:underline">
-              Scan your site
-            </Link>{" "}
-            to see your page count.
-          </p>
-        </FadeInSection>
+        <p className="text-center text-sm text-muted-foreground mt-8">
+          +$99 optional: Help with DNS setup.{" "}
+          <Link href="/#scan" className="text-primary hover:underline">
+            Scan your site
+          </Link>{" "}
+          to see your page count.
+        </p>
       </div>
     </section>
   );
