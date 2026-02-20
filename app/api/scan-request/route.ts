@@ -53,7 +53,7 @@ export async function POST(request: Request) {
       .insert(orders)
       .values({
         userId: user.userId,
-        amountCents: 55000, // 1-year starter placeholder; checkout will use actual tier
+        amountCents: 79900, // 1-year starter placeholder; checkout will use actual tier
         bundleYears: 1,
         dnsHelp: false,
         status: "pending",

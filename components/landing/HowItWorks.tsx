@@ -192,11 +192,11 @@ function PaymentsCard() {
         <div className="space-y-3">
           <Link href="/checkout?plan=chatbot-1y&pages=25" className="flex items-center justify-between py-2 border-b border-border hover:bg-accent/50 -mx-2 px-2 rounded">
             <span className="text-sm text-foreground">1-Year</span>
-            <span className="text-sm font-medium text-foreground">from $550</span>
+            <span className="text-sm font-medium text-foreground">from $799</span>
           </Link>
           <Link href="/checkout?plan=chatbot-2y&pages=25" className="flex items-center justify-between py-2 hover:bg-accent/50 -mx-2 px-2 rounded">
             <span className="text-sm text-foreground">2-Year</span>
-            <span className="text-sm font-medium text-foreground">from $850</span>
+            <span className="text-sm font-medium text-foreground">from $1,099</span>
           </Link>
         </div>
         <p className="mt-4 text-xs text-muted-foreground">

@@ -43,9 +43,9 @@ const TYPING_BUBBLES = [
 const TYPEWRITER_MS_PER_CHAR = 65;
 
 const PAGE_TIERS = [
-  { min: 0, max: 300, tier: "Small", price: 550, years: 1 },
-  { min: 300, max: 1000, tier: "Medium", price: 850, years: 2 },
-  { min: 1000, max: 5000, tier: "Large", price: 1250, years: 3 },
+  { min: 0, max: 300, tier: "Small", price: 799, years: 1 },
+  { min: 300, max: 1000, tier: "Medium", price: 1099, years: 2 },
+  { min: 1000, max: 5000, tier: "Large", price: 2999, years: 1 },
   { min: 5000, max: Infinity, tier: "Enterprise", price: null, years: null },
 ];
 

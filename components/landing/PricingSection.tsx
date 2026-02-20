@@ -23,9 +23,9 @@ const INCLUDED = [
 ];
 
 const TIER_OPTIONS: { key: TierKey; pages: number; label: string }[] = [
-  { key: "under50", pages: 25, label: "< 50 pages" },
-  { key: "50-200", pages: 125, label: "50–200 pages" },
-  { key: "200-500", pages: 350, label: "200–500 pages" },
+  { key: "under50", pages: 25, label: "Up to 50 pages" },
+  { key: "50-200", pages: 125, label: "51–200 pages" },
+  { key: "200-500", pages: 350, label: "201–500 pages" },
   { key: "500+", pages: 500, label: "500+ pages" },
 ];
 
@@ -43,8 +43,8 @@ export function PricingSection() {
       const p = Math.min(500, Math.max(1, parseInt(pagesParam, 10) || 25));
       setPages(p);
       if (p >= 500) setTierKey("500+");
-      else if (p >= 200) setTierKey("200-500");
-      else if (p >= 50) setTierKey("50-200");
+      else if (p > 200) setTierKey("200-500");
+      else if (p > 50) setTierKey("50-200");
       else setTierKey("under50");
     }
   }, [pagesParam]);

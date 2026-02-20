@@ -39,7 +39,7 @@ function getHardcodedResponse(message: string): ResponseResult | null {
       keywords: ["how much", "pricing", "cost", "plans", "price", "how much is it"],
       answer: `Simple one-time pricing — year 1 hosting included, no monthly fees ever.
 After year 1: move to your own host (free) or renew hosting with us for $200/year (optional).
-AI chatbot: from $550 (1yr) or $850 (2yr) — price scales with site size. Tap below.`,
+AI chatbot: from $799 (1yr) or $1,099 (2yr) — price scales with site size. Tap below.`,
       pills: [
         { label: "AI Chatbot — See price", href: "/?pages=25#pricing" },
         { label: "Quick $350 Starter", href: "/checkout?plan=starter" },

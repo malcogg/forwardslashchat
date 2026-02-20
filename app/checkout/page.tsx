@@ -44,17 +44,17 @@ const PLANS: Record<PlanSlug, { name: string; price: number; description: string
   },
   chatbot: {
     name: "AI Chatbot (1-Year Starter)",
-    price: 550,
+    price: 799,
     description: "Custom AI trained on your site, chat.yourdomain.com, year 1 hosting",
   },
   "chatbot-1y": {
     name: "AI Chatbot (1-Year Starter)",
-    price: 550,
+    price: 799,
     description: "Custom AI trained on your site, chat.yourdomain.com, year 1 hosting",
   },
   "chatbot-2y": {
     name: "AI Chatbot (2-Year Bundle)",
-    price: 850,
+    price: 1099,
     description: "Custom AI trained on your site, 2-year hosting included",
   },
   "chatbot-3y": {
@@ -86,7 +86,7 @@ const ADD_ONS: {
   {
     id: "ai-chatbot",
     label: "AI Chatbot Add-On",
-    price: 550,
+    price: 799,
     description: "Add your custom AI assistant trained on your content — answers 24/7 on chat.yourdomain.com.",
     forPlans: ["starter"],
   },
