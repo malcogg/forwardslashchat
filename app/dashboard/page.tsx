@@ -311,6 +311,43 @@ function DashboardContent() {
     });
   };
 
+  // Derive values and notifications before any early return so hook count is stable (React #310)
+  const order = data?.order;
+  const customer = data?.customer;
+  const hasOrder = !!order;
+  const contentCount = data?.contentCount ?? 0;
+  const hasPaidOrder = myOrders.some((o) => o.order.status === "paid");
+  const isPaid = order?.status === "paid";
+  const customerStatus = customer?.status ?? "";
+  const isLive = customerStatus === "delivered";
+  const isTestingOrLive = ["testing", "delivered"].includes(customerStatus);
+
+  const notifications = useMemo(() => {
+    type Config = { id: string; title: string; body: string };
+    const configs: Config[] = [];
+    configs.push({
+      id: "welcome",
+      title: "Welcome to ForwardSlash",
+      body: "Your dashboard is where you'll manage your AI chatbot: add your site, train it on your content, and connect your domain. Need help? Reply to any email from us or use the support link in the footer.",
+    });
+    if (myOrders.length >= 1 && !hasPaidOrder) {
+      configs.push({ id: "site_added", title: "You added a site", body: "Complete checkout to unlock your AI chatbot. We'll train it on your content and deploy it at chat.yourdomain.com." });
+    }
+    if (isPaid && contentCount === 0) {
+      configs.push({ id: "payment_confirmed", title: "Payment confirmed", body: "We're building your chatbot. Click \"Build my chatbot\" in the Training section to crawl your site and train the AI on your content." });
+    }
+    if (isPaid && contentCount > 0 && !isTestingOrLive) {
+      configs.push({ id: "crawl_done", title: "Content ready", body: `We've crawled ${contentCount} pages. Your chatbot is being trained on your content. Next: we'll email you when it's time to add your domain (e.g. chat.yoursite.com).` });
+    }
+    if (isPaid && contentCount > 0 && isTestingOrLive && !isLive) {
+      configs.push({ id: "domain_next", title: "Add your domain", body: "Your chatbot is ready for testing. Add the CNAME record we sent you (e.g. chat.yoursite.com) to go live." });
+    }
+    if (isLive) {
+      configs.push({ id: "go_live", title: "Your chatbot is live", body: "Your AI chatbot is live at your domain. Share the link with customers and we'll keep it updated." });
+    }
+    return configs.map((c) => ({ id: c.id, title: c.title, body: c.body, read: notificationReadIds.has(c.id) }));
+  }, [myOrders.length, hasPaidOrder, isPaid, contentCount, isTestingOrLive, isLive, notificationReadIds]);
+
   if (loading) {
     return (
       <main className="min-h-screen flex flex-col bg-background">
@@ -398,18 +435,12 @@ function DashboardContent() {
     );
   }
 
-  const order = data?.order;
-  const customer = data?.customer;
-  const hasOrder = !!order;
-  const contentCount = data?.contentCount ?? 0;
-
   const RESCAN_DAYS = 7;
   const lastCrawled = customer?.lastCrawledAt ? new Date(customer.lastCrawledAt) : null;
   const nextCrawlAvailable = lastCrawled
     ? new Date(lastCrawled.getTime() + RESCAN_DAYS * 24 * 60 * 60 * 1000)
     : null;
   const canRescan = !lastCrawled || !nextCrawlAvailable || new Date() >= nextCrawlAvailable;
-  const isPaid = order?.status === "paid";
 
   const STATUS_STEPS = [
     { key: "payment", label: "Payment confirmed", done: ["paid", "processing", "delivered"].includes(order?.status ?? "") },
@@ -417,69 +448,6 @@ function DashboardContent() {
     { key: "dns", label: "DNS setup", done: ["testing", "delivered"].includes(customer?.status ?? "") },
     { key: "live", label: "Chatbot live", done: customer?.status === "delivered" },
   ];
-
-  const hasPaidOrder = myOrders.some((o) => o.order.status === "paid");
-  const customerStatus = customer?.status ?? "";
-  const isLive = customerStatus === "delivered";
-  const isTestingOrLive = ["testing", "delivered"].includes(customerStatus);
-
-  const notifications = useMemo(() => {
-    type Config = { id: string; title: string; body: string };
-    const configs: Config[] = [];
-
-    configs.push({
-      id: "welcome",
-      title: "Welcome to ForwardSlash",
-      body: "Your dashboard is where you'll manage your AI chatbot: add your site, train it on your content, and connect your domain. Need help? Reply to any email from us or use the support link in the footer.",
-    });
-
-    if (myOrders.length >= 1 && !hasPaidOrder) {
-      configs.push({
-        id: "site_added",
-        title: "You added a site",
-        body: "Complete checkout to unlock your AI chatbot. We'll train it on your content and deploy it at chat.yourdomain.com.",
-      });
-    }
-
-    if (isPaid && contentCount === 0) {
-      configs.push({
-        id: "payment_confirmed",
-        title: "Payment confirmed",
-        body: "We're building your chatbot. Click \"Build my chatbot\" in the Training section to crawl your site and train the AI on your content.",
-      });
-    }
-
-    if (isPaid && contentCount > 0 && !isTestingOrLive) {
-      configs.push({
-        id: "crawl_done",
-        title: "Content ready",
-        body: `We've crawled ${contentCount} pages. Your chatbot is being trained on your content. Next: we'll email you when it's time to add your domain (e.g. chat.yoursite.com).`,
-      });
-    }
-
-    if (isPaid && contentCount > 0 && isTestingOrLive && !isLive) {
-      configs.push({
-        id: "domain_next",
-        title: "Add your domain",
-        body: "Your chatbot is ready for testing. Add the CNAME record we sent you (e.g. chat.yoursite.com) to go live.",
-      });
-    }
-
-    if (isLive) {
-      configs.push({
-        id: "go_live",
-        title: "Your chatbot is live",
-        body: "Your AI chatbot is live at your domain. Share the link with customers and we'll keep it updated.",
-      });
-    }
-
-    return configs.map((c) => ({
-      id: c.id,
-      title: c.title,
-      body: c.body,
-      read: notificationReadIds.has(c.id),
-    }));
-  }, [myOrders.length, hasPaidOrder, isPaid, contentCount, isTestingOrLive, isLive, notificationReadIds]);
 
   return (
     <main className="min-h-screen bg-background">
