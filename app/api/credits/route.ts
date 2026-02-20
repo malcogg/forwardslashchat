@@ -6,8 +6,8 @@ import { getCreditBalance } from "@/lib/credits";
  * GET /api/credits
  * Returns current user's Firecrawl credit balance.
  */
-export async function GET() {
-  const user = await getOrCreateUser();
+export async function GET(request: Request) {
+  const user = await getOrCreateUser(request);
   if (!user?.userId) {
     return NextResponse.json({ error: "Sign in required" }, { status: 401 });
   }

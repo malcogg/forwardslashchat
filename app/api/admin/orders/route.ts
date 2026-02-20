@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { orders, customers } from "@/db/schema";
 import { getOrCreateUser } from "@/lib/auth";
-import { auth } from "@clerk/nextjs/server";
 import { eq, desc } from "drizzle-orm";
 import {
   sanitizeWebsiteUrl,
@@ -25,10 +24,12 @@ function isAdmin(email: string | undefined): boolean {
  * GET /api/admin/orders
  * List all orders with customers. Admin only.
  */
-export async function GET() {
-  const { sessionClaims } = await auth();
-  const email = (sessionClaims?.email as string)?.toLowerCase();
-  if (!isAdmin(email)) {
+export async function GET(request: Request) {
+  const user = await getOrCreateUser(request);
+  if (!user?.userId) {
+    return NextResponse.json({ error: "Sign in required" }, { status: 401 });
+  }
+  if (!isAdmin(user.email ?? undefined)) {
     return NextResponse.json({ error: "Admin only" }, { status: 403 });
   }
 
@@ -61,14 +62,12 @@ export async function GET() {
  * Body: { websiteUrl, businessName, domain, subdomain? }
  */
 export async function POST(request: Request) {
-  const user = await getOrCreateUser();
+  const user = await getOrCreateUser(request);
   if (!user?.userId) {
     return NextResponse.json({ error: "Sign in required" }, { status: 401 });
   }
 
-  const { sessionClaims } = await auth();
-  const email = (sessionClaims?.email as string)?.toLowerCase();
-  if (!isAdmin(email)) {
+  if (!isAdmin(user.email ?? undefined)) {
     return NextResponse.json({ error: "Admin only" }, { status: 403 });
   }
 

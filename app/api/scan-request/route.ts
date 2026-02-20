@@ -10,7 +10,7 @@ import { getOrCreateUser } from "@/lib/auth";
  * No payment required yet - crawl runs first, payment gate after.
  */
 export async function POST(request: Request) {
-  const user = await getOrCreateUser();
+  const user = await getOrCreateUser(request);
   if (!user?.userId) {
     return NextResponse.json({ error: "Sign in required" }, { status: 401 });
   }

@@ -9,7 +9,7 @@ import { getOrCreateUser } from "@/lib/auth";
  * Returns customer for an order. Requires auth + order ownership.
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ orderId: string }> }
 ) {
   const { orderId } = await params;
@@ -17,7 +17,7 @@ export async function GET(
     return NextResponse.json({ error: "Order ID required" }, { status: 400 });
   }
 
-  const user = await getOrCreateUser();
+  const user = await getOrCreateUser(request);
   if (!user?.userId) {
     return NextResponse.json({ error: "Sign in required" }, { status: 401 });
   }

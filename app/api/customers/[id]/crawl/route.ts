@@ -74,10 +74,10 @@ async function runFirecrawlCrawl(
  * Crawl customer's website and save content for chat. Requires auth + ownership.
  */
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const user = await getOrCreateUser();
+  const user = await getOrCreateUser(req);
   if (!user?.userId) {
     return NextResponse.json({ error: "Sign in required" }, { status: 401 });
   }

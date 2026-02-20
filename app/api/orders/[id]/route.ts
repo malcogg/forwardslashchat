@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { getOrCreateUser } from "@/lib/auth";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -13,7 +13,7 @@ export async function GET(
     return NextResponse.json({ error: "Order ID required" }, { status: 400 });
   }
 
-  const user = await getOrCreateUser();
+  const user = await getOrCreateUser(request);
   if (!user?.userId) {
     return NextResponse.json({ error: "Sign in required" }, { status: 401 });
   }
@@ -39,7 +39,7 @@ export async function GET(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -47,7 +47,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Order ID required" }, { status: 400 });
   }
 
-  const user = await getOrCreateUser();
+  const user = await getOrCreateUser(request);
   if (!user?.userId) {
     return NextResponse.json({ error: "Sign in required" }, { status: 401 });
   }

@@ -8,8 +8,8 @@ import { getOrCreateUser } from "@/lib/auth";
  * POST /api/checkout/visit
  * Record that a signed-in user viewed the checkout page (for abandonment emails).
  */
-export async function POST() {
-  const user = await getOrCreateUser();
+export async function POST(request: Request) {
+  const user = await getOrCreateUser(request);
   if (!user?.userId) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }

@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { PENDING_SCAN_URL_KEY } from "@/components/ScanModal";
-import { UserButton, useUser } from "@clerk/nextjs";
+import { UserButton, useUser, useAuth } from "@clerk/nextjs";
 import { Globe, Check, ChevronDown, X, Monitor, Tablet, Smartphone, Copy, ExternalLink, Trash2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CustomerChat } from "@/components/CustomerChat";
@@ -25,6 +25,7 @@ function getInitials(name: string): string {
 
 function DashboardContent() {
   const { user, isLoaded: clerkLoaded } = useUser();
+  const { getToken } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
@@ -34,6 +35,12 @@ function DashboardContent() {
   // Call dashboard/orders only when we have a signed-in user (avoids 401 after redirect).
   // Dashboard is for all signed-in users; payment is only required to run "Build my chatbot".
   const canCallApi = clerkLoaded && !!user;
+
+  // Auth header so API routes get the session even when cookies aren't sent (e.g. after Google redirect).
+  const authHeaders = async (): Promise<HeadersInit> => {
+    const token = await getToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
 
   // If Clerk loaded and still no user after a short wait (signed out / session expired), show sign-in.
   useEffect(() => {
@@ -65,22 +72,20 @@ function DashboardContent() {
       } catch {
         pendingUrl = raw;
       }
-      fetch("/api/scan-request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: pendingUrl, estimatedPages: pendingEstimatedPages }),
-        credentials: "include",
-      })
-        .then(async (res) => {
-          const json = await res.json();
-          if (!res.ok) throw new Error(json.error ?? "Failed");
-          if (json.orderId) {
-            router.replace(`/dashboard?orderId=${encodeURIComponent(json.orderId)}`);
-          }
-        })
-        .catch(() => {
-          sessionStorage.setItem(PENDING_SCAN_URL_KEY, raw);
+      (async () => {
+        const headers = { "Content-Type": "application/json", ...(await authHeaders()) };
+        const res = await fetch("/api/scan-request", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ url: pendingUrl, estimatedPages: pendingEstimatedPages }),
+          credentials: "include",
         });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error ?? "Failed");
+        if (json.orderId) router.replace(`/dashboard?orderId=${encodeURIComponent(json.orderId)}`);
+      })().catch(() => {
+        sessionStorage.setItem(PENDING_SCAN_URL_KEY, raw);
+      });
     } catch {
       /* ignore */
     }
@@ -133,64 +138,64 @@ function DashboardContent() {
   const [crawlError, setCrawlError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Wait for signed-in user so session cookie is ready before calling API (avoids 401 after Google redirect)
+  // Wait for signed-in user; send Bearer token so API has session (fixes 401 when cookie not sent after redirect)
   useEffect(() => {
     if (!canCallApi) return;
     let mounted = true;
-    const load = (retries = 2) => {
-      fetch(`/api/dashboard${orderId ? `?orderId=${encodeURIComponent(orderId)}` : ""}`, { credentials: "include", cache: "no-store" })
-        .then(async (res) => {
-          if (res.ok) {
-            const json = await res.json();
-            if (mounted) setData(json);
-            if (mounted) setLoading(false);
-            return;
-          }
-          const err = await res.json().catch(() => ({}));
-          // Retry on 401 (session may not be ready yet after sign-in redirect)
-          if (res.status === 401 && retries > 0) {
-            setTimeout(() => load(retries - 1), 1200);
-            return;
-          }
-          if (res.status === 401) {
-            if (mounted) setError("Sign in required");
-            if (mounted) setLoading(false);
-            return;
-          }
-          if (mounted) setError((err as { error?: string }).error ?? "Could not load dashboard");
-          if (mounted) setLoading(false);
-        })
-        .catch(() => {
-          if (mounted) setError("Could not load dashboard");
-          if (mounted) setLoading(false);
-        });
+    const load = async (retries = 2) => {
+      const headers = await authHeaders();
+      const res = await fetch(`/api/dashboard${orderId ? `?orderId=${encodeURIComponent(orderId)}` : ""}`, {
+        credentials: "include",
+        cache: "no-store",
+        headers: { ...headers },
+      });
+      if (!mounted) return;
+      if (res.ok) {
+        const json = await res.json();
+        if (mounted) setData(json);
+        if (mounted) setLoading(false);
+        return;
+      }
+      const err = await res.json().catch(() => ({}));
+      if (res.status === 401 && retries > 0) {
+        setTimeout(() => load(retries - 1), 1200);
+        return;
+      }
+      if (res.status === 401) {
+        if (mounted) setError("Sign in required");
+        if (mounted) setLoading(false);
+        return;
+      }
+      if (mounted) setError((err as { error?: string }).error ?? "Could not load dashboard");
+      if (mounted) setLoading(false);
     };
+    const doLoad = () => load().catch(() => {
+      if (mounted) setError("Could not load dashboard");
+      if (mounted) setLoading(false);
+    });
     setLoading(true);
     setError(null);
-    // Delay so the first request has the session cookie attached after redirect (avoids 401)
-    const t = setTimeout(() => { if (mounted) load(); }, 400);
+    const t = setTimeout(() => { if (mounted) doLoad(); }, 400);
     return () => { clearTimeout(t); mounted = false; };
   }, [orderId, canCallApi]);
 
   useEffect(() => {
     if (!canCallApi) return;
     let mounted = true;
-    const loadOrders = (retries = 1) => {
-      fetch("/api/orders/me", { credentials: "include" })
-        .then(async (res) => {
-          if (res.ok) {
-            const json = await res.json();
-            if (mounted) setMyOrders(json);
-            return;
-          }
-          if (res.status === 401 && retries > 0) {
-            setTimeout(() => loadOrders(retries - 1), 1200);
-            return;
-          }
-        })
-        .catch(() => {});
+    const loadOrders = async (retries = 1) => {
+      const headers = await authHeaders();
+      const res = await fetch("/api/orders/me", { credentials: "include", headers: { ...headers } });
+      if (!mounted) return;
+      if (res.ok) {
+        const json = await res.json();
+        if (mounted) setMyOrders(json);
+        return;
+      }
+      if (res.status === 401 && retries > 0) {
+        setTimeout(() => loadOrders(retries - 1), 1200);
+      }
     };
-    const t = setTimeout(() => { if (mounted) loadOrders(); }, 600);
+    const t = setTimeout(() => { loadOrders().catch(() => {}); }, 600);
     return () => { clearTimeout(t); mounted = false; };
   }, [canCallApi]);
 
@@ -199,22 +204,19 @@ function DashboardContent() {
     const isPending = data?.order?.status && data.order.status !== "paid";
     if (!isPending) return;
     const currentOrderId = orderId ?? data?.order?.id;
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
+      const headers = await authHeaders();
       const url = currentOrderId
         ? `/api/dashboard?orderId=${encodeURIComponent(currentOrderId)}`
         : "/api/dashboard";
-      fetch(url, { credentials: "include", cache: "no-store" })
-        .then((res) => (res.ok ? res.json() : null))
-        .then((json) => {
-          if (json?.order?.status === "paid") {
-            setData(json);
-            fetch("/api/orders/me", { credentials: "include" })
-              .then((r) => (r.ok ? r.json() : []))
-              .then(setMyOrders)
-              .catch(() => {});
-          }
-        })
-        .catch(() => {});
+      const res = await fetch(url, { credentials: "include", cache: "no-store", headers: { ...headers } });
+      const json = res.ok ? await res.json() : null;
+      if (json?.order?.status === "paid") {
+        setData(json);
+        const h = await authHeaders();
+        const r = await fetch("/api/orders/me", { credentials: "include", headers: { ...h } });
+        if (r.ok) setMyOrders(await r.json());
+      }
     }, 30_000);
     return () => clearInterval(interval);
   }, [orderId, data?.order?.status, data?.order?.id]);
@@ -223,7 +225,8 @@ function DashboardContent() {
     if (deletingOrderId) return;
     setDeletingOrderId(orderIdToDelete);
     try {
-      const res = await fetch(`/api/orders/${orderIdToDelete}`, { method: "DELETE", credentials: "include" });
+      const headers = await authHeaders();
+      const res = await fetch(`/api/orders/${orderIdToDelete}`, { method: "DELETE", credentials: "include", headers: { ...headers } });
       if (res.ok) {
         setCartSelectedIds((prev) => {
           const next = new Set(prev);
@@ -250,9 +253,8 @@ function DashboardContent() {
     setCartModalOpen(true);
   };
 
-  const handleCrawl = () => {
+  const handleCrawl = async () => {
     if (!data?.customer?.id) return;
-    // No crawl before payment: redirect unpaid users to checkout
     if (data.order?.status !== "paid") {
       router.push(
         `/checkout?plan=chatbot-2y&pages=25&url=${encodeURIComponent(data.customer?.websiteUrl ?? "")}&orderId=${encodeURIComponent(data.order?.id ?? "")}`
@@ -261,22 +263,26 @@ function DashboardContent() {
     }
     setCrawlError(null);
     setCrawling(true);
-    fetch(`/api/customers/${data.customer.id}/crawl`, { method: "POST" })
-      .then(async (res) => {
-        const json = await res.json();
-        if (!res.ok) {
-          setCrawlError(json.error ?? "Crawl failed");
-          return;
-        }
-        const [dashRes, ordersRes] = await Promise.all([
-          fetch(`/api/dashboard${orderId ? `?orderId=${encodeURIComponent(orderId)}` : ""}`, { credentials: "include" }),
-          fetch("/api/orders/me", { credentials: "include" }),
-        ]);
-        if (dashRes.ok) setData(await dashRes.json());
-        if (ordersRes.ok) setMyOrders(await ordersRes.json());
-      })
-      .catch(() => setCrawlError("Crawl failed"))
-      .finally(() => setCrawling(false));
+    try {
+      const headers = await authHeaders();
+      const res = await fetch(`/api/customers/${data.customer.id}/crawl`, { method: "POST", credentials: "include", headers: { ...headers } });
+      const json = await res.json();
+      if (!res.ok) {
+        setCrawlError(json.error ?? "Crawl failed");
+        return;
+      }
+      const h = await authHeaders();
+      const [dashRes, ordersRes] = await Promise.all([
+        fetch(`/api/dashboard${orderId ? `?orderId=${encodeURIComponent(orderId)}` : ""}`, { credentials: "include", headers: { ...h } }),
+        fetch("/api/orders/me", { credentials: "include", headers: { ...h } }),
+      ]);
+      if (dashRes.ok) setData(await dashRes.json());
+      if (ordersRes.ok) setMyOrders(await ordersRes.json());
+    } catch {
+      setCrawlError("Crawl failed");
+    } finally {
+      setCrawling(false);
+    }
   };
 
   const copyCname = () => {
@@ -341,20 +347,24 @@ function DashboardContent() {
                 </Link>
               )}
               <button
-                onClick={() => {
+                onClick={async () => {
                   setError(null);
                   setLoading(true);
-                  fetch(`/api/dashboard${orderId ? `?orderId=${encodeURIComponent(orderId)}` : ""}`, { credentials: "include", cache: "no-store" })
-                    .then(async (res) => {
-                      const json = await res.json();
-                      if (res.ok) {
-                        setData(json);
-                      } else {
-                        setError((json as { error?: string }).error ?? "Could not load dashboard");
-                      }
-                    })
-                    .catch(() => setError("Could not load dashboard"))
-                    .finally(() => setLoading(false));
+                  try {
+                    const headers = await authHeaders();
+                    const res = await fetch(`/api/dashboard${orderId ? `?orderId=${encodeURIComponent(orderId)}` : ""}`, {
+                      credentials: "include",
+                      cache: "no-store",
+                      headers: { ...headers },
+                    });
+                    const json = await res.json();
+                    if (res.ok) setData(json);
+                    else setError((json as { error?: string }).error ?? "Could not load dashboard");
+                  } catch {
+                    setError("Could not load dashboard");
+                  } finally {
+                    setLoading(false);
+                  }
                 }}
                 className="text-sm px-4 py-2 border border-border rounded hover:bg-muted"
               >
@@ -712,7 +722,8 @@ function DashboardContent() {
                   </p>
                   {customer.status === "dns_setup" && (
                     <button onClick={async () => {
-                      const res = await fetch(`/api/customers/${customer.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "testing" }) });
+                      const headers = { "Content-Type": "application/json", ...(await authHeaders()) };
+                      const res = await fetch(`/api/customers/${customer.id}`, { method: "PATCH", headers, body: JSON.stringify({ status: "testing" }), credentials: "include" });
                       if (res.ok) setData((d) => (d?.customer ? { ...d, customer: { ...d.customer, status: "testing" } } : d));
                     }} className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded hover:opacity-90">
                       I&apos;ve added my DNS
@@ -720,7 +731,8 @@ function DashboardContent() {
                   )}
                   {customer.status === "testing" && (
                     <button onClick={async () => {
-                      const res = await fetch(`/api/customers/${customer.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "delivered" }) });
+                      const headers = { "Content-Type": "application/json", ...(await authHeaders()) };
+                      const res = await fetch(`/api/customers/${customer.id}`, { method: "PATCH", headers, body: JSON.stringify({ status: "delivered" }), credentials: "include" });
                       if (res.ok) setData((d) => (d?.customer ? { ...d, customer: { ...d.customer, status: "delivered" } } : d));
                     }} className="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
                       Chatbot is live
@@ -852,9 +864,10 @@ function DashboardContent() {
         origin="dashboard"
         onAddToDashboard={async (urlToAdd, estimatedPages) => {
           try {
+            const headers = { "Content-Type": "application/json", ...(await authHeaders()) };
             const res = await fetch("/api/scan-request", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers,
               body: JSON.stringify({ url: urlToAdd, estimatedPages }),
               credentials: "include",
             });

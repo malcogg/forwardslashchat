@@ -10,8 +10,8 @@ export const dynamic = "force-dynamic";
  * GET /api/orders/me
  * Returns current user's orders with customers (for sidebar, site list).
  */
-export async function GET() {
-  const user = await getOrCreateUser();
+export async function GET(request: Request) {
+  const user = await getOrCreateUser(request);
   if (!user?.userId) {
     return NextResponse.json({ error: "Sign in required" }, { status: 401 });
   }
