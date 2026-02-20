@@ -127,11 +127,9 @@ function CheckoutContent() {
   const pagesParam = searchParams.get("pages");
   const pages = pagesParam ? Math.min(499, Math.max(1, parseInt(pagesParam, 10) || 25)) : null;
   const isChatbotPlan = planSlug === "chatbot-1y" || planSlug === "chatbot-2y";
-  // Respect URL ?years=1 or ?years=2 from scan modal; otherwise derive from plan slug
+  // Respect URL ?years=1 or ?years=2 from scan modal; otherwise 1 (only chatbot plans use years)
   const yearsParam = searchParams.get("years");
-  const years: 1 | 2 = isChatbotPlan
-    ? (yearsParam === "2" ? 2 : 1)
-    : (planSlug === "chatbot-2y" ? 2 : 1);
+  const years: 1 | 2 = isChatbotPlan ? (yearsParam === "2" ? 2 : 1) : 1;
   const effectivePlanSlug: PlanSlug = isChatbotPlan ? (years === 2 ? "chatbot-2y" : "chatbot-1y") : planSlug;
   const dynamicPrice = isChatbotPlan && pages != null ? getPriceFromPagesAndYears(pages, years) : null;
   const plan = {
