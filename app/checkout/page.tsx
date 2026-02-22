@@ -24,7 +24,7 @@ function safeInitialUrl(param: string | null): string {
   return sanitizeWebsiteUrl(raw).slice(0, LIMITS.websiteUrl);
 }
 
-type PlanSlug = "chatbot-1y" | "chatbot-2y" | "starter" | "new-build" | "redesign";
+type PlanSlug = "chatbot-1y" | "chatbot-2y" | "starter" | "starter-bot" | "new-build" | "redesign";
 
 const CHATBOT_DESCRIPTION = "Custom AI trained on your site, chat.yourdomain.com. Hosting included. One-time payment.";
 
@@ -94,6 +94,7 @@ function CheckoutContent() {
   }, [isSignedIn]);
 
   const planParam = searchParams.get("plan");
+  const isStarterBot = planParam === "starter-bot";
   const isWebsitePlan =
     planParam === "starter" || planParam === "new-build" || planParam === "redesign";
   const websitePlan = WEBSITE_PLANS.find((p) => p.slug === planParam);
@@ -105,23 +106,32 @@ function CheckoutContent() {
   const chatbotPlanSlug: PlanSlug = years === 2 ? "chatbot-2y" : "chatbot-1y";
   const chatbotPrice = getPriceFromPagesAndYears(pages, years) ?? 799;
 
-  const effectivePlanSlug: PlanSlug = isWebsitePlan && websitePlan
-    ? websitePlan.slug
-    : chatbotPlanSlug;
+  const effectivePlanSlug: PlanSlug = isStarterBot
+    ? "starter-bot"
+    : isWebsitePlan && websitePlan
+      ? websitePlan.slug
+      : chatbotPlanSlug;
 
-  const plan = isWebsitePlan && websitePlan
+  const plan = isStarterBot
     ? {
-        name: websitePlan.name,
-        description: websitePlan.description,
-        price: websitePlan.price,
+        name: "Starter Bot — 5 pages, 1 year",
+        description: "AI chatbot for very small sites. Company info, hours, contact. 1 year hosting included.",
+        price: 129,
       }
-    : {
-        name: `AI Chatbot — ${years}-year, ~${pages} pages`,
-        description: CHATBOT_DESCRIPTION,
-        price: chatbotPrice,
-      };
+    : isWebsitePlan && websitePlan
+      ? {
+          name: websitePlan.name,
+          description: websitePlan.description,
+          price: websitePlan.price,
+        }
+      : {
+          name: `AI Chatbot — ${years}-year, ~${pages} pages`,
+          description: CHATBOT_DESCRIPTION,
+          price: chatbotPrice,
+        };
 
   const addOnsList = isWebsitePlan && websitePlan ? ADD_ONS_WEBSITE : ADD_ONS_CHATBOT;
+  const showChatbotPlanSelector = !isStarterBot && !isWebsitePlan;
 
   const setCheckoutYears = (y: 1 | 2) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -221,9 +231,22 @@ function CheckoutContent() {
       <div className="max-w-3xl mx-auto">
         <h1 className="font-serif text-2xl md:text-3xl text-foreground mb-2">Checkout</h1>
 
-        {/* Dynamic plan at top — website or chatbot */}
+        {/* Dynamic plan at top — website, starter-bot, or chatbot */}
         <div className="rounded-xl border border-border bg-card p-6 mb-8">
-          {isWebsitePlan && websitePlan ? (
+          {isStarterBot ? (
+            <>
+              <h2 className="font-serif text-lg font-medium text-foreground mb-1">Starter Bot</h2>
+              <p className="text-sm text-muted-foreground mb-2">
+                $129 — AI chatbot for very small sites (up to 5 pages). 1 year hosting included.
+              </p>
+              <p className="text-sm font-medium text-foreground">
+                <strong>Starter Bot — 5 pages, 1 year</strong> — $129
+              </p>
+              <Link href="/#pricing" className="text-sm text-primary hover:underline mt-2 inline-block">
+                View all plans →
+              </Link>
+            </>
+          ) : isWebsitePlan && websitePlan ? (
             <>
               <h2 className="font-serif text-lg font-medium text-foreground mb-1">Your website plan</h2>
               <p className="text-sm text-muted-foreground mb-4">Select a different plan or continue with your selection:</p>
@@ -247,7 +270,7 @@ function CheckoutContent() {
                 <strong className="text-foreground">{websitePlan.name}</strong> — ${websitePlan.price.toLocaleString()}
               </p>
             </>
-          ) : (
+          ) : showChatbotPlanSelector ? (
             <>
               <h2 className="font-serif text-lg font-medium text-foreground mb-1">AI Chatbot</h2>
               <p className="text-sm text-muted-foreground mb-4">~{pages} pages from your site. Choose your term:</p>
@@ -270,7 +293,7 @@ function CheckoutContent() {
                 </div>
               </div>
             </>
-          )}
+          ) : null}
         </div>
 
         {/* Your details */}

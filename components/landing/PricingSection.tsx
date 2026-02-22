@@ -16,10 +16,19 @@ const FEATURES = [
   "No monthly fees",
 ] as const;
 
+const STARTER_BOT_FEATURES = [
+  "AI trained on 5 key pages",
+  "Company info, hours, contact",
+  "1 year hosting included",
+  "Unlimited queries",
+  "Perfect for small sites",
+] as const;
+
 const TIERS = [
-  { key: "starter", name: "Starter", pages: "Up to 50 pages", pageCount: 25, popular: false },
-  { key: "growth", name: "Growth", pages: "51–200 pages", pageCount: 125, popular: true },
-  { key: "pro", name: "Pro", pages: "201–500+ pages", pageCount: 350, popular: false },
+  { key: "starter-bot", name: "Starter Bot", pages: "Up to 5 pages", pageCount: 5, fixedPrice: 129, years: 1 as const, popular: false, features: STARTER_BOT_FEATURES },
+  { key: "starter", name: "Starter", pages: "Up to 50 pages", pageCount: 25, popular: false, features: FEATURES },
+  { key: "growth", name: "Growth", pages: "51–200 pages", pageCount: 125, popular: true, features: FEATURES },
+  { key: "pro", name: "Pro", pages: "201–500+ pages", pageCount: 350, popular: false, features: FEATURES },
 ] as const;
 
 export function PricingSection() {
@@ -60,17 +69,26 @@ export function PricingSection() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-6">
           {TIERS.map((tier) => {
-            const price = tier.pageCount >= 500
-              ? null
-              : getPriceFromPagesAndYears(tier.pageCount, years);
+            const isStarterBot = tier.key === "starter-bot";
+            const price = isStarterBot
+              ? tier.fixedPrice!
+              : tier.pageCount >= 500
+                ? null
+                : getPriceFromPagesAndYears(tier.pageCount, years);
+            const displayYears = isStarterBot ? 1 : years;
+            const checkoutHref = isStarterBot
+              ? "/checkout?plan=starter-bot"
+              : price !== null
+                ? `/checkout?plan=chatbot-${years}y&pages=${tier.pageCount}`
+                : null;
 
             return (
               <div
                 key={tier.key}
-                className={`relative rounded-xl border border-border bg-card p-6 md:p-8 flex flex-col ${
-                  tier.popular ? "ring-2 ring-primary/30 border-primary/30 md:-my-2 md:py-10 md:z-10 md:shadow-lg" : ""
+                className={`relative rounded-xl border border-border bg-card p-6 md:p-6 flex flex-col ${
+                  tier.popular ? "ring-2 ring-primary/30 border-primary/30 lg:-my-2 lg:py-8 lg:z-10 lg:shadow-lg" : ""
                 }`}
               >
                 {tier.popular && (
@@ -79,7 +97,7 @@ export function PricingSection() {
                   </span>
                 )}
 
-                <div className="mb-6">
+                <div className="mb-4">
                   <h3 className="text-xl font-semibold text-foreground">{tier.name}</h3>
                   <p className="text-sm text-muted-foreground mt-1">{tier.pages}</p>
                   {tier.popular && (
@@ -87,14 +105,14 @@ export function PricingSection() {
                   )}
                 </div>
 
-                <div className="mb-6">
+                <div className="mb-4">
                   {price !== null ? (
                     <>
-                      <p className="text-4xl md:text-5xl font-bold text-foreground">
+                      <p className="text-4xl md:text-4xl font-bold text-foreground">
                         ${price.toLocaleString()}
                       </p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        One-time payment · {years} year{years > 1 ? "s" : ""} hosting included
+                        One-time payment · {displayYears} year{displayYears > 1 ? "s" : ""} hosting included
                       </p>
                     </>
                   ) : (
@@ -107,21 +125,21 @@ export function PricingSection() {
                   )}
                 </div>
 
-                <ul className="space-y-3 flex-1 mb-8">
-                  {FEATURES.map((feature, i) => (
+                <ul className="space-y-2 flex-1 mb-6">
+                  {tier.features.map((feature, i) => (
                     <li key={feature} className="flex items-center gap-2 text-sm text-foreground">
                       <Check className="w-4 h-4 shrink-0 text-emerald-600" />
-                      <span className={i === FEATURES.length - 1 ? "font-semibold" : ""}>
+                      <span className={i === tier.features.length - 1 ? "font-semibold" : ""}>
                         {feature}
                       </span>
                     </li>
                   ))}
                 </ul>
 
-                {price !== null ? (
+                {checkoutHref ? (
                   <Button asChild variant="cta" size="lg" className="w-full">
-                    <Link href={`/checkout?plan=chatbot-${years}y&pages=${tier.pageCount}`}>
-                      Get Started — ${price.toLocaleString()}
+                    <Link href={checkoutHref}>
+                      Get Started — ${price!.toLocaleString()}
                     </Link>
                   </Button>
                 ) : (

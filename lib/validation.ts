@@ -126,6 +126,7 @@ export function sanitizeGenericText(value: string, max: number = LIMITS.genericT
 // Valid plan slugs (for API validation)
 export const VALID_PLAN_SLUGS = new Set([
   "starter",
+  "starter-bot",
   "new-build",
   "redesign",
   "chatbot",

@@ -2,6 +2,7 @@
 
 import { useState, Suspense, useEffect, useCallback } from "react";
 import { Header } from "@/components/landing/Header";
+import { AnnouncementBanner } from "@/components/landing/AnnouncementBanner";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { BenefitsSection } from "@/components/landing/BenefitsSection";
 import { HowItWorks } from "@/components/landing/HowItWorks";
@@ -52,6 +53,7 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-background">
+      <AnnouncementBanner />
       <Header lastScan={lastScan} onOpenLastScan={handleOpenLastScan} />
       <HeroSection onScanClick={handleScanClick} />
       <BenefitsSection />

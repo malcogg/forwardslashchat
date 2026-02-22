@@ -33,7 +33,7 @@ function sanitizeAddOns(raw: unknown): string[] {
 }
 
 function bundleYearsFromPlanSlug(planSlug: string): number {
-  if (planSlug === "chatbot-1y") return 1;
+  if (planSlug === "starter-bot" || planSlug === "chatbot-1y") return 1;
   if (planSlug === "chatbot-2y") return 2;
   if (planSlug === "chatbot-3y") return 3;
   return 0; // website plans: starter, new-build, redesign
@@ -41,6 +41,7 @@ function bundleYearsFromPlanSlug(planSlug: string): number {
 
 function planNameFromSlug(planSlug: string): string {
   const map: Record<string, string> = {
+    "starter-bot": "Starter Bot — 5 pages, 1 year",
     "chatbot-1y": "AI Chatbot (1 year)",
     "chatbot-2y": "AI Chatbot (2 years)",
     "chatbot-3y": "AI Chatbot (3 years)",
@@ -166,6 +167,8 @@ export async function POST(request: Request) {
     const prepaidUntil = new Date();
     prepaidUntil.setFullYear(prepaidUntil.getFullYear() + (bundleYears || 1));
 
+    const isStarterBot = String(planSlug) === "starter-bot";
+
     const [customer] = await db
       .insert(customers)
       .values({
@@ -174,6 +177,7 @@ export async function POST(request: Request) {
         domain: safeDomain,
         subdomain: "chat",
         websiteUrl: safeWebsiteUrl.startsWith("http") ? safeWebsiteUrl : `https://${safeWebsiteUrl}`,
+        estimatedPages: isStarterBot ? 5 : undefined,
         prepaidUntil,
         status: "content_collection",
       })

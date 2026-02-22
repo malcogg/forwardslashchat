@@ -3,6 +3,7 @@
 import { ThemeToggle } from "@/components/ThemeToggle";
 import Link from "next/link";
 import { ArrowUp } from "lucide-react";
+import { AnnouncementBanner } from "@/components/landing/AnnouncementBanner";
 import { useEffect, useRef, useState } from "react";
 import { sanitizeChatMessage, LIMITS } from "@/lib/validation";
 
@@ -248,10 +249,7 @@ export default function DemoChatPage() {
 
   return (
     <div className="flex flex-col h-dvh bg-background">
-      <div className="bg-emerald-500/10 border-b border-emerald-500/20 px-4 py-2 text-center text-sm text-foreground">
-        This is a demo chatbot.{" "}
-        <Link href="/checkout?plan=chatbot-2y&pages=25" className="font-medium text-emerald-600 hover:underline">Get your own at forwardslash.chat</Link>
-      </div>
+      <AnnouncementBanner />
       <header className="flex items-center justify-between px-4 py-3 border-b shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
