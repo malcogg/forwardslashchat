@@ -6,7 +6,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { PENDING_SCAN_URL_KEY } from "@/components/ScanModal";
 import { UserButton, useUser, useAuth } from "@clerk/nextjs";
-import { Globe, Check, ChevronDown, X, Monitor, Tablet, Smartphone, Copy, ExternalLink, Trash2, Bell } from "lucide-react";
+import { Globe, Check, ChevronDown, X, Monitor, Tablet, Smartphone, Copy, ExternalLink, Trash2, Bell, Lock } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CustomerChat } from "@/components/CustomerChat";
 import { ScanModal } from "@/components/ScanModal";
@@ -21,6 +21,54 @@ function getDisplayName(user: { firstName?: string | null; lastName?: string | n
 
 function getInitials(name: string): string {
   return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+}
+
+function GoLiveButton({
+  customerId,
+  customerDomain,
+  onSuccess,
+  authHeaders,
+}: {
+  customerId: string;
+  customerDomain: string;
+  onSuccess: () => void;
+  authHeaders: () => Promise<HeadersInit>;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <div className="mt-4 space-y-2">
+      <button
+        onClick={async () => {
+          setError(null);
+          setLoading(true);
+          try {
+            const headers = { "Content-Type": "application/json", ...(await authHeaders()) };
+            const res = await fetch(`/api/customers/${customerId}/go-live`, {
+              method: "POST",
+              headers,
+              credentials: "include",
+            });
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              throw new Error((json as { error?: string }).error ?? "Go live failed");
+            }
+            onSuccess();
+            window.open(`https://${customerDomain}`, "_blank");
+          } catch (e) {
+            setError(e instanceof Error ? e.message : "Go live failed");
+          } finally {
+            setLoading(false);
+          }
+        }}
+        disabled={loading}
+        className="w-full px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-70 flex items-center justify-center gap-2"
+      >
+        {loading ? "Verifying & adding domain…" : "Go live — Add my domain"}
+      </button>
+      {error && <p className="text-sm text-destructive">{error}</p>}
+    </div>
+  );
 }
 
 function DashboardContent() {
@@ -142,6 +190,7 @@ function DashboardContent() {
   const [crawling, setCrawling] = useState(false);
   const [crawlError, setCrawlError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [successToast, setSuccessToast] = useState<{ message: string; cta?: string; ctaHref?: string } | null>(null);
 
   const ONBOARDING_SEEN_KEY = "forwardslash_onboarding_seen";
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
@@ -296,6 +345,9 @@ function DashboardContent() {
       ]);
       if (dashRes.ok) setData(await dashRes.json());
       if (ordersRes.ok) setMyOrders(await ordersRes.json());
+      setSuccessToast({ message: "Content ready! Check your email for DNS instructions. Add your CNAME below to go live." });
+      setActivePanel("domains");
+      setTimeout(() => setSuccessToast(null), 8000);
     } catch {
       setCrawlError("Crawl failed");
     } finally {
@@ -640,8 +692,20 @@ function DashboardContent() {
               <span className="w-5 shrink-0">{customer && contentCount > 0 ? <Check className="w-4 h-4 text-green-500" /> : <span className="text-muted-foreground/50">○</span>}</span>
               Design
             </button>
-            <button onClick={() => setActivePanel("domains")} className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded text-left ${activePanel === "domains" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`}>
-              <span className="w-5 shrink-0">{[ "testing", "delivered" ].includes(customer?.status ?? "") ? <Check className="w-4 h-4 text-green-500" /> : <span className="text-muted-foreground/50">○</span>}</span>
+            <button
+              onClick={() => setActivePanel("domains")}
+              title={!isWebsiteOrder && (contentCount ?? 0) === 0 ? "Complete Training first" : undefined}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded text-left ${activePanel === "domains" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`}
+            >
+              <span className="w-5 shrink-0">
+                {["testing", "delivered"].includes(customer?.status ?? "") ? (
+                  <Check className="w-4 h-4 text-green-500" />
+                ) : !isWebsiteOrder && (contentCount ?? 0) === 0 ? (
+                  <Lock className="w-3.5 h-3.5 text-muted-foreground/60" />
+                ) : (
+                  <span className="text-muted-foreground/50">○</span>
+                )}
+              </span>
               Domain
             </button>
           </nav>
@@ -706,7 +770,29 @@ function DashboardContent() {
         </aside>
 
         {/* Center panel: Design | Domains */}
-        <div className={`border-r border-border overflow-y-auto shrink-0 ${activePanel === "design" ? "w-64 p-4" : "min-w-[280px] flex-1 max-w-md p-6"}`}>
+        <div className={`border-r border-border overflow-y-auto shrink-0 flex flex-col ${activePanel === "design" ? "w-64" : "min-w-[280px] flex-1 max-w-md"}`}>
+          {successToast && (
+            <div className="flex items-center justify-between gap-4 p-4 bg-emerald-500/15 border-b border-emerald-500/30 shrink-0">
+              <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                {successToast.message}
+              </p>
+              <div className="flex items-center gap-2 shrink-0">
+                {successToast.cta && successToast.ctaHref && (
+                  <a
+                    href={successToast.ctaHref}
+                    target={successToast.ctaHref.startsWith("http") ? "_blank" : undefined}
+                    rel={successToast.ctaHref.startsWith("http") ? "noopener noreferrer" : undefined}
+                    className="text-sm font-medium text-emerald-600 hover:underline"
+                  >
+                    {successToast.cta}
+                  </a>
+                )}
+                <button onClick={() => setSuccessToast(null)} className="p-1 rounded hover:bg-emerald-500/20 text-muted-foreground" aria-label="Dismiss">×</button>
+              </div>
+            </div>
+          )}
+          <div className={`flex-1 overflow-y-auto ${activePanel === "design" ? "p-4" : "p-6"}`}>
           {activePanel === "design" && (
             <>
               {hasOrder && !isPaid && contentCount > 0 && !isWebsiteOrder && (
@@ -844,11 +930,12 @@ function DashboardContent() {
                       <button
                         onClick={handleCrawl}
                         disabled={crawling || (isPaid && !canRescan && contentCount > 0)}
-                        className="w-full px-3 py-2 text-sm bg-primary text-primary-foreground rounded hover:opacity-90 disabled:opacity-50"
+                        className={`w-full px-3 py-2 text-sm bg-primary text-primary-foreground rounded hover:opacity-90 disabled:opacity-50 transition-all ${crawling ? "animate-pulse" : ""}`}
                       >
-                        {crawling ? "Crawling..." : !isPaid ? "Pay to scan" : contentCount ? (canRescan ? "Rescan site" : "Rescan (7-day cooldown)") : "Build my chatbot"}
+                        {crawling ? "Crawling…" : !isPaid ? "Pay to scan" : contentCount ? (canRescan ? "Rescan site" : "Rescan (7-day cooldown)") : "Build my chatbot"}
                       </button>
-                      {crawlError && <p className="text-xs text-destructive">{crawlError}</p>}
+                      {crawling && <p className="text-xs text-muted-foreground mt-1">This typically takes 2–8 minutes. We&apos;ll email you when it&apos;s ready.</p>}
+                      {crawlError && <p className="text-xs text-destructive mt-1">{crawlError}</p>}
                     </div>
                   )}
                 </div>
@@ -879,7 +966,7 @@ function DashboardContent() {
                     We&apos;ll reach out when it&apos;s time to connect your domain.
                   </p>
                 </div>
-              ) : customer ? (
+              ) : customer && (contentCount ?? 0) > 0 ? (
                 <>
                   <p className="text-sm text-muted-foreground mb-4">Add this CNAME record to your DNS:</p>
                   <div className="relative">
@@ -900,22 +987,16 @@ function DashboardContent() {
                     <a href="https://www.godaddy.com/help/add-a-cname-record-19236" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">GoDaddy</a>
                   </p>
                   {customer.status === "dns_setup" && (
-                    <button onClick={async () => {
-                      const headers = { "Content-Type": "application/json", ...(await authHeaders()) };
-                      const res = await fetch(`/api/customers/${customer.id}`, { method: "PATCH", headers, body: JSON.stringify({ status: "testing" }), credentials: "include" });
-                      if (res.ok) setData((d) => (d?.customer ? { ...d, customer: { ...d.customer, status: "testing" } } : d));
-                    }} className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded hover:opacity-90">
-                      I&apos;ve added my DNS
-                    </button>
-                  )}
-                  {customer.status === "testing" && (
-                    <button onClick={async () => {
-                      const headers = { "Content-Type": "application/json", ...(await authHeaders()) };
-                      const res = await fetch(`/api/customers/${customer.id}`, { method: "PATCH", headers, body: JSON.stringify({ status: "delivered" }), credentials: "include" });
-                      if (res.ok) setData((d) => (d?.customer ? { ...d, customer: { ...d.customer, status: "delivered" } } : d));
-                    }} className="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-                      Chatbot is live
-                    </button>
+                    <GoLiveButton
+                      customerId={customer.id}
+                      customerDomain={`${customer.subdomain}.${customer.domain}`}
+                      onSuccess={() => {
+                        setData((d) => (d?.customer ? { ...d, customer: { ...d.customer, status: "delivered" } } : d));
+                        setSuccessToast({ message: "Your chatbot is live!", cta: "Visit your chat", ctaHref: `https://${customer.subdomain}.${customer.domain}` });
+                        setTimeout(() => setSuccessToast(null), 6000);
+                      }}
+                      authHeaders={authHeaders}
+                    />
                   )}
                   {customer.status === "delivered" && (
                     <a
@@ -929,6 +1010,17 @@ function DashboardContent() {
                     </a>
                   )}
                 </>
+              ) : customer ? (
+                <div className="p-6 rounded-xl bg-muted/50 border border-border">
+                  <p className="text-sm font-medium text-foreground mb-1">Complete Training first</p>
+                  <p className="text-sm text-muted-foreground mb-4">Build your chatbot to crawl your site. Then you&apos;ll unlock domain setup to go live at chat.yourdomain.com.</p>
+                  <button
+                    onClick={() => setActivePanel("design")}
+                    className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:opacity-90"
+                  >
+                    Go to Training →
+                  </button>
+                </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
                   Complete checkout to set up your domain. <Link href="/checkout?plan=chatbot-2y&pages=25" className="text-primary hover:underline">Go to checkout</Link>
@@ -937,6 +1029,7 @@ function DashboardContent() {
             </>
           )}
 
+          </div>
         </div>
 
         {/* Chat preview / Website order summary */}

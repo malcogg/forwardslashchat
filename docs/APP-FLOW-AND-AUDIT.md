@@ -16,8 +16,7 @@ End-to-end paths through the product:
 2. **Scan modal – Enter URL** (if dashboard-style with no URL) or **Roasting** (if URL already set, e.g. from hero).
 3. **Roasting** → Typing bubbles + `POST /api/scan/roast` (light scan, no Firecrawl). Min display ~2.5s (`MIN_ROAST_DISPLAY_MS`). Roast result (age, reasons, `estimatedPages`) shown.
 4. **Roast results** → Bullets reveal with ~400ms stagger (`BULLET_DISPLAY_MS`). CTA: “Pay $X (2-yr, ~N pages) →” links to `/checkout?plan=chatbot-2y&pages=N&url=…`; 500+ pages → “Contact us” → `/#pricing`. Optional: “Create free account” / “Continue to dashboard”.
-5. **Checkout** → User lands with plan + pages + optional url. Form: name, email, phone, business, domain, website. If **signed in**: `POST /api/checkout/visit` fires (for abandonment reminder). “Pay” → `POST /api/checkout/lead` (saves to `checkout_leads`) → redirect to **PayPal.me** with amount + description. **No order created yet.**
-6. **PayPal** → User pays externally. **No webhook.** You confirm payment then create/link order manually (see Post-payment below).
+5. **Checkout** → User lands with plan + pages + optional url. Form: name, email, phone, business, domain, website. If **signed in**: `POST /api/checkout/visit` fires (for abandonment reminder). “Pay” → `POST /api/checkout/stripe` (saves lead, creates order + customer) → redirect to **Stripe Checkout** with amount + description. 6. **Stripe** → User pays with card. Webhook marks order `paid`. Redirect to `/thank-you?orderId=...`.
 
 ### Path B: Visitor → Roast → Sign up → Dashboard (no payment required)
 
@@ -43,7 +42,7 @@ End-to-end paths through the product:
 
 - **Homepage** → URL → **Scan modal** (roasting → roast results → Pay CTA or Sign up / Dashboard).
 - **Sign up** → Clerk → **Dashboard** (no payment required). Pending URL → **scan-request** → pending **order + customer**; user sees their project(s).
-- **Checkout** → Form → **Lead** (`POST /api/checkout/lead`) → **PayPal** redirect (no order created).
+- **Checkout** → Form → **Stripe** (`POST /api/checkout/stripe`) → Stripe Checkout → order + customer created, webhook marks paid.
 - **Mark order paid** (Neon or Stripe webhook) → **Cron** sends “Payment confirmed – build your chatbot” (once per order).
 - **Dashboard** → **Build my chatbot** (only when paid) → **Crawl** → **Crawl complete + DNS emails** → **Chat** at `/chat/c/[customerId]`.
 - **Public chat** → `/chat/c/[customerId]` → load customer → RAG chat.
@@ -56,7 +55,7 @@ End-to-end paths through the product:
 |--------|----------------|-----------|
 | **Clerk `user.created`** | Webhook: `POST /api/webhooks/clerk` | Create/sync user in DB; send **Welcome** email (Resend). |
 | **Checkout page load** | Checkout page `useEffect` (signed-in only) | `POST /api/checkout/visit` (upsert `checkout_visits`). |
-| **Pay button** | Checkout “Pay” click | `POST /api/checkout/lead` → redirect to PayPal. |
+| **Pay button** | Checkout “Pay” click | `POST /api/checkout/stripe` → Stripe Checkout URL → redirect. |
 | **Dashboard load with pending URL** | Dashboard `useEffect`, no `orderId` | `POST /api/scan-request` → create order + customer → redirect with `orderId`. |
 | **Build my chatbot** | Dashboard “Build my chatbot” button | `POST /api/customers/[id]/crawl` → Firecrawl → save content → send **Crawl complete** + **DNS instructions** emails. |
 | **Stripe payment** | Webhook: `POST /api/webhooks/stripe` (`checkout.session.completed`) | Update `orders.status = 'paid'` for `metadata.orderId`. (Order must already exist.) |
@@ -64,7 +63,7 @@ End-to-end paths through the product:
 | **Cron: checkout-reminder** | Vercel cron daily 15:00 UTC | `GET /api/cron/checkout-reminder` → “Finish your AI chatbot order” to users who **visited checkout 4–24h ago** and have no paid order; uses `checkout_visits` (migration 006). |
 | **Cron: paid-notification** | Vercel cron every 10 min | `GET /api/cron/paid-notification` → (1) **Newly paid:** `orders.status = 'paid'` and `paid_notification_sent_at IS NULL` → send “Payment confirmed – build your chatbot”, set `paid_notification_sent_at`. (2) **Build reminder:** paid 2+ days ago, notification already sent, **no content** → send “Build your bot to get started”, set `build_reminder_sent_at`. Requires migration 008. |
 
-**Important:** PayPal has **no** webhook. Orders are set to `paid` either by **Stripe webhook** (if using Stripe and order exists with `metadata.orderId`) or by **manually** setting `orders.status = 'paid'` in Neon (and optionally creating order + customer from a checkout lead in admin, if that flow exists).
+**Important:** Checkout uses **Stripe** only. Stripe webhook sets `orders.status = 'paid'` when payment completes. For manual testing, you can still set `orders.status = 'paid'` in Neon.
 
 ---
 
