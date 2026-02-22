@@ -731,7 +731,7 @@ export function ScanModal({ open, onClose, url, onScanComplete, origin = "homepa
               Continue to Payment
             </button>
             <p className="text-xs text-muted-foreground mt-4 text-center">
-              You&apos;ll be redirected to PayPal or Stripe
+              You&apos;ll be redirected to Stripe for secure checkout
             </p>
           </div>
         )}

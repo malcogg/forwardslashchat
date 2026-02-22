@@ -29,7 +29,6 @@ type PlanSlug = "chatbot-1y" | "chatbot-2y" | "starter" | "new-build" | "redesig
 const CHATBOT_DESCRIPTION = "Custom AI trained on your site, chat.yourdomain.com. Hosting included. One-time payment.";
 
 const CAL_LINK = process.env.NEXT_PUBLIC_STRATEGY_CALL_URL || "https://cal.com/forwardslash/30min";
-const PAYPAL_ME_USER = "michael239";
 const PHONE_NUMBER = "619-719-5932";
 
 const WEBSITE_PLANS: {
@@ -166,13 +165,6 @@ function CheckoutContent() {
 
   const addOnsTotal = addOnsList.reduce((sum, a) => (addOns.has(a.id) ? sum + a.price : sum), 0);
   const subtotal = plan.price + addOnsTotal;
-  const addOnLabels = addOnsList.filter((a) => addOns.has(a.id)).map((a) => a.label);
-  const paypalDescription =
-    addOnLabels.length > 0
-      ? `ForwardSlash.Chat - ${plan.name} + ${addOnLabels.join(", ")}`
-      : `ForwardSlash.Chat - ${plan.name}`;
-  const amount = subtotal.toFixed(2);
-  const paypalLink = `https://www.paypal.com/paypalme/${PAYPAL_ME_USER}/${amount}?item_name=${encodeURIComponent(paypalDescription)}`;
 
   const emailValid = !email.trim() || isValidEmail(email);
   const detailsComplete =
@@ -184,13 +176,16 @@ function CheckoutContent() {
     domain.trim() &&
     websiteUrl.trim();
 
+  const [isPaying, setIsPaying] = useState(false);
+
   const handlePay = async (e: React.MouseEvent) => {
     e.preventDefault();
-    if (!detailsComplete || subtotal <= 0) return;
+    if (!detailsComplete || subtotal <= 0 || isPaying) return;
 
     setSaveError(null);
+    setIsPaying(true);
     try {
-      const res = await fetch("/api/checkout/lead", {
+      const res = await fetch("/api/checkout/stripe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -205,13 +200,19 @@ function CheckoutContent() {
           amountCents: Math.round(subtotal * 100),
         }),
       });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error((err as { error?: string }).error ?? "Failed to save");
+        throw new Error((data as { error?: string }).error ?? "Failed to start checkout");
       }
-      window.location.href = paypalLink;
+      const { url } = data as { url?: string };
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Could not save. Please try again.");
+      setSaveError(err instanceof Error ? err.message : "Could not start checkout. Please try again.");
+      setIsPaying(false);
     }
   };
 
@@ -463,17 +464,14 @@ function CheckoutContent() {
               <button
                 type="button"
                 onClick={handlePay}
-                className="flex w-full items-center justify-center rounded-full bg-emerald-600 px-6 py-3 text-base font-medium text-white transition-colors hover:bg-emerald-700 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                disabled={isPaying}
+                className="flex w-full items-center justify-center rounded-full bg-emerald-600 px-6 py-3 text-base font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-70 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
-                Pay with PayPal – ${subtotal.toLocaleString()} One-Time
+                {isPaying ? "Redirecting to checkout…" : `Pay $${subtotal.toLocaleString()} — Secure checkout`}
               </button>
-              <div className="mt-2 flex justify-center">
-                <img
-                  src="https://www.paypalobjects.com/webstatic/en_US/i/buttons/buy-logo-small.png"
-                  alt="PayPal"
-                  className="h-5 w-auto opacity-80"
-                />
-              </div>
+              <p className="mt-2 text-xs text-muted-foreground text-center">
+                Secured by Stripe. Card payment. One-time charge.
+              </p>
               {saveError && <p className="mt-2 text-sm text-destructive text-center">{saveError}</p>}
             </div>
           ) : (
@@ -499,11 +497,11 @@ function CheckoutContent() {
 
         {/* 6. Disclaimer + footer */}
         <p className="text-sm text-muted-foreground text-center mb-4">
-          After payment, email{" "}
+          Questions? Email{" "}
           <a href="mailto:hello@forwardslash.chat" className="text-primary hover:underline">
             hello@forwardslash.chat
-          </a>{" "}
-          with your business name, website URL, and order details to start setup.
+          </a>
+          . After payment, create an account to track your order.
         </p>
         <Link
           href="/"
