@@ -137,7 +137,12 @@ function DashboardContent() {
         });
         const json = await res.json();
         if (!res.ok) throw new Error(json.error ?? "Failed");
-        if (json.orderId) router.replace(`/dashboard?orderId=${encodeURIComponent(json.orderId)}`);
+        if (json.orderId) {
+          const ordersRes = await fetch("/api/orders/me", { credentials: "include", headers: await authHeaders() });
+          if (ordersRes.ok) setMyOrders(await ordersRes.json());
+          router.replace(`/dashboard?orderId=${encodeURIComponent(json.orderId)}`);
+          setMobileScreen("site-detail");
+        }
       })().catch(() => {
         sessionStorage.setItem(PENDING_SCAN_URL_KEY, raw);
       });
@@ -1277,6 +1282,10 @@ function DashboardContent() {
             });
             const json = await res.json();
             if (res.ok && json.orderId) {
+              setScanNewSiteModalOpen(false);
+              setScanInitialUrl("");
+              const ordersRes = await fetch("/api/orders/me", { credentials: "include", headers: await authHeaders() });
+              if (ordersRes.ok) setMyOrders(await ordersRes.json());
               router.replace(`/dashboard?orderId=${encodeURIComponent(json.orderId)}`);
               setMobileScreen("site-detail");
             }
