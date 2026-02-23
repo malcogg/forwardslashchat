@@ -12,6 +12,12 @@ import { CustomerChat } from "@/components/CustomerChat";
 import { ScanModal } from "@/components/ScanModal";
 import { DashboardMobileSheet, type MobileSheetPanel } from "@/components/DashboardMobileSheet";
 import { getPriceFromPagesAndYears } from "@/lib/pricing";
+import type { MobileScreen } from "@/components/dashboard/mobile-types";
+import { MobileBottomNav } from "@/components/dashboard/MobileBottomNav";
+import { MobileDashboardHome } from "@/components/dashboard/MobileDashboardHome";
+import { MobileAddSite } from "@/components/dashboard/MobileAddSite";
+import { MobileAccount } from "@/components/dashboard/MobileAccount";
+import { MobileSiteDetail } from "@/components/dashboard/MobileSiteDetail";
 
 function getDisplayName(user: { firstName?: string | null; lastName?: string | null; fullName?: string | null } | null | undefined): string {
   if (!user) return "Michael Francis";
@@ -144,6 +150,8 @@ function DashboardContent() {
   const [activePanel, setActivePanel] = useState<"design" | "domains">("design");
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [mobileView, setMobileView] = useState<MobileSheetPanel>("design");
+  const [mobileScreen, setMobileScreen] = useState<MobileScreen>("home");
+  const [scanInitialUrl, setScanInitialUrl] = useState("");
   const [scanDropdownOpen, setScanDropdownOpen] = useState(false);
   const [scanNewSiteModalOpen, setScanNewSiteModalOpen] = useState(false);
   const [upsellModalOpen, setUpsellModalOpen] = useState(false);
@@ -163,6 +171,13 @@ function DashboardContent() {
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, [scanDropdownOpen]);
+
+  // On mobile, when URL has orderId, show site-detail view
+  useEffect(() => {
+    if (typeof window === "undefined" || !orderId) return;
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) setMobileScreen("site-detail");
+  }, [orderId]);
 
   const [data, setData] = useState<{
     order: { id: string; status: string; amountCents: number; bundleYears: number; dnsHelp: boolean; planSlug?: string; addOns?: string[] };
@@ -535,6 +550,8 @@ function DashboardContent() {
 
   return (
     <main className="min-h-screen bg-background">
+      {/* Desktop layout - hidden on mobile */}
+      <div className="hidden md:block">
       {/* Browser bar */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
         <div className="flex items-center gap-2">
@@ -1128,42 +1145,83 @@ function DashboardContent() {
           )}
         </div>
       </div>
-
-      {/* Mobile bottom bar - open sheet */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-30 flex items-center justify-center py-3 px-4 bg-background/95 backdrop-blur border-t border-border safe-area-pb">
-        <button
-          type="button"
-          onClick={() => setMobileSheetOpen(true)}
-          className="w-full max-w-sm flex items-center justify-center gap-2 py-3 px-6 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 active:opacity-80 transition-opacity"
-        >
-          <Menu className="w-5 h-5" />
-          Menu
-        </button>
       </div>
 
-      {/* Mobile: spacer so content isn't hidden behind bottom bar */}
-      <div className="md:hidden h-16 shrink-0" aria-hidden />
-
-      {/* Mobile bottom sheet */}
-      <DashboardMobileSheet
-        open={mobileSheetOpen}
-        onClose={() => setMobileSheetOpen(false)}
-        onSelectPanel={setMobilePanel}
-        onSelectOrder={(id) => {
-          router.replace(`/dashboard?orderId=${encodeURIComponent(id)}`);
-        }}
-        onScanNewSite={() => setScanNewSiteModalOpen(true)}
-        orders={myOrders.map(({ order, customer }) => ({
-          orderId: order.id,
-          label: customer?.websiteUrl?.replace(/^https?:\/\//, "").replace(/\/$/, "") ?? customer?.businessName ?? "Order",
-          isWebsite: order.planSlug ? ["starter", "new-build", "redesign"].includes(order.planSlug) : false,
-        }))}
-        activePanel={activePanel}
-        contentCount={contentCount}
-        domainDone={["testing", "delivered"].includes(customer?.status ?? "")}
-        domainLocked={!isWebsiteOrder && (contentCount ?? 0) === 0}
-        currentOrderId={orderId}
-      />
+      {/* Mobile: Rork-style shell (tab bar + home / add / account / site-detail) */}
+      <div className="md:hidden flex flex-col min-h-screen bg-background">
+        {mobileScreen === "site-detail" && orderId && data?.order?.id === orderId ? (
+          <MobileSiteDetail
+            siteData={{
+              order: data.order,
+              customer: data.customer ?? null,
+              contentCount: data.contentCount ?? 0,
+            }}
+            estimatedPages={myOrders.find((o) => o.order.id === orderId)?.estimatedPages ?? 25}
+            onBack={() => {
+              setMobileScreen("home");
+              router.replace("/dashboard");
+            }}
+            onRescan={handleCrawl}
+            crawling={crawling}
+            canRescan={canRescan}
+            copied={copied}
+            onCopyUrl={copyCname}
+          />
+        ) : mobileScreen === "site-detail" && orderId ? (
+          <div className="flex flex-col flex-1 items-center justify-center p-6">
+            <p className="text-sm text-muted-foreground">Loading site…</p>
+            <button
+              type="button"
+              onClick={() => { setMobileScreen("home"); router.replace("/dashboard"); }}
+              className="mt-4 text-sm text-primary"
+            >
+              Back to dashboard
+            </button>
+          </div>
+        ) : (
+          <>
+            <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-background shrink-0">
+              <span className="text-sm font-medium text-foreground">ForwardSlash.Chat</span>
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <UserButton afterSignOutUrl="/" />
+              </div>
+            </header>
+            <div className="flex-1 overflow-auto min-h-0">
+              {mobileScreen === "home" && (
+                <MobileDashboardHome
+                  displayName={displayName}
+                  orders={myOrders}
+                  onSelectSite={(id) => {
+                    router.replace(`/dashboard?orderId=${encodeURIComponent(id)}`);
+                    setMobileScreen("site-detail");
+                  }}
+                  onGoToAddSite={() => setMobileScreen("add")}
+                />
+              )}
+              {mobileScreen === "add" && (
+                <MobileAddSite
+                  onScan={(url) => {
+                    setScanInitialUrl(url);
+                    setScanNewSiteModalOpen(true);
+                  }}
+                />
+              )}
+              {mobileScreen === "account" && (
+                <MobileAccount
+                  displayName={displayName}
+                  email={user?.primaryEmailAddress?.emailAddress}
+                  initials={initials}
+                  totalSites={myOrders.length}
+                  liveSites={myOrders.filter((o) => o.customer?.status === "delivered" || (o.order.planSlug && ["starter", "new-build", "redesign"].includes(o.order.planSlug) && o.order.status === "delivered")).length}
+                  investedCents={myOrders.reduce((sum, o) => sum + (o.order.amountCents ?? 0), 0)}
+                />
+              )}
+            </div>
+            <MobileBottomNav current={mobileScreen} onSelect={setMobileScreen} />
+          </>
+        )}
+      </div>
 
       {/* Upsell modal */}
       {upsellModalOpen && (
@@ -1202,8 +1260,11 @@ function DashboardContent() {
       {/* Scan new site modal - same roast flow as homepage, stays in dashboard */}
       <ScanModal
         open={scanNewSiteModalOpen}
-        onClose={() => setScanNewSiteModalOpen(false)}
-        url=""
+        onClose={() => {
+          setScanNewSiteModalOpen(false);
+          setScanInitialUrl("");
+        }}
+        url={scanInitialUrl || ""}
         origin="dashboard"
         onAddToDashboard={async (urlToAdd, estimatedPages) => {
           try {
@@ -1217,6 +1278,7 @@ function DashboardContent() {
             const json = await res.json();
             if (res.ok && json.orderId) {
               router.replace(`/dashboard?orderId=${encodeURIComponent(json.orderId)}`);
+              setMobileScreen("site-detail");
             }
           } catch {
             /* ignore */
