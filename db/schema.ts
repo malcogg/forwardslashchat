@@ -123,3 +123,29 @@ export const content = pgTable("content", {
   description: text("description"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+// Per-customer products (for rich chat product cards)
+export const customerProducts = pgTable("customer_products", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  customerId: uuid("customer_id").references(() => customers.id).notNull(),
+  title: text("title").notNull(),
+  price: text("price"),
+  imageUrl: text("image_url"),
+  productUrl: text("product_url"),
+  description: text("description"),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Per-customer blog posts (for rich chat blog cards)
+export const customerBlogPosts = pgTable("customer_blog_posts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  customerId: uuid("customer_id").references(() => customers.id).notNull(),
+  title: text("title").notNull(),
+  excerpt: text("excerpt"),
+  imageUrl: text("image_url"),
+  url: text("url"),
+  date: text("date"),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});

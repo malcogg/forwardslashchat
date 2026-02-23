@@ -2,8 +2,11 @@
 
 import { useChat } from "ai/react";
 import { ArrowUp } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useCallback, useState, useRef } from "react";
 import { sanitizeChatMessage, LIMITS } from "@/lib/validation";
+import { ChatMessageContent } from "@/components/chat/ChatMessageContent";
+import { ChatCards } from "@/components/chat/ChatCards";
+import type { ChatCardBlock } from "@/components/chat/chat-types";
 
 interface CustomerChatProps {
   customerId: string;
@@ -18,9 +21,32 @@ export function CustomerChat({
   primaryColor = "#059669",
   compact = false,
 }: CustomerChatProps) {
+  const [messageBlocks, setMessageBlocks] = useState<Record<number, ChatCardBlock[]>>({});
+  const nextAssistantIndexRef = useRef(0);
+
   const { messages, input, setInput, append, isLoading } = useChat({
     api: "/api/chat",
     body: { customerId },
+    onFinish: useCallback(
+      async (_message, { message: finalMessage }) => {
+        const content = finalMessage?.content;
+        if (typeof content !== "string" || !content.trim()) return;
+        const idx = nextAssistantIndexRef.current;
+        try {
+          const res = await fetch("/api/chat/extract-blocks", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ customerId, messageContent: content }),
+          });
+          const data = (await res.json()) as { blocks?: ChatCardBlock[] };
+          const blocks = Array.isArray(data.blocks) ? data.blocks : [];
+          setMessageBlocks((prev) => ({ ...prev, [idx]: blocks }));
+        } catch {
+          // ignore
+        }
+      },
+      [customerId]
+    ),
   });
 
   const suggestions = useMemo(() => {
@@ -35,6 +61,7 @@ export function CustomerChat({
   const send = (text: string) => {
     const t = sanitizeChatMessage(text);
     if (!t || isLoading) return;
+    nextAssistantIndexRef.current = messages.length + 1; // next message will be assistant at this index
     append({ role: "user", content: t });
   };
 
@@ -114,14 +141,15 @@ export function CustomerChat({
                   className={`inline-block max-w-[90%] px-3 py-2 rounded-xl text-sm ${
                     m.role === "user"
                       ? "text-white"
-                      : "bg-gray-100 text-gray-900 prose prose-sm max-w-none"
+                      : "bg-gray-100 text-gray-900"
                   }`}
                   style={m.role === "user" ? { backgroundColor: primaryColor } : undefined}
                 >
                   {m.role === "assistant" ? (
-                    <div className="whitespace-pre-wrap [&_a]:text-blue-600 [&_a]:underline">
-                      {m.content}
-                    </div>
+                    <>
+                      <ChatMessageContent content={m.content} />
+                      <ChatCards blocks={messageBlocks[i] ?? []} primaryColor={primaryColor} />
+                    </>
                   ) : (
                     m.content
                   )}

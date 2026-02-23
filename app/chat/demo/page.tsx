@@ -5,6 +5,9 @@ import Link from "next/link";
 import { ArrowUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { sanitizeChatMessage, LIMITS } from "@/lib/validation";
+import { ChatMessageContent } from "@/components/chat/ChatMessageContent";
+import { ChatCards } from "@/components/chat/ChatCards";
+import { getDemoCardsForMessage } from "@/lib/demo-cards";
 
 const CAL_LINK = process.env.NEXT_PUBLIC_STRATEGY_CALL_URL || "https://cal.com/forwardslash/30min";
 
@@ -137,83 +140,6 @@ Check the [demo](/chat/demo) or see [how it works](/services#how-it-works).`,
   return null;
 }
 
-function MarkdownText({ text }: { text: string }) {
-  const parts: React.ReactNode[] = [];
-  let remaining = text;
-  let key = 0;
-
-  while (remaining) {
-    const linkMatch = remaining.match(/\[([^\]]+)\]\(([^)]+)\)/);
-    const boldMatch = remaining.match(/\*\*([^*]+)\*\*/);
-    const codeMatch = remaining.match(/`([^`]+)`/);
-
-    let match: RegExpMatchArray | null = null;
-    let type: "link" | "bold" | "code" = "link";
-    let idx = remaining.length;
-
-    if (linkMatch && linkMatch.index !== undefined && linkMatch.index < idx) {
-      match = linkMatch;
-      type = "link";
-      idx = linkMatch.index;
-    }
-    if (boldMatch && boldMatch.index !== undefined && boldMatch.index < idx) {
-      match = boldMatch;
-      type = "bold";
-      idx = boldMatch.index;
-    }
-    if (codeMatch && codeMatch.index !== undefined && codeMatch.index < idx) {
-      match = codeMatch;
-      type = "code";
-      idx = codeMatch.index;
-    }
-
-    if (match && match.index !== undefined) {
-      if (idx > 0) {
-        parts.push(
-          <span key={key++}>
-            {remaining.slice(0, idx).split("\n").map((line, i) => (
-              <span key={i}>{line}{i < remaining.slice(0, idx).split("\n").length - 1 ? <br /> : null}</span>
-            ))}
-          </span>
-        );
-      }
-      if (type === "link") {
-        const href = match[2];
-        const isInternal = href.startsWith("/") && !href.startsWith("//");
-        if (isInternal) {
-          parts.push(
-            <Link key={key++} href={href} className="text-primary underline hover:underline">
-              {match[1]}
-            </Link>
-          );
-        } else {
-          parts.push(
-            <a key={key++} href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline">
-              {match[1]}
-            </a>
-          );
-        }
-      } else if (type === "bold") {
-        parts.push(<strong key={key++}>{match[1]}</strong>);
-      } else if (type === "code") {
-        parts.push(<code key={key++} className="bg-muted px-1 rounded text-sm">{match[1]}</code>);
-      }
-      remaining = remaining.slice(idx + match[0].length);
-    } else {
-      parts.push(
-        <span key={key++}>
-          {remaining.split("\n").map((line, i) => (
-            <span key={i}>{line}{i < remaining.split("\n").length - 1 ? <br /> : null}</span>
-          ))}
-        </span>
-      );
-      break;
-    }
-  }
-
-  return <>{parts}</>;
-}
-
 type Message = { role: "user" | "assistant"; content: string; id?: string; pills?: { label: string; href: string }[]; followUps?: string[] };
 
 export default function DemoChatPage() {
@@ -307,10 +233,9 @@ export default function DemoChatPage() {
                   >
                     {m.role === "assistant" ? (
                       <>
-                        <div className="prose prose-sm dark:prose-invert max-w-none">
-                          <MarkdownText text={m.content} />
-                        </div>
-                                        {m.followUps && m.followUps.length > 0 && (
+                        <ChatMessageContent content={m.content} />
+                        <ChatCards blocks={getDemoCardsForMessage(m.content)} primaryColor="#059669" />
+                        {m.followUps && m.followUps.length > 0 && (
                           <div className="mt-3 flex flex-wrap gap-2">
                             {m.followUps.map((f) => (
                               <button
