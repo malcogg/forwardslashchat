@@ -291,7 +291,7 @@ export function ScanModal({ open, onClose, url, onScanComplete, origin = "homepa
                 </button>
               </div>
               <p className="text-xs text-muted-foreground mt-4">
-                We&apos;ll run a light scan (no Firecrawl credits) and show you a quick roast + price estimate.
+                We&apos;ll run a light scan and show you a quick roast + price estimate.
               </p>
             </motion.div>
           )}

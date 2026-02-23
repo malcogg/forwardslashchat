@@ -6,7 +6,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { PENDING_SCAN_URL_KEY } from "@/components/ScanModal";
 import { UserButton, useUser, useAuth } from "@clerk/nextjs";
-import { Globe, Check, ChevronDown, X, Monitor, Tablet, Smartphone, Copy, ExternalLink, Trash2, Bell, Lock, Menu } from "lucide-react";
+import { Globe, Check, ChevronDown, X, Monitor, Tablet, Smartphone, Copy, ExternalLink, Trash2, Bell, Lock, Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CustomerChat } from "@/components/CustomerChat";
 import { ScanModal } from "@/components/ScanModal";
@@ -157,6 +157,7 @@ function DashboardContent() {
   const [mobileView, setMobileView] = useState<MobileSheetPanel>("design");
   const [mobileScreen, setMobileScreen] = useState<MobileScreen>("home");
   const [scanInitialUrl, setScanInitialUrl] = useState("");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [scanDropdownOpen, setScanDropdownOpen] = useState(false);
   const [scanNewSiteModalOpen, setScanNewSiteModalOpen] = useState(false);
   const [upsellModalOpen, setUpsellModalOpen] = useState(false);
@@ -630,102 +631,117 @@ function DashboardContent() {
       </div>
 
       <div className="flex h-[calc(100vh-52px)]">
-        {/* Sidebar - hidden on mobile (use bottom sheet instead) */}
-        <aside className="hidden md:flex w-56 border-r border-border bg-muted/20 p-4 flex-col shrink-0">
-          <div className="flex items-center gap-2 mb-6">
+        {/* Sidebar - collapsible on desktop, hidden on mobile */}
+        <aside
+          className={`hidden md:flex border-r border-border bg-muted/20 flex-col shrink-0 transition-[width] duration-200 ${
+            sidebarCollapsed ? "w-16 p-2" : "w-56 p-4"
+          }`}
+        >
+          <div className={`flex items-center gap-2 mb-6 ${sidebarCollapsed ? "justify-center" : ""}`}>
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
               <span className="text-primary-foreground text-xs font-medium">{initials}</span>
             </div>
-            <span className="text-sm font-medium text-foreground truncate">{displayName}</span>
+            {!sidebarCollapsed && <span className="text-sm font-medium text-foreground truncate">{displayName}</span>}
           </div>
 
-          <div className="mb-2" ref={scanDropdownRef}>
+          {sidebarCollapsed ? (
             <button
-              onClick={() => setScanDropdownOpen((o) => !o)}
-              className="w-full flex items-center justify-between gap-2 px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted/50 rounded hover:text-foreground"
+              type="button"
+              onClick={() => setScanNewSiteModalOpen(true)}
+              className="w-full flex items-center justify-center p-2 rounded-lg text-muted-foreground hover:bg-muted/50 hover:text-foreground mb-2"
+              title="Scan new site"
             >
-              <span className="flex items-center gap-2">
-                <span>▸</span> Scan site
-              </span>
-              <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${scanDropdownOpen ? "rotate-180" : ""}`} />
+              <Globe className="w-5 h-5" />
             </button>
-            {scanDropdownOpen && (
-              <div className="mt-1 py-2 px-2 space-y-0.5 border-l-2 border-muted ml-2 pl-3">
-                {myOrders.length === 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setScanDropdownOpen(false);
-                      setScanNewSiteModalOpen(true);
-                    }}
-                    className="block w-full text-left px-3 py-2 text-sm text-foreground hover:bg-accent rounded"
-                  >
-                    Scan new site
-                  </button>
-                ) : (
-                  <>
-                    {myOrders.map(({ order: o, customer: c, estimatedPages: ep }) => {
-                      const isWeb = o.planSlug && ["starter", "new-build", "redesign"].includes(o.planSlug);
-                      return (
-                      <div
-                        key={o.id}
-                        className={`flex items-center gap-2 px-3 py-2 rounded group ${
-                          orderId === o.id ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-accent"
-                        }`}
-                      >
-                        <Link
-                          href={`/dashboard?orderId=${o.id}`}
-                          onClick={() => setScanDropdownOpen(false)}
-                          className="flex-1 min-w-0 truncate text-sm"
-                        >
-                          {c?.websiteUrl?.replace(/^https?:\/\//, "").replace(/\/$/, "") ?? c?.businessName ?? "Order"}
-                        </Link>
-                        <span className="text-xs text-muted-foreground shrink-0">
-                          {isWeb ? WEBSITE_PLAN_NAMES[o.planSlug!]?.split(" ")[0] ?? "Web" : `~${ep} pg`}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleDeleteSite(o.id);
-                          }}
-                          disabled={deletingOrderId === o.id}
-                          className="p-1 rounded text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50"
-                          aria-label="Delete site"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    );})}
+          ) : (
+            <div className="mb-2" ref={scanDropdownRef}>
+              <button
+                onClick={() => setScanDropdownOpen((o) => !o)}
+                className="w-full flex items-center justify-between gap-2 px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted/50 rounded hover:text-foreground"
+              >
+                <span className="flex items-center gap-2">
+                  <span>▸</span> Scan site
+                </span>
+                <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${scanDropdownOpen ? "rotate-180" : ""}`} />
+              </button>
+              {scanDropdownOpen && (
+                <div className="mt-1 py-2 px-2 space-y-0.5 border-l-2 border-muted ml-2 pl-3">
+                  {myOrders.length === 0 ? (
                     <button
                       type="button"
                       onClick={() => {
                         setScanDropdownOpen(false);
                         setScanNewSiteModalOpen(true);
                       }}
-                      className="block w-full text-left px-3 py-2 text-sm text-primary hover:bg-accent rounded mt-1 pt-2 border-t border-border"
+                      className="block w-full text-left px-3 py-2 text-sm text-foreground hover:bg-accent rounded"
                     >
-                      + Scan new site
+                      Scan new site
                     </button>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
+                  ) : (
+                    <>
+                      {myOrders.map(({ order: o, customer: c, estimatedPages: ep }) => {
+                        const isWeb = o.planSlug && ["starter", "new-build", "redesign"].includes(o.planSlug);
+                        return (
+                        <div
+                          key={o.id}
+                          className={`flex items-center gap-2 px-3 py-2 rounded group ${
+                            orderId === o.id ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-accent"
+                          }`}
+                        >
+                          <Link
+                            href={`/dashboard?orderId=${o.id}`}
+                            onClick={() => setScanDropdownOpen(false)}
+                            className="flex-1 min-w-0 truncate text-sm"
+                          >
+                            {c?.websiteUrl?.replace(/^https?:\/\//, "").replace(/\/$/, "") ?? c?.businessName ?? "Order"}
+                          </Link>
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            {isWeb ? WEBSITE_PLAN_NAMES[o.planSlug!]?.split(" ")[0] ?? "Web" : `~${ep} pg`}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleDeleteSite(o.id);
+                            }}
+                            disabled={deletingOrderId === o.id}
+                            className="p-1 rounded text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                            aria-label="Delete site"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      );})}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setScanDropdownOpen(false);
+                          setScanNewSiteModalOpen(true);
+                        }}
+                        className="block w-full text-left px-3 py-2 text-sm text-primary hover:bg-accent rounded mt-1 pt-2 border-t border-border"
+                      >
+                        + Scan new site
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
-          <nav className="space-y-0.5 flex-1">
-            <button onClick={() => setActivePanel("design")} className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded text-left ${activePanel === "design" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`}>
+          <nav className={`space-y-0.5 flex-1 ${sidebarCollapsed ? "flex flex-col items-center" : ""}`}>
+            <button onClick={() => setActivePanel("design")} className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded text-left ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "design" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`} title="Training">
               <span className="w-5 shrink-0">{contentCount > 0 ? <Check className="w-4 h-4 text-green-500" /> : <span className="text-muted-foreground/50">○</span>}</span>
-              Training
+              {!sidebarCollapsed && "Training"}
             </button>
-            <button onClick={() => setActivePanel("design")} className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded text-left ${activePanel === "design" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`}>
+            <button onClick={() => setActivePanel("design")} className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded text-left ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "design" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`} title="Design">
               <span className="w-5 shrink-0">{customer && contentCount > 0 ? <Check className="w-4 h-4 text-green-500" /> : <span className="text-muted-foreground/50">○</span>}</span>
-              Design
+              {!sidebarCollapsed && "Design"}
             </button>
             <button
               onClick={() => setActivePanel("domains")}
-              title={!isWebsiteOrder && (contentCount ?? 0) === 0 ? "Complete Training first" : undefined}
-              className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded text-left ${activePanel === "domains" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`}
+              title={!sidebarCollapsed && !isWebsiteOrder && (contentCount ?? 0) === 0 ? "Complete Training first" : "Domain"}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded text-left ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "domains" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`}
             >
               <span className="w-5 shrink-0">
                 {["testing", "delivered"].includes(customer?.status ?? "") ? (
@@ -736,74 +752,85 @@ function DashboardContent() {
                   <span className="text-muted-foreground/50">○</span>
                 )}
               </span>
-              Domain
+              {!sidebarCollapsed && "Domain"}
             </button>
           </nav>
 
-          {/* CTA / Upsell - below DNS, in sidebar */}
-          <button
-            onClick={() => setUpsellModalOpen(true)}
-            className="w-full mt-4 p-3 rounded-lg bg-white dark:bg-zinc-800 border border-border text-left hover:shadow-md transition-shadow"
-          >
-            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Also from us</p>
-            <p className="text-xs font-semibold text-foreground mt-0.5">Web design & marketing</p>
-            <p className="text-[10px] text-muted-foreground mt-1">Full overhauls for local businesses →</p>
-          </button>
-
-          <div className="pt-6 border-t border-border mt-4">
-            {(() => {
-              const hasPaidOrder = myOrders.some((o) => o.order.status === "paid");
-              const totalPages = myOrders.reduce((s, o) => s + (o.estimatedPages ?? 25), 0);
-              const totalCrawled = myOrders.reduce((s, o) => s + (o.contentCount ?? 0), 0);
-              const selectedPages = myOrders
-                .filter((o) => cartSelectedIds.has(o.order.id))
-                .reduce((s, o) => s + (o.estimatedPages ?? 25), 0);
-              const cartPrice = getPriceFromPagesAndYears(selectedPages, 2);
-              const hasSites = myOrders.length > 0;
-              return (
-                <>
-                  <div className="text-xs text-muted-foreground">Content pages</div>
-                  <div className="text-sm font-medium text-red-500 dark:text-red-400">
-                    {totalCrawled} / {totalPages > 0 ? totalPages : "—"} crawled
+          {!sidebarCollapsed && (
+            <>
+              <button
+                onClick={() => setUpsellModalOpen(true)}
+                className="w-full mt-4 p-3 rounded-lg bg-white dark:bg-zinc-800 border border-border text-left hover:shadow-md transition-shadow"
+              >
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Also from us</p>
+                <p className="text-xs font-semibold text-foreground mt-0.5">Web design & marketing</p>
+                <p className="text-[10px] text-muted-foreground mt-1">Full overhauls for local businesses →</p>
+              </button>
+              <div className="pt-6 border-t border-border mt-4">
+                {(() => {
+                  const hasPaidOrder = myOrders.some((o) => o.order.status === "paid");
+                  const totalPages = myOrders.reduce((s, o) => s + (o.estimatedPages ?? 25), 0);
+                  const totalCrawled = myOrders.reduce((s, o) => s + (o.contentCount ?? 0), 0);
+                  const selectedPages = myOrders
+                    .filter((o) => cartSelectedIds.has(o.order.id))
+                    .reduce((s, o) => s + (o.estimatedPages ?? 25), 0);
+                  const cartPrice = getPriceFromPagesAndYears(selectedPages, 2);
+                  const hasSites = myOrders.length > 0;
+                  return (
+                    <>
+                      <div className="text-xs text-muted-foreground">Content pages</div>
+                      <div className="text-sm font-medium text-red-500 dark:text-red-400">
+                        {totalCrawled} / {totalPages > 0 ? totalPages : "—"} crawled
+                      </div>
+                      {hasSites && !hasPaidOrder && (
+                        <motion.button
+                          type="button"
+                          onClick={openCartModal}
+                          className="w-full mt-3 flex items-center justify-center gap-2 rounded-xl py-3 px-4 text-sm font-semibold text-white overflow-hidden"
+                          style={{
+                            background: "linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%)",
+                            boxShadow: "0 0 24px rgba(16,185,129,0.4)",
+                          }}
+                          animate={{
+                            boxShadow: [
+                              "0 0 24px rgba(16,185,129,0.4)",
+                              "0 0 40px rgba(16,185,129,0.6)",
+                              "0 0 24px rgba(16,185,129,0.4)",
+                            ],
+                          }}
+                          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                        >
+                          <span>Get AI chatbot for all — ${cartPrice?.toLocaleString() ?? "—"}</span>
+                        </motion.button>
+                      )}
+                    </>
+                  );
+                })()}
+                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
+                  <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0">
+                    <span className="text-foreground text-xs font-medium">{initials}</span>
                   </div>
-                  {hasSites && !hasPaidOrder && (
-                    <motion.button
-                      type="button"
-                      onClick={openCartModal}
-                      className="w-full mt-3 flex items-center justify-center gap-2 rounded-xl py-3 px-4 text-sm font-semibold text-white overflow-hidden"
-                      style={{
-                        background: "linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%)",
-                        boxShadow: "0 0 24px rgba(16,185,129,0.4)",
-                      }}
-                      animate={{
-                        boxShadow: [
-                          "0 0 24px rgba(16,185,129,0.4)",
-                          "0 0 40px rgba(16,185,129,0.6)",
-                          "0 0 24px rgba(16,185,129,0.4)",
-                        ],
-                      }}
-                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                    >
-                      <span>Get AI chatbot for all — ${cartPrice?.toLocaleString() ?? "—"}</span>
-                    </motion.button>
-                  )}
-                </>
-              );
-            })()}
-            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
-              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0">
-                <span className="text-foreground text-xs font-medium">{initials}</span>
+                  <span className="text-sm text-foreground truncate">{displayName}</span>
+                </div>
               </div>
-              <span className="text-sm text-foreground truncate">{displayName}</span>
-            </div>
-          </div>
+            </>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setSidebarCollapsed((c) => !c)}
+            className={`mt-2 flex items-center justify-center gap-2 py-2 rounded-lg text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors ${sidebarCollapsed ? "w-full" : "w-full"}`}
+            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {sidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
+          </button>
         </aside>
 
-        {/* Center panel: Design | Domains - on mobile full width, hidden when showing preview */}
+        {/* Center panel: Design | Domains - compact on desktop (Rork-style), resizable feel */}
         <div
-          className={`border-r border-border overflow-y-auto shrink-0 flex flex-col flex-1 min-w-0 ${
-            activePanel === "design" ? "md:w-64" : "md:min-w-[280px] md:max-w-md"
-          } ${mobileView === "preview" ? "max-md:hidden" : ""}`}
+          className={`border-r border-border overflow-y-auto shrink-0 flex flex-col min-w-0 ${
+            activePanel === "design" ? "md:w-56 md:min-w-[200px] md:max-w-[280px]" : "md:w-72 md:min-w-[220px] md:max-w-[360px]"
+          } flex-1 ${mobileView === "preview" ? "max-md:hidden" : ""}`}
         >
           {successToast && (
             <div className="flex items-center justify-between gap-4 p-4 bg-emerald-500/15 border-b border-emerald-500/30 shrink-0">
@@ -1120,15 +1147,18 @@ function DashboardContent() {
                   </button>
                 </div>
               </div>
-              <div
-                className={`flex-1 flex justify-center min-h-0 transition-[max-width] duration-200 ${
-                  previewView === "desktop" ? "max-w-full" : previewView === "tablet" ? "max-w-[480px] mx-auto" : "max-w-[320px] mx-auto"
-                }`}
-              >
+              <div className="flex-1 flex justify-center min-h-0 overflow-x-auto transition-[width] duration-200">
                 <div
-                  className={`w-full h-full bg-card border border-border shadow-lg overflow-hidden flex flex-col min-h-0 ring-1 ring-black/5 transition-all duration-200 ${
-                    previewView === "desktop" ? "rounded-xl" : previewView === "tablet" ? "rounded-2xl" : "rounded-[2rem]"
+                  className={`h-full bg-card border border-border shadow-lg overflow-hidden flex flex-col min-h-0 ring-1 ring-black/5 transition-all duration-200 shrink-0 ${
+                    previewView === "desktop" ? "rounded-xl w-full" : previewView === "tablet" ? "rounded-2xl" : "rounded-[2rem]"
                   }`}
+                  style={
+                    previewView === "tablet"
+                      ? { width: 768, minWidth: 768 }
+                      : previewView === "mobile"
+                        ? { width: 390, minWidth: 390 }
+                        : undefined
+                  }
                 >
                   <CustomerChat customerId={customer.id} businessName={customer.businessName} primaryColor={customer.primaryColor ?? "#000"} compact={false} />
                 </div>
