@@ -22,7 +22,7 @@ export type OrderRow = {
   estimatedPages: number;
 };
 
-export function getSiteStatusLabel(order: OrderRow["order"], customer: OrderRow["customer"], contentCount: number): string {
+export function getSiteStatusLabel(order: OrderRow["order"], customer: OrderRow["customer"] | undefined, contentCount: number): string {
   if (!customer) return "Payment";
   const isWebsite = order.planSlug && ["starter", "new-build", "redesign"].includes(order.planSlug);
   if (isWebsite) {
@@ -37,7 +37,7 @@ export function getSiteStatusLabel(order: OrderRow["order"], customer: OrderRow[
   return "Payment";
 }
 
-export function getSiteStatusDot(order: OrderRow["order"], customer: OrderRow["customer"], contentCount: number): "live" | "domain" | "training" {
+export function getSiteStatusDot(order: OrderRow["order"], customer: OrderRow["customer"] | undefined, contentCount: number): "live" | "domain" | "training" {
   const label = getSiteStatusLabel(order, customer, contentCount);
   if (label === "Live") return "live";
   if (label === "Domain Setup") return "domain";
@@ -60,7 +60,7 @@ export function getPlanLabel(order: OrderRow["order"], estimatedPages: number): 
   return "Pro";
 }
 
-export function getProgressSteps(order: OrderRow["order"], customer: OrderRow["customer"], contentCount: number) {
+export function getProgressSteps(order: OrderRow["order"], customer: OrderRow["customer"] | undefined, contentCount: number) {
   const isWebsite = order.planSlug && ["starter", "new-build", "redesign"].includes(order.planSlug);
   if (isWebsite) {
     return [

@@ -46,7 +46,7 @@ export function MobileSiteDetail({
   const { order, customer, contentCount = 0 } = siteData;
   const isWebsiteOrder = order.planSlug && ["starter", "new-build", "redesign"].includes(order.planSlug);
   const statusLabel = getSiteStatusLabel(order, customer, contentCount);
-  const steps = getProgressSteps(order, customer ?? undefined, contentCount);
+  const steps = getProgressSteps(order, customer, contentCount);
   const planLabel = getPlanLabel(order, estimatedPages);
   const amountPaid = ((order.amountCents ?? 0) / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
   const siteName = customer?.businessName || customer?.websiteUrl?.replace(/^https?:\/\//, "").replace(/\/$/, "") || "Site";
