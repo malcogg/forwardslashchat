@@ -72,7 +72,7 @@ export function MobileDashboardHome({
             const statusLabel = getSiteStatusLabel(row.order, row.customer, row.contentCount);
             const dot = getSiteStatusDot(row.order, row.customer, row.contentCount);
             const planLabel = getPlanLabel(row.order, row.estimatedPages);
-            const steps = getProgressSteps(row.order, row.customer ?? undefined, row.contentCount);
+            const steps = getProgressSteps(row.order, row.customer ?? null, row.contentCount);
             const displayUrl = row.customer?.websiteUrl?.replace(/^https?:\/\//, "").replace(/\/$/, "") ?? row.customer?.businessName ?? "Site";
 
             return (
