@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, Suspense, useEffect, useCallback } from "react";
 import { Header } from "@/components/landing/Header";
 import { HeroSection } from "@/components/landing/HeroSection";
