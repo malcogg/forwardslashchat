@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { content, customers, orders } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { sanitizeChatMessage } from "@/lib/validation";
+import { checkAndIncrementRateLimit } from "@/lib/rate-limit";
 
 /**
  * POST /api/chat
@@ -37,6 +38,13 @@ export async function POST(request: Request) {
     const [customer] = await db.select().from(customers).where(eq(customers.id, customerId));
     if (!customer) {
       return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+    }
+
+    // Rate limit per customer to prevent abuse / runaway spend.
+    const perMinute = Math.min(120, Math.max(5, Number(process.env.CHAT_RATE_LIMIT_PER_MINUTE ?? 30)));
+    const rl = await checkAndIncrementRateLimit({ key: `customer:${customerId}`, limitPerMinute: perMinute });
+    if (!rl.ok) {
+      return NextResponse.json({ error: "Rate limited. Please slow down." }, { status: 429 });
     }
 
     // Public endpoint: only allow real usage for paid customers.
@@ -92,6 +100,9 @@ ${context || "(No content yet - the chatbot is still being built.)"}`;
       model: openai("gpt-4o-mini"),
       system: systemPrompt,
       messages: safeMessages,
+      maxSteps: 1,
+      maxTokens: Math.min(1200, Math.max(128, Number(process.env.CHAT_MAX_TOKENS ?? 600))),
+      maxRetries: 1,
     });
 
     return result.toDataStreamResponse();

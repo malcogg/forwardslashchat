@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { orders, customers } from "@/db/schema";
 import { getOrCreateUser } from "@/lib/auth";
 import { eq, desc } from "drizzle-orm";
+import { enqueueOrKickJob } from "@/lib/jobs";
 import {
   sanitizeWebsiteUrl,
   sanitizeBusinessName,
@@ -59,7 +60,7 @@ export async function GET(request: Request) {
 /**
  * POST /api/admin/orders
  * Create order + customer (no payment). Admin only. For testing.
- * Body: { websiteUrl, businessName, domain, subdomain? }
+ * Body: { websiteUrl, businessName, domain, subdomain?, autoBuild?, maxPages? }
  */
 export async function POST(request: Request) {
   const user = await getOrCreateUser(request);
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => ({}));
-  const { websiteUrl, businessName, domain, subdomain } = body as Record<string, unknown>;
+  const { websiteUrl, businessName, domain, subdomain, autoBuild, maxPages } = body as Record<string, unknown>;
 
   if (
     typeof websiteUrl !== "string" ||
@@ -137,6 +138,18 @@ export async function POST(request: Request) {
         status: "content_collection",
       })
       .returning();
+
+    // Optional: auto-build immediately (demo/testing). Runs via /api/cron/jobs.
+    const doAutoBuild = autoBuild === true;
+    if (doAutoBuild && customer?.id) {
+      const max = typeof maxPages === "number" ? Math.min(50, Math.max(10, Math.round(maxPages))) : 20;
+      await enqueueOrKickJob({
+        type: "auto_crawl_customer",
+        dedupeKey: `auto_crawl_${order.id}`,
+        payload: { orderId: order.id, customerId: customer.id, notifyEmail: user.email ?? null, maxPages: max },
+        maxAttempts: 10,
+      });
+    }
 
     return NextResponse.json({ order, customer });
   } catch (e) {

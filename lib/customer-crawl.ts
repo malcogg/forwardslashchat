@@ -6,6 +6,7 @@ import { resend, FROM_EMAIL } from "@/lib/resend";
 import { CrawlCompleteEmail } from "@/components/emails/crawl-complete";
 import { DnsInstructionsEmail } from "@/components/emails/dns-instructions";
 import { assertSafeOutboundHttpUrl } from "@/lib/url-safety";
+import { normalizeContentUrl, shouldKeepCrawledPage } from "@/lib/content-filter";
 
 async function runFirecrawlCrawl(apiKey: string, url: string, limit: number): Promise<{
   success: boolean;
@@ -119,22 +120,25 @@ export async function autoCrawlCustomer(input: {
 
   // Replace content
   await db.delete(content).where(eq(content.customerId, customer.id));
+  let pagesSaved = 0;
   for (const page of result.data) {
     const markdown = page.markdown ?? "";
     const sourceUrl = page.metadata?.sourceURL ?? "";
     const title = (page.metadata?.title ?? (sourceUrl ? new URL(sourceUrl).pathname : "")) || "Page";
     if (!markdown && !sourceUrl) continue;
+    if (!shouldKeepCrawledPage({ sourceUrl, title, markdown })) continue;
 
     await db.insert(content).values({
       customerId: customer.id,
-      url: sourceUrl,
+      url: normalizeContentUrl(sourceUrl),
       title,
       content: markdown || "(No content extracted)",
       description: markdown.slice(0, 200) || null,
     });
+    pagesSaved++;
   }
 
-  const pagesCrawled = result.data.length;
+  const pagesCrawled = pagesSaved;
   const now = new Date();
   await db
     .update(customers)

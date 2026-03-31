@@ -10,6 +10,8 @@ import { CrawlCompleteEmail } from "@/components/emails/crawl-complete";
 import { DnsInstructionsEmail } from "@/components/emails/dns-instructions";
 import { assertSafeOutboundHttpUrl } from "@/lib/url-safety";
 import { fetchWithRetry } from "@/lib/fetch-retry";
+import { normalizeContentUrl, shouldKeepCrawledPage } from "@/lib/content-filter";
+import { deductRescanCredits, getRescanCreditsBalance } from "@/lib/credit-balance";
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
   .split(",")
@@ -144,9 +146,28 @@ export async function POST(
   }
 
   // Credit check: skip for paid orders and admins (paid customers get crawl as part of their purchase)
-  const skipCredits = adminBypass || order.status === "paid";
+  const isRescan = !!customer.lastCrawledAt;
+  // Initial build is included for paid orders; rescans require credits.
+  const enforceRescanCredits = !adminBypass && order.status === "paid" && isRescan;
+  const skipCredits = adminBypass || (order.status === "paid" && !enforceRescanCredits);
   // Use purchased/estimated pages — we charge for what the bot will crawl (cap 500)
   const crawlLimit = Math.min(Math.max(customer.estimatedPages ?? 50, 1), 500);
+
+  if (enforceRescanCredits) {
+    const bal = await getRescanCreditsBalance(user.userId);
+    if (bal < crawlLimit) {
+      return NextResponse.json(
+        {
+          error: `Rescan requires credits. Need ~${crawlLimit}, have ${bal}.`,
+          creditsRequired: crawlLimit,
+          creditsBalance: bal,
+          purchaseEndpoint: "/api/credits/checkout",
+        },
+        { status: 402 }
+      );
+    }
+  }
+
   if (!skipCredits) {
     const creditsNeeded = crawlLimit;
     const balance = await getCreditBalance(user.userId);
@@ -180,7 +201,8 @@ export async function POST(
   // Delete existing content for this customer
   await db.delete(content).where(eq(content.customerId, customerId));
 
-  // Insert new content
+  // Insert new content (filter out junk URLs/content)
+  let pagesSaved = 0;
   for (const page of result.data) {
     const markdown = page.markdown ?? "";
     const sourceUrl = page.metadata?.sourceURL ?? "";
@@ -188,18 +210,25 @@ export async function POST(
       (page.metadata?.title ?? (sourceUrl ? new URL(sourceUrl).pathname : "")) || "Page";
 
     if (!markdown && !sourceUrl) continue;
+    if (!shouldKeepCrawledPage({ sourceUrl, title, markdown })) continue;
 
     await db.insert(content).values({
       customerId,
-      url: sourceUrl,
+      url: normalizeContentUrl(sourceUrl),
       title,
       content: markdown || "(No content extracted)",
       description: markdown.slice(0, 200) || null,
     });
+    pagesSaved++;
   }
 
-  const pagesCrawled = result.data.length;
-  if (!skipCredits) {
+  const pagesCrawled = pagesSaved;
+  if (enforceRescanCredits) {
+    const deducted = await deductRescanCredits({ userId: user.userId, amount: pagesCrawled, reason: "rescan" });
+    if (!deducted.ok) {
+      return NextResponse.json({ error: "Insufficient credits" }, { status: 402 });
+    }
+  } else if (!skipCredits) {
     const deducted = await deductCredits(user.userId, pagesCrawled);
     if (!deducted.ok) {
       return NextResponse.json({ error: "Credit deduction failed" }, { status: 500 });
@@ -252,9 +281,11 @@ export async function POST(
   }
 
   const remaining = skipCredits ? 9999 : (await getCreditBalance(user.userId)).remaining;
+  const rescanCreditsRemaining = await getRescanCreditsBalance(user.userId);
   return NextResponse.json({
     success: true,
     pages: pagesCrawled,
     creditsRemaining: remaining,
+    rescanCreditsRemaining,
   });
 }

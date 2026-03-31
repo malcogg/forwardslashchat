@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { customers, orders, stripeEvents } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { enqueueJob } from "@/lib/jobs";
+import { addRescanCredits } from "@/lib/credit-balance";
 
 /**
  * POST /api/webhooks/stripe
@@ -52,12 +53,32 @@ export async function POST(request: Request) {
 
   if (paidSessionEvents.has(event.type)) {
     const session = event.data.object as Stripe.Checkout.Session;
+    const purpose = session.metadata?.purpose;
     const orderId = session.metadata?.orderId;
     const paymentStatus = session.payment_status;
     const notifyEmail =
       (session.customer_details?.email as string | undefined) ??
       (session.customer_email as string | undefined) ??
       undefined;
+
+    // Credits purchase flow (no order required)
+    if (purpose === "credits") {
+      const userId = session.metadata?.userId;
+      const credits = Number(session.metadata?.credits ?? 0);
+      if (userId && Number.isFinite(credits) && credits > 0) {
+        try {
+          await addRescanCredits({
+            userId,
+            delta: credits,
+            reason: "purchase",
+            stripeSessionId: session.id,
+          });
+        } catch (e) {
+          console.error("[stripe webhook] credit add failed:", e);
+        }
+      }
+      return NextResponse.json({ received: true });
+    }
 
     if (!orderId) {
       return NextResponse.json({ received: true });

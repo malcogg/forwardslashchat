@@ -44,7 +44,17 @@ export async function GET(req: NextRequest) {
         const notifyEmail = typeof payload.notifyEmail === "string" ? payload.notifyEmail : null;
         if (!customerId) throw new Error("Missing payload.customerId");
 
-        const res = await autoCrawlCustomer({ customerId, notifyEmail, reason: "payment", maxPages });
+        const overrideMaxPagesRaw = payload.maxPages;
+        const overrideMaxPages = typeof overrideMaxPagesRaw === "number"
+          ? Math.min(500, Math.max(10, Math.round(overrideMaxPagesRaw)))
+          : null;
+
+        const res = await autoCrawlCustomer({
+          customerId,
+          notifyEmail,
+          reason: "payment",
+          maxPages: overrideMaxPages ?? maxPages,
+        });
         if (!res.ok) throw new Error(res.error ?? "Auto crawl failed");
       } else if (job.type === JOB_TYPE_GO_LIVE) {
         const payload = (job.payload ?? {}) as Record<string, unknown>;

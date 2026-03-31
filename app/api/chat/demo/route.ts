@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import { sanitizeChatMessage } from "@/lib/validation";
+import { checkAndIncrementRateLimit } from "@/lib/rate-limit";
 
 /**
  * POST /api/chat/demo
@@ -45,6 +46,17 @@ ${context}`;
       return NextResponse.json({ error: "LLM not configured" }, { status: 503 });
     }
 
+    // Rate limit demo by IP (best-effort)
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const demoLimit = Math.min(60, Math.max(5, Number(process.env.DEMO_CHAT_RATE_LIMIT_PER_MINUTE ?? 20)));
+    const rl = await checkAndIncrementRateLimit({ key: `ip:${ip}`, limitPerMinute: demoLimit });
+    if (!rl.ok) {
+      return NextResponse.json({ error: "Rate limited. Please slow down." }, { status: 429 });
+    }
+
     const safeMessages = messages
       .slice(-10)
       .map((m) => ({
@@ -57,6 +69,9 @@ ${context}`;
       model: openai("gpt-4o-mini"),
       system: systemPrompt,
       messages: safeMessages,
+      maxSteps: 1,
+      maxTokens: Math.min(900, Math.max(128, Number(process.env.DEMO_CHAT_MAX_TOKENS ?? 400))),
+      maxRetries: 1,
     });
 
     return result.toDataStreamResponse();

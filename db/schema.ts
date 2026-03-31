@@ -177,3 +177,29 @@ export const jobs = pgTable("jobs", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+// Rescan credits (purchased packs). Separate from the legacy per-plan credit_usage limits.
+export const creditBalances = pgTable("credit_balances", {
+  userId: uuid("user_id").references(() => users.id).notNull().primaryKey(),
+  balance: integer("balance").notNull().default(0),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const creditTransactions = pgTable("credit_transactions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  delta: integer("delta").notNull(),
+  reason: text("reason").notNull(), // purchase | rescan | admin
+  stripeSessionId: text("stripe_session_id").unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Simple rate limit buckets to protect OpenAI spend (per customer per minute).
+export const chatRateLimits = pgTable("chat_rate_limits", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  key: text("key").notNull(), // customer:<id> or ip:<ip>
+  windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+  count: integer("count").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});

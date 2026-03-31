@@ -148,6 +148,7 @@ function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
+  const buyCredits = searchParams.get("buyCredits");
 
   const displayName = getDisplayName(user);
 
@@ -160,6 +161,25 @@ function DashboardContent() {
     const token = await getToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
+
+  // Optional: deep link to purchase credits (used when a rescan requires credits)
+  useEffect(() => {
+    if (!canCallApi) return;
+    if (buyCredits !== "1") return;
+    (async () => {
+      const headers = { "Content-Type": "application/json", ...(await authHeaders()) };
+      const res = await fetch("/api/credits/checkout", {
+        method: "POST",
+        headers,
+        credentials: "include",
+        body: JSON.stringify({ pack: "1000" }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && (json as { url?: string }).url) {
+        window.location.href = (json as { url: string }).url;
+      }
+    })().catch(() => {});
+  }, [canCallApi, buyCredits]);
 
   // If Clerk loaded and still no user after a short wait (signed out / session expired), show sign-in.
   useEffect(() => {
@@ -461,7 +481,13 @@ function DashboardContent() {
       const res = await fetch(`/api/customers/${data.customer.id}/crawl`, { method: "POST", credentials: "include", headers: { ...headers } });
       const json = await res.json();
       if (!res.ok) {
-        setCrawlError(json.error ?? "Crawl failed");
+        if (res.status === 402 && (json as { purchaseEndpoint?: string }).purchaseEndpoint) {
+          setCrawlError("Rescan requires credits. Buy a credit pack to continue.");
+          setSuccessToast({ message: "Rescan requires credits.", cta: "Buy credits", ctaHref: "/dashboard?buyCredits=1" });
+          setTimeout(() => setSuccessToast(null), 8000);
+        } else {
+          setCrawlError(json.error ?? "Crawl failed");
+        }
         return;
       }
       const h = await authHeaders();
