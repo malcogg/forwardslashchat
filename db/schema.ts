@@ -161,3 +161,19 @@ export const customerBlogPosts = pgTable("customer_blog_posts", {
   sortOrder: integer("sort_order").default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+// Background jobs (minimal queue for serverless + cron workers)
+export const jobs = pgTable("jobs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  type: text("type").notNull(),
+  status: text("status").notNull().default("queued"), // queued | running | succeeded | failed
+  dedupeKey: text("dedupe_key").unique(), // prevents duplicate enqueues
+  attempts: integer("attempts").notNull().default(0),
+  maxAttempts: integer("max_attempts").notNull().default(8),
+  runAt: timestamp("run_at", { withTimezone: true }).defaultNow().notNull(),
+  lockedAt: timestamp("locked_at", { withTimezone: true }),
+  lastError: text("last_error"),
+  payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});

@@ -23,8 +23,10 @@ Maintain distinct envs:
 - `STRIPE_WEBHOOK_SECRET`
 
 ### Crawl + LLM
-- `FIRECRAWL_API_KEY` (legacy) or preferred multi-key: `FIRECRAWL_API_KEYS`
-- `OPENAI_API_KEY` (legacy) or preferred multi-key: `OPENAI_API_KEYS`
+- `FIRECRAWL_API_KEY`
+- `OPENAI_API_KEY`
+
+Note: this codebase currently uses the single-key vars above. Multi-key rotation (`*_API_KEYS`) is a planned improvement (see `API_KEYS.md`).
 
 ### Email (Resend)
 - `RESEND_API_KEY`
@@ -33,6 +35,10 @@ Maintain distinct envs:
 
 ### Cron
 - `CRON_SECRET` (Bearer token required by `/api/cron/*`)
+
+### Background jobs (auto-fulfillment)
+- `JOBS_MAX_PER_RUN` (optional, default `5`)
+- `AUTO_CRAWL_MAX_PAGES` (optional, default `200`, max `500`)
 
 ### Domain automation
 - `VERCEL_ACCESS_TOKEN`
@@ -60,6 +66,16 @@ Maintain distinct envs:
 Key endpoint:
 - `POST /api/customers/[id]/go-live`
 
+### What you (the operator) must configure once
+
+- `VERCEL_ACCESS_TOKEN`: a Vercel token that can add domains to the project
+- `VERCEL_PROJECT_ID`: the target Vercel project id (e.g. `prj_...`)
+- Optional `CNAME_TARGET`:
+  - Keep default `cname.vercel-dns.com`, or
+  - Use a branded alias (e.g. `cname.forwardslash.chat`) that CNAMEs to `cname.vercel-dns.com`
+
+Setup guide: `docs/VERCEL-DOMAIN-AUTOMATION-SETUP.md`.
+
 ---
 
 ## Cron endpoints
@@ -70,6 +86,7 @@ Configured in Vercel Cron (recommended):
 - `/api/cron/paid-notification` — every 10–15 minutes
 - `/api/cron/checkout-reminder` — daily
 - `/api/cron/payment-reminder` — daily
+- `/api/cron/jobs` — every 1–2 minutes (processes background jobs like auto-crawl after payment)
 
 ---
 

@@ -14,7 +14,8 @@
 - Maintain at least **two API keys** (primary + secondary) so you can rotate without downtime.
 
 ### Environment variables
-- `FIRECRAWL_API_KEYS`: comma-separated keys, e.g. `fc_live_a,fc_live_b`
+- **Current**: `FIRECRAWL_API_KEY`
+- **Planned**: `FIRECRAWL_API_KEYS` (comma-separated keys, e.g. `fc_live_a,fc_live_b`)
 - Optional per-plan limits:
   - `FIRECRAWL_CREDITS_FREE`, `FIRECRAWL_CREDITS_HOBBY`, etc.
 
@@ -44,7 +45,8 @@ and alert ops.
 ### Paid tier strategy
 - Use a paid OpenAI tier and set sane per-request budgets.
 - Maintain multiple API keys, similar to Firecrawl:
-  - `OPENAI_API_KEYS`: comma-separated keys
+  - **Current**: `OPENAI_API_KEY`
+  - **Planned**: `OPENAI_API_KEYS` (comma-separated keys)
 
 ### Key usage policy
 - Never expose keys client-side.
@@ -81,4 +83,16 @@ and alert ops.
 ### Rate limiting / retries
 - Retry on 429/5xx.
 - Persist failures to the DB so the system can retry later.
+
+---
+
+## Other paid (or likely paid) services
+
+These aren’t “API keys” in the same sense, but they are core dependencies you should expect to pay for as usage grows:
+
+- **Vercel**: hosting + bandwidth + cron (depending on plan/usage)
+- **Neon Postgres**: database (free tiers exist; production usage usually paid)
+- **Clerk**: auth (free tiers exist; paid at higher MAU/features)
+- **Resend**: outbound email (free tiers exist; paid for volume/dedicated sending)
+- **Stripe**: payment processing fees (no monthly fee required, but per-transaction fees apply)
 

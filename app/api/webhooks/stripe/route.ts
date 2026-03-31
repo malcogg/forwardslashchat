@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { db } from "@/db";
-import { orders, stripeEvents } from "@/db/schema";
+import { customers, orders, stripeEvents } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { enqueueJob } from "@/lib/jobs";
 
 /**
  * POST /api/webhooks/stripe
@@ -53,6 +54,10 @@ export async function POST(request: Request) {
     const session = event.data.object as Stripe.Checkout.Session;
     const orderId = session.metadata?.orderId;
     const paymentStatus = session.payment_status;
+    const notifyEmail =
+      (session.customer_details?.email as string | undefined) ??
+      (session.customer_email as string | undefined) ??
+      undefined;
 
     if (!orderId) {
       return NextResponse.json({ received: true });
@@ -86,6 +91,24 @@ export async function POST(request: Request) {
       .update(stripeEvents)
       .set({ orderId })
       .where(eq(stripeEvents.eventId, event.id));
+
+    // Auto-fulfillment: enqueue background crawl/build (deduped by orderId)
+    try {
+      const [customer] = await db.select().from(customers).where(eq(customers.orderId, orderId));
+      if (customer) {
+        await enqueueJob({
+          type: "auto_crawl_customer",
+          dedupeKey: `auto_crawl_${orderId}`,
+          payload: {
+            orderId,
+            customerId: customer.id,
+            notifyEmail: notifyEmail ?? null,
+          },
+        });
+      }
+    } catch (e) {
+      console.error("[stripe webhook] enqueue auto crawl failed:", e);
+    }
   }
 
   return NextResponse.json({ received: true });
