@@ -12,7 +12,7 @@ import { ScanModal } from "@/components/ScanModal";
 
 export default function HomePage() {
   const [modalOpen, setModalOpen] = useState(false);
-  const [scanUrl, setScanUrl] = useState("https://example.com"); // Updated
+  const [scanUrl, setScanUrl] = useState("https://example.com"); // Deployment triggered
 
   const handleScanClick = (url: string) => {
     setScanUrl(url);
