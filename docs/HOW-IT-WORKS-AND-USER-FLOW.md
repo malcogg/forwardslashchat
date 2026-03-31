@@ -11,7 +11,7 @@ Target: small/local business owners who want a custom AI chatbot without monthly
 - You give us your website -> we train a smart ChatGPT-style chatbot on it
 - One-time payment -> you get a branded chatbot on your own domain
 - No monthly subscription, no per-message fees
-- Hosting and maintenance included for the prepaid period (1-5 years depending on bundle)
+- Hosting and maintenance included for the prepaid period (1 or 2 years by tier)
 - Delivered in 3-10 business days
 
 ## User flow on the website (MVP)
@@ -22,8 +22,8 @@ Visitor sees:
 
 - Hero section: big headline + subheadline + mockup of chat interface
 - Clear value: "One-time payment. Your own AI assistant. No monthly fees."
-- Pricing table (1y $550, 2y $850, 3y $1,250, 4y $1,600, 5y $1,950)
-- Recommended: 2-Year Bundle - Save $190
+- Pricing by tier (Up to 50 / 51–200 / 201–500; 1yr or 2yr). See docs/pricing-and-bundles.md.
+- Recommended: 2-year option
 - Demo link: "See it live -> demo.forwardslash.chat"
 - Big CTA button: "Get Your Chatbot ->"
 
@@ -62,11 +62,11 @@ This step builds trust and shows "magic" without giving away too much tech detai
 
 User sees:
 
-- Pricing table with the bundles (1-5 years)
-- Pre-selected: 2-year bundle ($850) as default/recommended
+- Pricing by tier (1 or 2 years); see docs/pricing-and-bundles.md
+- Pre-selected: 2-year option as default/recommended
 - Dynamic total:
-  - Base price
-  - +$100 DNS help checkbox (default: unchecked)
+  - Base price from tier
+  - +$99 DNS help checkbox (default: unchecked)
 - "Pay with PayPal" button (Stripe as fallback)
 
 After choosing plan and optional DNS help, send to PayPal checkout (Stripe fallback).

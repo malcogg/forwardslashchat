@@ -18,21 +18,21 @@ scalable multi-tenant foundation.
 ## Value Proposition and Pricing Rules
 
 - Upfront bundles with free hosting/maintenance for year one
-- Renewal after the included period is optional at $495/year
-- Recommended default: 2-Year Bundle ($850)
-- Optional add-on: DNS setup help for $100 one-time
+- Renewal after the included period is optional (see app for rate)
+- Recommended default: 2-year option for chosen tier
+- Optional add-on: DNS setup help +$99
 - No monthly fees, no usage limits, no token billing
 - Delivery in 3-10 business days
 - Customer must map their own subdomain via CNAME
 - Payment: PayPal primary, Stripe fallback
 
-### Pricing Bundles
+### Pricing (page-based tiers)
 
-- 1-Year Starter: $550 (year 1 included; renewal $495/year)
-- 2-Year Bundle: $850 (years 1-2 included; renewal $495/year)
-- 3-Year Bundle: $1,250 (years 1-3 included; renewal $495/year)
-- 4-Year Bundle: $1,600 (years 1-4 included; renewal $495/year)
-- 5-Year Bundle: $1,950 (years 1-5 included; renewal $495/year)
+- Up to 50 pages: $799 (1yr), $1,099 (2yr)
+- 51–200 pages: $1,499 (1yr), $2,099 (2yr)
+- 201–500 pages: $2,999 (1yr), $3,999 (2yr)
+- 500+ pages: contact for pricing  
+See docs/pricing-and-bundles.md for details.
 
 ## MVP Goals
 

@@ -1,108 +1,225 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import Link from "next/link";
 import { ArrowUp } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { sanitizeChatMessage, LIMITS } from "@/lib/validation";
+import { ChatMessageContent } from "@/components/chat/ChatMessageContent";
+import { ChatCards } from "@/components/chat/ChatCards";
+import { getDemoCardsForMessage, shouldShowBlogPill } from "@/lib/demo-cards";
 
-const DEMO_CONTENT = [
-  {
-    title: "Our Story",
-    url: "https://demo-coffee.com/about",
-    content:
-      "Demo Coffee Roasters started in 2018 in a small garage in Portland. We source single-origin beans from Ethiopia, Colombia, and Guatemala. We roast in small batches every Tuesday.",
-  },
-  {
-    title: "Best Sellers",
-    url: "https://demo-coffee.com/shop",
-    content:
-      "1. **Ethiopian Yirgacheffe** - $18/250g - bright, floral, citrus notes\n2. **Colombian Supremo** - $16/250g - chocolate, caramel sweetness\n3. **Guatemala Antigua** - $17/250g - balanced, smoky finish",
-  },
-  {
-    title: "Brew Guide",
-    url: "https://demo-coffee.com/brew",
-    content:
-      "**V60**: 15g coffee to 250g water, 92°C, 2:30 brew time.\n**French Press**: 30g to 500g water, 4 minutes steep.",
-  },
-  {
-    title: "Latest Blog",
-    url: "https://demo-coffee.com/blog/latest",
-    content:
-      "**Why Light Roasts Are Making a Comeback** (Feb 2026) - Light roasts preserve origin flavors and highlight subtle notes. Perfect for pour-over and AeroPress.",
-  },
+const CAL_LINK = process.env.NEXT_PUBLIC_STRATEGY_CALL_URL || "https://cal.com/forwardslash/30min";
+
+const PILL_SUGGESTIONS = [
+  "What is ForwardSlash.Chat?",
+  "How much does it cost?",
+  "How does it work?",
+  "Quick $350 Starter?",
 ];
 
-function findAnswer(query: string): string {
-  const q = query.toLowerCase();
-  if (q.includes("bean") || q.includes("product") || q.includes("sell") || q.includes("colombian") || q.includes("ethiopian")) {
-    const c = DEMO_CONTENT.find((x) => x.title === "Best Sellers");
-    return c ? `${c.content}\n\n[${c.title}](${c.url})` : "I don't have info on that yet.";
+const QUESTION_SUGGESTIONS = [
+  "Tell me about the $350 quick site",
+  "What's included in a new build?",
+  "How does the AI chatbot work?",
+];
+
+const FALLBACK =
+  "Sorry, I'm still learning! 😊 Ask me about our $350 quick start site, $1,000 new build, $2,000 redesign, AI chatbot, or how we help Florida businesses get online. Or [contact us](" +
+  CAL_LINK +
+  ") directly.";
+
+const TYPING_DELAY_MS = 1600;
+
+type ResponseResult = { text: string; pills?: { label: string; href: string }[]; followUps?: string[] };
+
+function getHardcodedResponse(message: string): ResponseResult | null {
+  const q = message.toLowerCase().trim();
+  if (!q) return null;
+
+  const pairs: { keywords: string[]; answer: string; pills?: { label: string; href: string }[]; followUps?: string[] }[] = [
+    {
+      keywords: ["how much", "pricing", "cost", "plans", "price", "how much is it"],
+      answer: `Simple one-time pricing — year 1 hosting included, no monthly fees ever.
+After year 1: move to your own host (free) or renew hosting with us for $200/year (optional).
+AI chatbot: from $799 (1yr) or $1,099 (2yr) — price scales with site size. Tap below.`,
+      pills: [
+        { label: "AI Chatbot — See price", href: "/?pages=25#pricing" },
+        { label: "Quick $350 Starter", href: "/checkout?plan=starter" },
+        { label: "$1,000 New Build", href: "/checkout?plan=new-build" },
+        { label: "$2,000 Redesign", href: "/checkout?plan=redesign" },
+      ],
+      followUps: ["How does it work?", "What's included in a new build?"],
+    },
+    {
+      keywords: ["how does it work", "how to get started", "process", "steps"],
+      answer: `Easy 3 steps:
+1. Tell us your business & goals
+2. We design & build your site (with AI chatbot if chosen)
+3. We launch + host for year 1 — live in days/weeks.
+One-time payment, no subscriptions. See the full [How it Works](/services#how-it-works) page.`,
+      followUps: ["How much does it cost?", "Quick $350 Starter?"],
+    },
+    {
+      keywords: ["quick", "starter", "$350", "simple site", "just get started"],
+      answer:
+        "Our $350 Quick WordPress Starter is perfect if you just want a simple site fast: 10 clean pages, mobile-ready, basic SEO, contact form + map, WordPress dashboard, year 1 hosting included. One-time $350 — no monthly fees. Great for new entrepreneurs!",
+      pills: [{ label: "Get Your $350 Site Now", href: "/checkout?plan=starter" }],
+      followUps: ["What's included in a new build?", "How much does it cost?"],
+    },
+    {
+      keywords: ["new website", "brand new", "$1000", "build"],
+      answer:
+        "For $1,000 one-time we build you a full custom modern website (Next.js or WordPress) + built-in AI chatbot trained on your content. Mobile-responsive, fast, SEO-ready, year 1 hosting included. Perfect upgrade for growing businesses.",
+      pills: [{ label: "Start $1,000 Build", href: "/checkout?plan=new-build" }],
+      followUps: ["How does the AI chatbot work?", "Tell me about redesign"],
+    },
+    {
+      keywords: ["redesign", "refresh", "upgrade", "$2000"],
+      answer:
+        "$2,000 one-time redesign/refresh: modern look, speed & SEO upgrades, mobile-responsive, + built-in AI chatbot. We keep your existing content, make it look & work better, host year 1. Ideal if your current site feels outdated.",
+      pills: [{ label: "Start $2,000 Redesign", href: "/checkout?plan=redesign" }],
+      followUps: ["How does the AI chatbot work?", "How much does it cost?"],
+    },
+    {
+      keywords: ["ai chatbot", "ai", "chatbot", "what is the ai"],
+      answer:
+        "Every plan can include our custom AI chatbot (trained only on your site content). It lives at chat.yourdomain.com or yourdomain.com/chat, answers customer questions 24/7 — services, hours, prices, FAQs — no monthly fees, private & branded. See it in action on the [Demo](/chat/demo).",
+      followUps: ["How much does it cost?", "What's included in a new build?"],
+    },
+    {
+      keywords: ["hosting", "host", "year 1", "after year 1", "renew"],
+      answer:
+        "We host your site for the full first year (included in price). After that: move to your own host for free (we give full access) or keep us hosting for $200/year (optional). Your choice — no lock-in.",
+    },
+    {
+      keywords: ["florida", "orlando", "local"],
+      answer: `We're based in Orlando, Florida and specialize in helping local businesses like plumbers, shops, restaurants, and contractors get a professional online presence fast — affordable, no-nonsense websites + AI help.
+[Book a chat with Michael Francis](${CAL_LINK})`,
+    },
+    {
+      keywords: ["demo", "see it", "try", "test"],
+      answer: `You're chatting with the demo right now! Tap any pill above or ask about our websites, AI chatbot, pricing, or getting started.
+Want to see more? Visit the full [Demo](/chat/demo).`,
+    },
+    {
+      keywords: ["dashboard", "how to use dashboard", "what is dashboard"],
+      answer:
+        "After payment, you get a dashboard to track your order, upload extra files, customize branding (logo/colors), view DNS instructions, and see your live site/chatbot URL once deployed. Super simple — no tech skills needed.",
+    },
+    {
+      keywords: ["branding", "customize", "logo", "colors"],
+      answer:
+        "In your dashboard, upload your logo/favicon, pick accent/background colors — your website and AI chatbot will match your brand perfectly. Easy drag-and-drop.",
+    },
+    {
+      keywords: ["how long", "delivery time", "when will it be ready", "timeline"],
+      answer:
+        "Most sites launch in days to a few weeks depending on plan. Quick $350 starter is fastest. We aim for 3–10 business days after you approve the design.",
+    },
+    {
+      keywords: ["help", "support", "contact", "questions"],
+      answer: `We're here for you! Reach out to Michael Francis anytime:
+Email: michael@forwardslash.chat
+[Book a quick chat](${CAL_LINK})
+We're based in Orlando, Florida and reply fast.`,
+    },
+    {
+      keywords: ["what is", "what does forwardslash do", "what is forwardslash.chat", "tell me about"],
+      answer: `**ForwardSlash.Chat** helps new entrepreneurs and local businesses in Florida get online fast with a professional website + built-in AI chatbot. We build it, host it for year 1, and you pay once — no monthly fees.
+From a quick [starter site for $350](/services#pricing) to full custom builds.
+Check the [demo](/chat/demo) or see [how it works](/services#how-it-works).`,
+    },
+    {
+      keywords: ["blog", "blogs", "article", "articles", "post", "posts", "read your", "writing", "tips"],
+      answer:
+        "Here are some posts we've written on getting online, one-time pricing, and using an AI chatbot for your business. Tap a card to read more.",
+      followUps: ["How much does it cost?", "What's the $350 starter?"],
+    },
+  ];
+
+  for (const { keywords, answer, pills, followUps } of pairs) {
+    for (const kw of keywords) {
+      if (q.includes(kw)) return { text: answer, pills, followUps };
+    }
   }
-  if (q.includes("brew") || q.includes("v60") || q.includes("french press") || q.includes("recipe")) {
-    const c = DEMO_CONTENT.find((x) => x.title === "Brew Guide");
-    return c ? `${c.content}\n\n[${c.title}](${c.url})` : "I don't have info on that yet.";
-  }
-  if (q.includes("blog") || q.includes("latest") || q.includes("light roast")) {
-    const c = DEMO_CONTENT.find((x) => x.title === "Latest Blog");
-    return c ? `${c.content}\n\n[${c.title}](${c.url})` : "I don't have info on that yet.";
-  }
-  if (q.includes("about") || q.includes("story") || q.includes("start")) {
-    const c = DEMO_CONTENT.find((x) => x.title === "Our Story");
-    return c ? `${c.content}\n\n[${c.title}](${c.url})` : "I don't have info on that yet.";
-  }
-  return "I don't have info on that yet — ask about our beans, brewing, or latest roast!";
+  return null;
 }
 
-const SUGGESTIONS = ["What beans do you have?", "How do I brew with V60?", "Show me your best sellers", "Tell me about your latest blog"];
+type Message = { role: "user" | "assistant"; content: string; id?: string; pills?: { label: string; href: string }[]; followUps?: string[] };
 
 export default function DemoChatPage() {
-  const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, isLoading]);
 
   const send = (text: string) => {
-    if (!text.trim() || loading) return;
-    const userMsg = text.trim();
+    const t = sanitizeChatMessage(text);
+    if (!t || isLoading) return;
     setInput("");
-    setMessages((m) => [...m, { role: "user", content: userMsg }]);
-    setLoading(true);
+    setMessages((prev) => [...prev, { role: "user", content: t, id: `u-${Date.now()}` }]);
+    setIsLoading(true);
+
     setTimeout(() => {
-      const reply = findAnswer(userMsg);
-      setMessages((m) => [...m, { role: "assistant", content: reply }]);
-      setLoading(false);
-    }, 600);
+      const result = getHardcodedResponse(t);
+      const content = result?.text ?? FALLBACK;
+      const pills = result?.pills;
+      const followUps = result?.followUps;
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content, pills, followUps, id: `a-${Date.now()}` },
+      ]);
+      setIsLoading(false);
+    }, TYPING_DELAY_MS);
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-zinc-950">
-      <header className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+    <div className="flex flex-col h-dvh bg-background">
+      <header className="flex items-center justify-between px-4 py-3 border-b shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#6B4E3D" }}>
-            <span className="text-white text-sm">☕</span>
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+            <span className="text-primary-foreground text-sm font-medium">/</span>
           </div>
-          <span className="font-semibold text-white">Demo Coffee Roasters</span>
+          <span className="font-semibold">ForwardSlash.Chat</span>
         </div>
-        <Link href="/" className="text-sm text-zinc-400 hover:text-white">
-          ← Back to ForwardSlash
-        </Link>
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
+            ← Back to site
+          </Link>
+        </div>
       </header>
 
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto px-4 py-8">
           {messages.length === 0 ? (
             <>
-              <p className="text-lg font-medium text-white mb-1">Hi! I&apos;m your friendly coffee assistant.</p>
-              <p className="text-zinc-400 mb-6">Ask me about beans, brewing, or our latest roast!</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {SUGGESTIONS.map((s) => (
+              <p className="text-lg font-medium mb-1">Hi! I&apos;m the ForwardSlash demo assistant.</p>
+              <p className="text-muted-foreground mb-6">Ask me about our product, pricing, how it works, or what&apos;s included.</p>
+
+              <div className="grid grid-cols-4 gap-1.5 mb-6">
+                {PILL_SUGGESTIONS.map((s) => (
                   <button
                     key={s}
                     onClick={() => send(s)}
-                    className="px-4 py-2 rounded-lg text-sm text-zinc-300 bg-zinc-800/50 border border-zinc-700 hover:bg-zinc-700/50 text-left"
+                    className="px-2 py-1.5 rounded-lg text-[11px] leading-tight text-left border bg-card hover:bg-accent hover:text-accent-foreground transition-colors min-w-0"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-2">
+                {QUESTION_SUGGESTIONS.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => send(s)}
+                    className="block w-full text-left text-sm text-muted-foreground hover:text-foreground py-2"
                   >
                     {s}
                   </button>
@@ -111,48 +228,71 @@ export default function DemoChatPage() {
             </>
           ) : (
             <div className="space-y-6">
-              {messages.map((msg, i) => (
-                <div key={i} className={msg.role === "user" ? "text-right" : ""}>
+              {messages.map((m, i) => {
+                const userQuery = m.role === "assistant" ? messages[i - 1]?.content ?? "" : "";
+                const cards = m.role === "assistant" ? getDemoCardsForMessage(userQuery) : [];
+                const showBlogPill = m.role === "assistant" && shouldShowBlogPill(userQuery);
+                return (
+                <div key={m.id ?? `msg-${i}`} className={m.role === "user" ? "flex justify-end" : ""}>
                   <div
-                    className={`inline-block max-w-[85%] px-4 py-2 rounded-xl text-sm ${
-                      msg.role === "user"
-                        ? "bg-zinc-700 text-white"
-                        : "bg-zinc-800/80 text-zinc-200 whitespace-pre-wrap"
+                    className={`inline-block max-w-[85%] px-4 py-3 rounded-2xl text-sm ${
+                      m.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted/80"
                     }`}
                   >
-                    {msg.role === "assistant" ? (
-                      <div className="prose prose-invert prose-sm max-w-none">
-                        {msg.content.split("\n").map((line, j) => {
-                          const linkMatch = line.match(/\[([^\]]+)\]\(([^)]+)\)/);
-                          if (linkMatch) {
-                            return (
-                              <div key={j}>
-                                <a href={linkMatch[2]} target="_blank" rel="noopener noreferrer" className="text-[#6B4E3D] underline">
-                                  {linkMatch[1]}
-                                </a>
-                              </div>
-                            );
-                          }
-                          const boldMatch = line.match(/\*\*([^*]+)\*\*/);
-                          if (boldMatch) {
-                            return (
-                              <p key={j}>
-                                <strong>{boldMatch[1]}</strong>
-                              </p>
-                            );
-                          }
-                          return <p key={j}>{line}</p>;
-                        })}
-                      </div>
+                    {m.role === "assistant" ? (
+                      <>
+                        <ChatMessageContent content={m.content} />
+                        <ChatCards blocks={cards} primaryColor="#059669" compact />
+                        {showBlogPill && (
+                          <div className="mt-3">
+                            <button
+                              type="button"
+                              onClick={() => send("What blog posts do you have?")}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-muted hover:bg-muted/80 text-foreground transition-colors border border-border"
+                            >
+                              Blog →
+                            </button>
+                          </div>
+                        )}
+                        {m.followUps && m.followUps.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {m.followUps.map((f) => (
+                              <button
+                                key={f}
+                                onClick={() => send(f)}
+                                className="inline-flex px-3 py-1.5 rounded-lg text-xs font-medium bg-muted hover:bg-muted/80 text-foreground transition-colors"
+                              >
+                                {f}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {m.pills && m.pills.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {m.pills.map((p) => (
+                              <Link
+                                key={p.href + p.label}
+                                href={p.href}
+                                className="inline-flex px-3 py-1.5 rounded-lg text-xs font-medium bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-colors shadow-sm"
+                              >
+                                {p.label}
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </>
                     ) : (
-                      msg.content
+                      m.content
                     )}
                   </div>
                 </div>
-              ))}
-              {loading && (
-                <div className="text-left">
-                  <div className="inline-block px-4 py-2 rounded-xl bg-zinc-800/80 text-zinc-400 text-sm">
+              );
+              })}
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="inline-block px-4 py-3 rounded-2xl bg-muted/80 text-muted-foreground text-sm">
                     Thinking...
                   </div>
                 </div>
@@ -163,25 +303,34 @@ export default function DemoChatPage() {
         </div>
       </div>
 
-      <div className="p-4 border-t border-zinc-800">
+      <div className="p-4 border-t shrink-0">
         <div className="max-w-2xl mx-auto">
-          <div className="flex gap-2 rounded-xl border border-zinc-700 bg-zinc-900/50 focus-within:border-zinc-600">
+          <div className="border border-border rounded-lg p-3 bg-muted/30 dark:bg-muted/10 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
             <input
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => setInput(e.target.value.slice(0, LIMITS.chatMessage))}
               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send(input)}
-              placeholder="Send a message..."
-              className="flex-1 px-4 py-3 bg-transparent text-white placeholder-zinc-500 focus:outline-none text-sm"
+              placeholder="Ask anything"
+              maxLength={LIMITS.chatMessage}
+              className="w-full text-sm outline-none bg-transparent placeholder:text-muted-foreground focus:outline-none"
             />
-            <button
-              onClick={() => send(input)}
-              disabled={!input.trim() || loading}
-              className="p-2 rounded-lg bg-zinc-700 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-600"
-            >
-              <ArrowUp className="w-4 h-4" />
-            </button>
+            <div className="flex items-center justify-between mt-2">
+              <Link
+                href="/checkout?plan=chatbot-2y&pages=25"
+                className="inline-flex px-3 py-1.5 rounded-lg text-xs font-medium bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90 transition-colors"
+              >
+                Purchase
+              </Link>
+              <button
+                onClick={() => send(input)}
+                disabled={!input.trim() || isLoading}
+                className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-700 shrink-0"
+              >
+                <ArrowUp className="w-4 h-4" />
+              </button>
+            </div>
           </div>
-          <p className="text-xs text-zinc-500 mt-2 text-center">Powered by ForwardSlash.Chat</p>
+          <p className="text-xs text-muted-foreground mt-2 text-center">Demo chatbot · Powered by ForwardSlash.Chat</p>
         </div>
       </div>
     </div>

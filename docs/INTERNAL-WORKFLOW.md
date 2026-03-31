@@ -1,22 +1,20 @@
 # ForwardSlash.Chat - Internal Fulfillment Workflow
 
-This document describes exactly how we fulfill a $550 / $850 / $1,250 / $1,600 /
-$1,950 order, from payment confirmation until the customer receives their
-working chatbot.
+This document describes how we fulfill an order (page-based tier, 1 or 2 years; see pricing-and-bundles.md), from payment confirmation until the customer receives their working chatbot.
 
 Current stage: manual / semi-manual (first ~50-100 customers)  
 Goal: automate as much as possible after validation
 
 ## Overview - What we promise the customer
 
-- One-time upfront payment for chosen bundle (1-5 years)
+- One-time upfront payment for chosen tier (1 or 2 years)
 - Full custom AI chatbot trained on their website plus optional uploaded files
 - Branded ChatGPT-style interface
 - Hosting and maintenance included for the full prepaid period
   - Year 1 always included free; years 2+ included if multi-year bundle purchased
 - Delivered in 3-10 business days
 - Customer must point their own domain/subdomain via CNAME record
-- Optional renewal after prepaid period at $495/year (price subject to change)
+- Optional renewal after prepaid period (price subject to change)
 
 ## Tools and accounts needed (keep updated)
 
@@ -39,7 +37,7 @@ Goal: automate as much as possible after validation
   - Customer name
   - Email
   - Order ID
-  - Amount and bundle chosen ($550 / $850 / $1,250 / $1,600 / $1,950)
+  - Amount and tier (e.g. 2yr Up to 50 pages $1,099; see docs/pricing-and-bundles.md)
   - Prepaid years (1 / 2 / 3 / 4 / 5)
   - Website URL provided
   - Desired subdomain (chat / ai / support / etc.)

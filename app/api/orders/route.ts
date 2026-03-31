@@ -1,13 +1,36 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { orders, customers } from "@/db/schema";
+import { getOrCreateUser } from "@/lib/auth";
 
 /**
  * POST /api/orders
- * Create order + customer. Called by payment webhook or checkout success.
+ * Legacy endpoint (unsafe if public).
+ *
+ * This route is NOT used by the current Stripe checkout flow.
+ * It remains only for admin/testing compatibility and MUST NOT be publicly writable.
+ *
+ * Use instead:
+ * - POST /api/checkout/stripe (customer checkout + Stripe session)
+ * - POST /api/admin/orders (admin create for testing)
+ * - POST /api/admin/orders/from-lead (admin create from lead)
  * Body: { scanId?, amountCents, bundleYears, dnsHelp, businessName, domain, subdomain?, websiteUrl }
  */
 export async function POST(request: Request) {
+  const user = await getOrCreateUser(request);
+  if (!user?.userId) {
+    return NextResponse.json({ error: "Sign in required" }, { status: 401 });
+  }
+
+  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  const isAdmin = !!user.email && adminEmails.includes(user.email.toLowerCase());
+  if (!isAdmin) {
+    return NextResponse.json({ error: "Admin only" }, { status: 403 });
+  }
+
   if (!db) {
     return NextResponse.json(
       { error: "Database not configured" },

@@ -13,22 +13,23 @@ Key promises:
 
 - No monthly subscription, no per-message fees
 - One-time payment covers chatbot creation plus hosting/maintenance for the
-  prepaid period (1-5 years)
+  prepaid period (1 or 2 years by tier)
 - Chatbot lives on the customer's own domain (for example, chat.theirbusiness.com)
 - We crawl their website -> the bot answers using real content from their site
 - Simple, fast, trustworthy experience for non-technical users
 
-## Pricing (locked in)
+## Pricing (current)
 
-| Bundle         | Price  | Prepaid period | Renewal after | Notes                                   |
-|----------------|--------|----------------|---------------|-----------------------------------------|
-| 1-Year Starter | $550   | 1 year         | $495/year     | First year hosting/maintenance included |
-| 2-Year Bundle  | $850   | 2 years        | $495/year     | Recommended - saves $190                |
-| 3-Year Bundle  | $1,250 | 3 years        | $495/year     |                                         |
-| 4-Year Bundle  | $1,600 | 4 years        | $495/year     |                                         |
-| 5-Year Bundle  | $1,950 | 5 years        | $495/year     | Max upfront cash                        |
+Page-based tiers; customer picks 1 or 2 years.
 
-Optional add-on: $100 one-time upsell for DNS setup help.
+| Tier | 1 Year | 2 Years |
+|------|--------|--------|
+| Up to 50 pages | $799 | $1,099 |
+| 51–200 pages | $1,499 | $2,099 |
+| 201–500 pages | $2,999 | $3,999 |
+| 500+ | Contact us | Contact us |
+
+Optional add-on: +$99 DNS setup help.
 
 ## How It Works - User Flow (customer perspective)
 
@@ -41,13 +42,9 @@ Optional add-on: $100 one-time upsell for DNS setup help.
    - Results: "We found X pages on your site"
    - Confidence block + trust summary
 
-3. Pricing modal (auto-selected by page count)
-   - Page count from scan determines tier:
-     - Under 300 pages -> Small
-     - 300-1,000 -> Medium
-     - 1,000-5,000 -> Large
-     - 5,000+ -> Enterprise (Contact us)
-   - "Your Price" - tier pre-selected; customer doesn't have to think
+3. Pricing (from roast/scan page count)
+   - Tier by page count: Up to 50 / 51–200 / 201–500 / 500+ (contact)
+   - "Your Price" – tier pre-selected; customer picks 1 or 2 years
    - Checkbox: "Help me add DNS (+$99)"
    - Continue to Payment
 

@@ -1,0 +1,30 @@
+{
+  "businessName": "ForwardSlash.Chat",
+  "pages": [
+    {
+      "title": "About",
+      "url": "https://forwardslash.chat",
+      "content": "ForwardSlash.Chat builds custom AI chatbots for small and medium businesses. Pay once, get a chatbot trained on your website that lives at your subdomain (chat.yourdomain.com or yourdomain.com/chat). No monthly fees. We scan your site, train an AI on your content, and deploy it. Hosting included for your prepaid period."
+    },
+    {
+      "title": "How It Works",
+      "url": "https://forwardslash.chat#how-it-works",
+      "content": "1. Scan your site - Enter your URL. We crawl your pages and extract content. 2. Add your brand - Upload logo, set colors. 3. Connect a custom domain - chat.mybusiness.com or mybusiness.com/chat. 4. Pay once - Choose a 1-3 year bundle. One payment covers creation and hosting. 5. Go live - Add a CNAME record. Your chatbot goes live in minutes."
+    },
+    {
+      "title": "Pricing",
+      "url": "https://forwardslash.chat#pricing",
+      "content": "Page-based pricing: Up to 50 pages $799 (1yr) or $1,099 (2yr); 51-200 pages $1,499/$2,099; 201-500 $2,999/$3,999; 500+ contact us. One upfront payment. Hosting included. +$99 optional: DNS setup help. All plans include: AI trained on your content, hosting, your domain, no monthly fees."
+    },
+    {
+      "title": "Features",
+      "url": "https://forwardslash.chat",
+      "content": "AI trained on your website content. Your domain (chat.yoursite.com or yoursite.com/chat). No monthly fees. Hosting included. Delivery in 3-10 days. Branded with your colors and logo. Answers using only your real content - no hallucinations."
+    },
+    {
+      "title": "FAQ",
+      "url": "https://forwardslash.chat",
+      "content": "What is ForwardSlash.Chat? - We build custom AI chatbots for SMBs. Pay once, get a chatbot at your domain. How does it work? - We scan your site, train an AI on your content, deploy at your subdomain. What's included? - Creation, hosting, domain setup. No monthly fees. How long until live? - Typically 3-10 business days after you add the CNAME record."
+    }
+  ]
+}

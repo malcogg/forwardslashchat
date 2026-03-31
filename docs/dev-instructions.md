@@ -4,7 +4,7 @@ This document is for you (the developer). It is the exact checklist and actions
 to take after receiving a paid order.
 
 Last updated: February 2026  
-Current pricing: 1-5 year bundles ($550-$1,950), with optional $100 DNS setup help
+Current pricing: page-based tiers ($799–$3,999 for 1–2 years), optional +$99 DNS setup help. See docs/pricing-and-bundles.md.
 
 ## 1. Immediate actions (within 1 hour)
 
@@ -12,7 +12,7 @@ Current pricing: 1-5 year bundles ($550-$1,950), with optional $100 DNS setup he
   - Note down:
     - Payment ID / Charge ID
     - Amount paid
-    - Bundle chosen (1y $550 / 2y $850 / 3y $1,250 / 4y $1,600 / 5y $1,950)
+    - Tier and years (e.g. Up to 50 pages 2yr $1,099; see pricing-and-bundles.md)
     - Whether they paid extra $100 for DNS help
 - Create a new row in your order tracking sheet (Google Sheets / Notion / Airtable)
   - Columns:

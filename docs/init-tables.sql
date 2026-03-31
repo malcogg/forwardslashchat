@@ -7,8 +7,11 @@ CREATE TABLE IF NOT EXISTS "users" (
   "external_id" text UNIQUE,
   "email" text NOT NULL,
   "name" text,
+  "firecrawl_plan" text DEFAULT 'free',
   "created_at" timestamptz DEFAULT now() NOT NULL
 );
+
+-- If users table already exists without firecrawl_plan, run: ALTER TABLE users ADD COLUMN IF NOT EXISTS firecrawl_plan text DEFAULT 'free';
 
 CREATE TABLE IF NOT EXISTS "scans" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -10,13 +10,13 @@
 - `docs/MVP-PRD.md`
   - Full MVP PRD with goals, requirements, architecture, and risks.
   - Updated pricing model with multi-year bundles and optional renewals.
-  - Recommended default bundle set to 2-Year ($850).
+  - Recommended default: 2-year option for chosen tier (see pricing-and-bundles.md).
 
 ### Pricing Model Changes (PRD)
 
 - Replaced lifetime hosting promise with:
   - Year 1 included hosting/maintenance.
-  - Optional renewal after bundle period at $495/year.
+  - Optional renewal after bundle period (see app/docs for current rate).
 - Added bundle pricing (1-5 years) and DNS setup add-on ($100).
 
 ### Internal Workflow Updates

@@ -63,7 +63,7 @@ One viewport. No scrolling.
    - Title: "Your Price" or "Choose Your Plan"
    - Show: "Based on your X pages, we recommend [tier]"
    - Display the matching tier prominently; other tiers available if they want to change
-   - Bundles: 1y $550, 2y $850, 3y $1,250, 4y $1,600, 5y $1,950 (or setup+monthly if that model)
+   - Tiers: Up to 50 ($799/$1,099), 51–200 ($1,499/$2,099), 201–500 ($2,999/$3,999), 500+ contact. See pricing-and-bundles.md.
    - Checkbox: "+$99 - Help me set up my domain (DNS)"
    - Live total
    - Button: "Continue to Payment"
