@@ -1,5 +1,5 @@
 "use client";
-
+// Landing page - ForwardSlash
 import { useState } from "react";
 import { Header } from "@/components/landing/Header";
 import { HeroSection } from "@/components/landing/HeroSection";
