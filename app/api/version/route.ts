@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-const BUILD_BUMP = "2026-04-01c";
+const BUILD_BUMP = "2026-04-01d-vercel-pro";
 
 /**
  * GET /api/version
