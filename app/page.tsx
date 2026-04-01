@@ -26,7 +26,7 @@ function getLastScan(): { url: string; displayUrl: string } | null {
 export default function HomePage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [scanUrl, setScanUrl] = useState("https://example.com");
-  const [lastScan, setLastScan] = useState<{ url: string; displayUrl: string } | null>(null);
+  const [lastScan, setLastScan] = useState<{ url: string; displayUrl: string } | null>(null); // Deployment v1
 
   const refreshLastScan = useCallback(() => setLastScan(getLastScan()), []);
 
