@@ -40,6 +40,8 @@ Note: this codebase currently uses the single-key vars above. Multi-key rotation
 - `JOBS_MAX_PER_RUN` (optional, default `5`)
 - `AUTO_CRAWL_MAX_PAGES` (optional, default `200`, max `500`)
 
+**Flow:** Stripe `checkout.session.completed` (paid) enqueues `auto_crawl_*` → Vercel cron hits `GET /api/cron/jobs` (Bearer `CRON_SECRET`) → worker runs Firecrawl and sets customer to `dns_setup`, then enqueues `go_live_*`. The go-live job verifies CNAME (Google DoH) and calls the Vercel Domains API; it retries with long backoff until DNS is correct or `maxAttempts` is exhausted. Manual “Build” uses the same crawl route and also enqueues go-live.
+
 ### Domain automation
 - `VERCEL_ACCESS_TOKEN`
 - `VERCEL_PROJECT_ID`

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { db } from "@/db";
-import { customers, orders, stripeEvents } from "@/db/schema";
+import { customers, orders, stripeEvents, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { enqueueJob } from "@/lib/jobs";
 import { addRescanCredits } from "@/lib/credit-balance";
@@ -113,6 +113,15 @@ export async function POST(request: Request) {
       .set({ orderId })
       .where(eq(stripeEvents.eventId, event.id));
 
+    let notifyForJob = notifyEmail;
+    if (!notifyForJob) {
+      const [orderRow] = await db.select().from(orders).where(eq(orders.id, orderId));
+      if (orderRow?.userId) {
+        const [u] = await db.select().from(users).where(eq(users.id, orderRow.userId));
+        notifyForJob = u?.email ?? undefined;
+      }
+    }
+
     // Auto-fulfillment: enqueue background crawl/build (deduped by orderId)
     try {
       const [customer] = await db.select().from(customers).where(eq(customers.orderId, orderId));
@@ -123,7 +132,7 @@ export async function POST(request: Request) {
           payload: {
             orderId,
             customerId: customer.id,
-            notifyEmail: notifyEmail ?? null,
+            notifyEmail: notifyForJob ?? null,
           },
         });
       }

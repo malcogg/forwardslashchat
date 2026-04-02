@@ -283,6 +283,15 @@ function DashboardContent() {
       primaryColor: string | null;
     } | null;
     contentCount?: number;
+    automationJobs?: {
+      type: string;
+      status: string;
+      lastError: string | null;
+      attempts: number;
+      maxAttempts: number;
+      updatedAt: string;
+      dedupeKey: string | null;
+    }[];
   } | null>(null);
   const [myOrders, setMyOrders] = useState<{
     order: { id: string; status?: string; planSlug?: string; amountCents?: number };
@@ -392,17 +401,22 @@ function DashboardContent() {
     return () => clearInterval(interval);
   }, [orderId, data?.order?.status, data?.order?.id]);
 
-  // After payment: auto-refresh until content is ready (background job).
+  // After payment: poll until crawl finishes and (if applicable) status reaches delivered (DNS + auto go-live).
   useEffect(() => {
-    const isWebsiteOrder = data?.order?.planSlug && ["starter", "new-build", "redesign"].includes(data.order.planSlug);
-    const shouldPoll = !!data?.order?.id && data.order.status === "paid" && (data?.contentCount ?? 0) === 0 && !isWebsiteOrder;
+    const isWebsiteOrder =
+      data?.order?.planSlug && ["starter", "new-build", "redesign"].includes(data.order.planSlug);
+    const cust = data?.customer?.status ?? "";
+    const shouldPoll =
+      !!data?.order?.id &&
+      data.order.status === "paid" &&
+      !isWebsiteOrder &&
+      ((data?.contentCount ?? 0) === 0 || ["crawling", "dns_setup", "testing"].includes(cust));
     if (!shouldPoll) return;
     const currentOrderId = orderId ?? data.order.id;
     let ticks = 0;
     const interval = setInterval(async () => {
       ticks++;
-      // ~10 minutes then stop polling
-      if (ticks > 40) {
+      if (ticks > 100) {
         clearInterval(interval);
         return;
       }
@@ -413,9 +427,9 @@ function DashboardContent() {
       const res = await fetch(url, { credentials: "include", cache: "no-store", headers: { ...headers } });
       if (!res.ok) return;
       const json = await res.json();
-      const nextContent = Number(json?.contentCount ?? 0);
-      if (nextContent > 0) {
-        setData(json);
+      setData(json);
+      const nextStatus = json?.customer?.status ?? "";
+      if (nextStatus === "delivered") {
         const h = await authHeaders();
         const r = await fetch("/api/orders/me", { credentials: "include", headers: { ...h } });
         if (r.ok) setMyOrders(await r.json());
@@ -423,7 +437,14 @@ function DashboardContent() {
       }
     }, 15_000);
     return () => clearInterval(interval);
-  }, [orderId, data?.order?.id, data?.order?.planSlug, data?.order?.status, data?.contentCount]);
+  }, [
+    orderId,
+    data?.order?.id,
+    data?.order?.planSlug,
+    data?.order?.status,
+    data?.contentCount,
+    data?.customer?.status,
+  ]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !canCallApi || loading || error) return;
@@ -545,16 +566,37 @@ function DashboardContent() {
       configs.push({ id: "payment_confirmed", title: "Payment confirmed", body: "We're building your chatbot automatically now. This usually takes a few minutes. If nothing happens after ~2 minutes, click “Build my chatbot” in Training." });
     }
     if (isPaid && contentCount > 0 && !isTestingOrLive) {
-      configs.push({ id: "crawl_done", title: "Content ready", body: `We've crawled ${contentCount} pages. Your chatbot is being trained on your content. Next: we'll email you when it's time to add your domain (e.g. chat.yoursite.com).` });
+      configs.push({ id: "crawl_done", title: "Content ready", body: `We've crawled ${contentCount} pages. Your chatbot is being trained on your content. Add the CNAME from your email when you're ready—we'll attach your domain on Vercel automatically once DNS is correct.` });
+    }
+    const goLiveJob = data?.automationJobs?.find((j) => j.dedupeKey?.startsWith("go_live_"));
+    const goLiveActive =
+      goLiveJob && (goLiveJob.status === "queued" || goLiveJob.status === "running");
+    if (isPaid && contentCount > 0 && customerStatus === "dns_setup" && goLiveActive) {
+      configs.push({
+        id: "dns_watching",
+        title: "Watching your DNS",
+        body: "We check regularly for your CNAME. When it propagates, we attach chat.yourdomain to Vercel for you. You can still test from the dashboard or use “Go live” to retry.",
+      });
     }
     if (isPaid && contentCount > 0 && isTestingOrLive && !isLive) {
-      configs.push({ id: "domain_next", title: "Add your domain", body: "Your chatbot is ready for testing. Add the CNAME record we sent you (e.g. chat.yoursite.com) to go live." });
+      configs.push({ id: "domain_next", title: "Add your domain", body: "Your chatbot is ready for testing. Add the CNAME record we sent you (e.g. chat.yoursite.com). We’ll go live automatically when DNS points to Vercel." });
     }
     if (isLive) {
       configs.push({ id: "go_live", title: "Your chatbot is live", body: "Your AI chatbot is live at your domain. Share the link with customers and we'll keep it updated." });
     }
     return configs.map((c) => ({ id: c.id, title: c.title, body: c.body, read: notificationReadIds.has(c.id) }));
-  }, [myOrders.length, hasPaidOrder, isPaid, contentCount, isTestingOrLive, isLive, notificationReadIds, isWebsiteOrder]);
+  }, [
+    myOrders.length,
+    hasPaidOrder,
+    isPaid,
+    contentCount,
+    isTestingOrLive,
+    isLive,
+    notificationReadIds,
+    isWebsiteOrder,
+    data?.automationJobs,
+    customerStatus,
+  ]);
 
   if (loading) {
     return (

@@ -12,6 +12,7 @@ import { assertSafeOutboundHttpUrl } from "@/lib/url-safety";
 import { fetchWithRetry } from "@/lib/fetch-retry";
 import { normalizeContentUrl, shouldKeepCrawledPage } from "@/lib/content-filter";
 import { deductRescanCredits, getRescanCreditsBalance } from "@/lib/credit-balance";
+import { enqueueGoLiveForCustomer } from "@/lib/jobs";
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
   .split(",")
@@ -278,6 +279,12 @@ export async function POST(
         console.error("Crawl/DNS email failed:", e);
       }
     }
+  }
+
+  try {
+    await enqueueGoLiveForCustomer(customerId);
+  } catch (e) {
+    console.error("[crawl] enqueue go-live failed:", e);
   }
 
   const remaining = skipCredits ? 9999 : (await getCreditBalance(user.userId)).remaining;

@@ -7,6 +7,7 @@ import { CrawlCompleteEmail } from "@/components/emails/crawl-complete";
 import { DnsInstructionsEmail } from "@/components/emails/dns-instructions";
 import { assertSafeOutboundHttpUrl } from "@/lib/url-safety";
 import { normalizeContentUrl, shouldKeepCrawledPage } from "@/lib/content-filter";
+import { enqueueGoLiveForCustomer } from "@/lib/jobs";
 
 async function runFirecrawlCrawl(apiKey: string, url: string, limit: number): Promise<{
   success: boolean;
@@ -91,7 +92,16 @@ export async function autoCrawlCustomer(input: {
     .from(content)
     .where(eq(content.customerId, customer.id));
   const existingCount = Number(existing?.cnt ?? 0);
-  if (existingCount > 0) return { ok: true, pages: existingCount, skipped: true };
+  if (existingCount > 0) {
+    if (customer.status !== "delivered") {
+      try {
+        await enqueueGoLiveForCustomer(customer.id);
+      } catch (e) {
+        console.error("[auto-crawl] enqueue go-live failed (skipped crawl):", e);
+      }
+    }
+    return { ok: true, pages: existingCount, skipped: true };
+  }
 
   const apiKey = process.env.FIRECRAWL_API_KEY;
   if (!apiKey) return { ok: false, pages: 0, error: "Crawl not configured" };
@@ -145,8 +155,12 @@ export async function autoCrawlCustomer(input: {
     .set({ status: "dns_setup", updatedAt: now, lastCrawledAt: now })
     .where(eq(customers.id, customer.id));
 
-  // Notify user (best-effort). If order has a userId, use it; otherwise fall back to webhook email.
-  const toEmail = input.notifyEmail ?? null;
+  // Notify user (best-effort): Stripe session email, else linked app user.
+  let toEmail = input.notifyEmail ?? null;
+  if (!toEmail && order.userId) {
+    const [u] = await db.select().from(users).where(eq(users.id, order.userId));
+    toEmail = u?.email ?? null;
+  }
   if (resend && toEmail) {
     let firstName: string | undefined;
     if (order.userId) {
@@ -183,6 +197,12 @@ export async function autoCrawlCustomer(input: {
     } catch (e) {
       console.error("[auto-crawl] email failed:", e);
     }
+  }
+
+  try {
+    await enqueueGoLiveForCustomer(customer.id);
+  } catch (e) {
+    console.error("[auto-crawl] enqueue go-live failed:", e);
   }
 
   return { ok: true, pages: pagesCrawled };

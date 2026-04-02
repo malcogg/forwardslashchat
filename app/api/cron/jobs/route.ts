@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { claimNextJob, markJobFailed, markJobSucceeded } from "@/lib/jobs";
+import {
+  claimNextJob,
+  markJobFailed,
+  markJobSucceeded,
+  JOB_TYPE_AUTO_CRAWL,
+  JOB_TYPE_GO_LIVE,
+} from "@/lib/jobs";
 import { autoCrawlCustomer } from "@/lib/customer-crawl";
 import { autoGoLiveCustomer } from "@/lib/go-live";
 
 export const dynamic = "force-dynamic";
-
-const JOB_TYPE_AUTO_CRAWL = "auto_crawl_customer";
-const JOB_TYPE_GO_LIVE = "go_live_domain";
 
 function requireCronAuth(req: NextRequest): NextResponse | null {
   const authHeader = req.headers.get("authorization");

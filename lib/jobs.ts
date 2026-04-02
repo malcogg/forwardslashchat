@@ -4,6 +4,24 @@ import { eq, sql } from "drizzle-orm";
 
 export type JobRow = typeof jobs.$inferSelect;
 
+/** Cron worker + enqueue helpers use the same type strings. */
+export const JOB_TYPE_AUTO_CRAWL = "auto_crawl_customer";
+export const JOB_TYPE_GO_LIVE = "go_live_domain";
+
+/**
+ * After crawl (or if content already exists), queue DNS verify + Vercel attach.
+ * Deduped per customer; retries with longer backoff in markJobFailed (DNS can take days).
+ */
+export async function enqueueGoLiveForCustomer(customerId: string): Promise<void> {
+  await enqueueJob({
+    type: JOB_TYPE_GO_LIVE,
+    dedupeKey: `go_live_${customerId}`,
+    payload: { customerId },
+    maxAttempts: 96,
+    runAt: new Date(),
+  });
+}
+
 export async function getJobByDedupeKey(dedupeKey: string): Promise<JobRow | null> {
   if (!db) return null;
   const res = await db.execute(sql`
@@ -120,7 +138,11 @@ export async function markJobFailed(job: JobRow, error: unknown): Promise<void> 
     return;
   }
 
-  const backoffSeconds = Math.min(60 * 30, Math.pow(2, Math.max(0, attempts - 1)) * 10); // 10s, 20s, 40s...
+  const isGoLive = job.type === JOB_TYPE_GO_LIVE;
+  // Go-live waits on customer DNS; use multi-hour backoff (cap 6h). Crawl/other: fast retry.
+  const backoffSeconds = isGoLive
+    ? Math.min(6 * 3600, 300 + Math.min(attempts, 72) * 240)
+    : Math.min(60 * 30, Math.pow(2, Math.max(0, attempts - 1)) * 10);
   const jitter = Math.round(backoffSeconds * (0.2 + Math.random() * 0.3)); // +20–50%
   const runAt = new Date(Date.now() + (backoffSeconds + jitter) * 1000);
 

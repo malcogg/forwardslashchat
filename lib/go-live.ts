@@ -1,7 +1,9 @@
 import { db } from "@/db";
-import { customers } from "@/db/schema";
+import { customers, orders, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { fetchWithRetry } from "@/lib/fetch-retry";
+import { resend, FROM_EMAIL } from "@/lib/resend";
+import { ChatbotDeliveredEmail } from "@/components/emails/chatbot-delivered";
 
 const CNAME_TARGET = process.env.CNAME_TARGET ?? "cname.vercel-dns.com";
 
@@ -82,6 +84,10 @@ export async function autoGoLiveCustomer(customerId: string): Promise<{
 
   const customDomain = `${customer.subdomain}.${customer.domain}`;
 
+  if (customer.status === "delivered") {
+    return { ok: true, domain: customDomain, chatUrl: `https://${customDomain}` };
+  }
+
   const cname = await verifyCustomerCname(customDomain);
   if (!cname.ok) {
     const found = cname.found ? ` Found: ${cname.found}` : "";
@@ -100,6 +106,31 @@ export async function autoGoLiveCustomer(customerId: string): Promise<{
     .update(customers)
     .set({ status: "delivered", updatedAt: new Date() })
     .where(eq(customers.id, customerId));
+
+  const [order] = await db.select().from(orders).where(eq(orders.id, customer.orderId));
+  let toEmail: string | null = null;
+  let firstName: string | undefined;
+  if (order?.userId) {
+    const [u] = await db.select().from(users).where(eq(users.id, order.userId));
+    toEmail = u?.email ?? null;
+    firstName = u?.name?.split(" ")[0];
+  }
+  if (resend && toEmail) {
+    try {
+      await resend.emails.send({
+        from: FROM_EMAIL,
+        to: [toEmail],
+        subject: "Your chatbot is live",
+        react: ChatbotDeliveredEmail({
+          firstName,
+          businessName: customer.businessName,
+          chatUrl: `https://${customDomain}`,
+        }),
+      });
+    } catch (e) {
+      console.error("[go-live] delivered email failed:", e);
+    }
+  }
 
   return { ok: true, domain: customDomain, chatUrl: `https://${customDomain}` };
 }
