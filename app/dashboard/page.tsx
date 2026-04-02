@@ -236,7 +236,9 @@ function DashboardContent() {
   }, [orderId, router, canCallApi]);
   const initials = getInitials(displayName);
 
-  const [activePanel, setActivePanel] = useState<"design" | "domains">("design");
+  const [activePanel, setActivePanel] = useState<"training" | "design" | "domains">("training");
+  const [accentDraft, setAccentDraft] = useState("#000000");
+  const [brandingSaveState, setBrandingSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [mobileView, setMobileView] = useState<MobileSheetPanel>("design");
   const [mobileScreen, setMobileScreen] = useState<MobileScreen>("home");
@@ -548,6 +550,12 @@ function DashboardContent() {
   const isTestingOrLive = ["testing", "delivered"].includes(customerStatus);
   const isWebsiteOrder = order?.planSlug && ["starter", "new-build", "redesign"].includes(order.planSlug);
 
+  useEffect(() => {
+    const hex = data?.customer?.primaryColor;
+    setAccentDraft(typeof hex === "string" && /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex : "#000000");
+    setBrandingSaveState("idle");
+  }, [data?.customer?.id, data?.customer?.primaryColor]);
+
   const notifications = useMemo(() => {
     type Config = { id: string; title: string; body: string };
     const configs: Config[] = [];
@@ -719,12 +727,68 @@ function DashboardContent() {
         { key: "live", label: "Chatbot live", done: customer?.status === "delivered" },
       ];
 
+  const stepperPendingIndex = STATUS_STEPS.findIndex((s) => !s.done);
+  const stepperCurrentIndex = stepperPendingIndex === -1 ? STATUS_STEPS.length - 1 : stepperPendingIndex;
+
+  const estimatedPageTotal = Math.max(
+    1,
+    myOrders.find((o) => o.order.id === order?.id)?.estimatedPages ?? 25
+  );
+
+  const desktopNextAction = (() => {
+    if (isWebsiteOrder) {
+      if (!hasOrder) return "Choose a package at checkout to get started.";
+      if (!isPaid) return "Complete payment — we'll reach out to start your project.";
+      if (order?.status === "delivered") return "Delivered. We're here if you need anything else.";
+      return "We're preparing your project — watch your inbox for updates.";
+    }
+    if (!hasOrder) return "Scan your site or start checkout to build your AI chatbot.";
+    if (!isPaid) return "Complete payment to unlock crawling and custom-domain deployment.";
+    if (contentCount === 0) {
+      return customerStatus === "crawling"
+        ? "Crawling your site now — usually 2–8 minutes."
+        : "We crawl automatically after payment — or press Build my chatbot below if you're still waiting.";
+    }
+    if (customerStatus === "dns_setup")
+      return "Open the Domain tab and add your CNAME — we attach chat.yourdomain on Vercel when DNS propagates.";
+    if (customerStatus === "testing") return "DNS verified — finishing setup on your domain.";
+    if (isLive) return "You're live — share your chat link with visitors.";
+    return null;
+  })();
+
+  const handleSaveBranding = async () => {
+    const c = data?.customer;
+    if (!c) return;
+    setBrandingSaveState("saving");
+    try {
+      const headers = { "Content-Type": "application/json", ...(await authHeaders()) };
+      const res = await fetch(`/api/customers/${c.id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers,
+        body: JSON.stringify({ primaryColor: accentDraft }),
+      });
+      if (!res.ok) throw new Error("Save failed");
+      setBrandingSaveState("saved");
+      setData((d) => (d?.customer ? { ...d, customer: { ...d.customer, primaryColor: accentDraft } } : d));
+      setTimeout(() => setBrandingSaveState("idle"), 2500);
+    } catch {
+      setBrandingSaveState("error");
+    }
+  };
+
+  const handleDiscardBranding = () => {
+    const hex = data?.customer?.primaryColor;
+    setAccentDraft(typeof hex === "string" && /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex : "#000000");
+    setBrandingSaveState("idle");
+  };
+
   return (
     <main className="min-h-screen bg-background">
       {/* Desktop layout - hidden on mobile */}
-      <div className="hidden md:block">
+      <div className="hidden md:flex md:flex-col md:h-screen md:max-h-[100dvh] overflow-hidden">
       {/* Browser bar */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30 shrink-0">
         <div className="flex items-center gap-2">
           <div className="flex gap-1.5">
             <div className="w-3 h-3 rounded-full bg-red-400" />
@@ -795,7 +859,57 @@ function DashboardContent() {
         </div>
       </div>
 
-      <div className="flex h-[calc(100vh-52px)]">
+      {hasOrder && (
+        <div className="shrink-0 border-b border-border bg-gradient-to-b from-muted/40 to-background px-4 py-3 md:px-6">
+          <div className="max-w-6xl mx-auto flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-2 md:gap-0 md:justify-between">
+              {STATUS_STEPS.map((step, i) => {
+                const isDone = step.done;
+                const isCurrent = i === stepperCurrentIndex && !isDone;
+                const isPast = isDone;
+                return (
+                  <div key={step.key} className="flex items-center gap-2 md:flex-1 md:min-w-0">
+                    {i > 0 && (
+                      <div
+                        className={`hidden md:block h-px flex-1 min-w-[8px] mx-1 rounded-full ${isPast || isCurrent ? "bg-primary/35" : "bg-border"}`}
+                        aria-hidden
+                      />
+                    )}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold border-2 transition-colors ${
+                          isDone
+                            ? "border-emerald-500 bg-emerald-500 text-white"
+                            : isCurrent
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-muted-foreground/30 text-muted-foreground"
+                        }`}
+                      >
+                        {isDone ? <Check className="w-4 h-4" /> : i + 1}
+                      </span>
+                      <span
+                        className={`text-xs md:text-sm font-medium truncate max-w-[140px] md:max-w-none ${
+                          isDone ? "text-foreground" : isCurrent ? "text-foreground" : "text-muted-foreground"
+                        }`}
+                      >
+                        {step.label}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {desktopNextAction && (
+              <p className="text-sm text-muted-foreground border-t border-border/60 pt-2 md:border-0 md:pt-0">
+                <span className="font-medium text-foreground">Next: </span>
+                {desktopNextAction}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-1 min-h-0">
         {/* Sidebar - collapsible on desktop, hidden on mobile */}
         <aside
           className={`hidden md:flex border-r border-border bg-muted/20 flex-col shrink-0 transition-[width] duration-200 ${
@@ -895,11 +1009,21 @@ function DashboardContent() {
           )}
 
           <nav className={`space-y-0.5 flex-1 ${sidebarCollapsed ? "flex flex-col items-center" : ""}`}>
-            <button onClick={() => setActivePanel("design")} className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded text-left ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "design" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`} title="Training">
+            <button
+              type="button"
+              onClick={() => setActivePanel("training")}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded text-left ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "training" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`}
+              title="Training"
+            >
               <span className="w-5 shrink-0">{contentCount > 0 ? <Check className="w-4 h-4 text-green-500" /> : <span className="text-muted-foreground/50">○</span>}</span>
               {!sidebarCollapsed && "Training"}
             </button>
-            <button onClick={() => setActivePanel("design")} className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded text-left ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "design" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`} title="Design">
+            <button
+              type="button"
+              onClick={() => setActivePanel("design")}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded text-left ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "design" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`}
+              title="Design"
+            >
               <span className="w-5 shrink-0">{customer && contentCount > 0 ? <Check className="w-4 h-4 text-green-500" /> : <span className="text-muted-foreground/50">○</span>}</span>
               {!sidebarCollapsed && "Design"}
             </button>
@@ -994,7 +1118,9 @@ function DashboardContent() {
         {/* Center panel: Design | Domains - compact on desktop (Rork-style), resizable feel */}
         <div
           className={`border-r border-border overflow-y-auto shrink-0 flex flex-col min-w-0 ${
-            activePanel === "design" ? "md:w-56 md:min-w-[200px] md:max-w-[280px]" : "md:w-72 md:min-w-[220px] md:max-w-[360px]"
+            activePanel === "domains"
+              ? "md:w-80 md:min-w-[240px] md:max-w-[420px]"
+              : "md:w-[min(100%,420px)] md:min-w-[260px] md:max-w-[460px]"
           } flex-1 ${mobileView === "preview" ? "max-md:hidden" : ""}`}
         >
           {successToast && (
@@ -1018,8 +1144,8 @@ function DashboardContent() {
               </div>
             </div>
           )}
-          <div className={`flex-1 overflow-y-auto max-md:pb-24 ${activePanel === "design" ? "p-4" : "p-6"}`}>
-          {activePanel === "design" && (
+          <div className={`flex-1 overflow-y-auto max-md:pb-24 ${activePanel === "domains" ? "p-6" : "p-4 md:p-6"}`}>
+          {activePanel === "training" && (
             <>
               {hasOrder && !isPaid && contentCount > 0 && !isWebsiteOrder && (
                 <div className="mb-6 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
@@ -1033,22 +1159,10 @@ function DashboardContent() {
                   </Link>
                 </div>
               )}
-              {hasOrder && (
-                <div className="mb-6 space-y-2">
-                  <h4 className="text-xs font-medium text-muted-foreground uppercase">Status</h4>
-                  <div className="space-y-1">
-                    {STATUS_STEPS.map((s) => (
-                      <div key={s.key} className="flex items-center gap-2 text-sm">
-                        <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${s.done ? "bg-emerald-600 text-white" : "border border-muted-foreground/50"}`}>
-                          {s.done ? <Check className="w-2.5 h-2.5" /> : null}
-                        </span>
-                        <span className={s.done ? "text-foreground" : "text-muted-foreground"}>{s.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <h3 className="font-medium text-foreground mb-6">Design</h3>
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold text-foreground tracking-tight">Training</h2>
+                <p className="text-sm text-muted-foreground mt-1">Crawl your site and train the chatbot on your content.</p>
+              </div>
 
               {!hasOrder ? (
                 <div className="space-y-4">
@@ -1106,29 +1220,119 @@ function DashboardContent() {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-6">
+                  {isPaid && (
+                    <div className="rounded-xl border border-border bg-card/60 p-4 shadow-sm">
+                      <div className="flex justify-between text-xs text-muted-foreground mb-2">
+                        <span className="font-medium text-foreground">Pages indexed</span>
+                        <span>
+                          {contentCount} / {estimatedPageTotal}
+                        </span>
+                      </div>
+                      <div className="h-2.5 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-emerald-500 transition-[width] duration-500 ease-out"
+                          style={{
+                            width: `${Math.min(100, Math.round((contentCount / estimatedPageTotal) * 100))}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {customer &&
+                    (["content_collection", "crawling", "indexing"].includes(customer.status) ||
+                      (contentCount > 0 && ["dns_setup", "testing", "delivered"].includes(customer.status))) && (
+                      <div className="space-y-2">
+                        {lastCrawled && (
+                          <p className="text-xs text-muted-foreground">
+                            Last scanned: {lastCrawled.toLocaleDateString()}
+                            {isPaid && !canRescan && nextCrawlAvailable && (
+                              <span className="block">
+                                Rescan in {Math.ceil((nextCrawlAvailable.getTime() - Date.now()) / (24 * 60 * 60 * 1000))}{" "}
+                                days
+                              </span>
+                            )}
+                          </p>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handleCrawl}
+                          disabled={
+                            crawling ||
+                            (isPaid && !canRescan && contentCount > 0) ||
+                            (!!isPaid && contentCount === 0 && customer.status === "crawling")
+                          }
+                          className={`w-full px-4 py-2.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 transition-all ${crawling ? "animate-pulse" : ""}`}
+                        >
+                          {crawling
+                            ? "Crawling…"
+                            : !isPaid
+                              ? "Pay to scan"
+                              : contentCount
+                                ? canRescan
+                                  ? "Rescan site"
+                                  : "Rescan (7-day cooldown)"
+                                : customer.status === "crawling"
+                                  ? "Building (in progress)…"
+                                  : "Build my chatbot"}
+                        </button>
+                        {(crawling || (isPaid && contentCount === 0)) && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            This typically takes 2–8 minutes. We&apos;ll email you when it&apos;s ready.
+                          </p>
+                        )}
+                        {crawlError && <p className="text-xs text-destructive mt-1">{crawlError}</p>}
+                      </div>
+                    )}
+                </div>
+              )}
+            </>
+          )}
+
+          {activePanel === "design" && (
+            <>
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold text-foreground tracking-tight">Branding</h2>
+                <p className="text-sm text-muted-foreground mt-1">Changes show in the live preview on the right.</p>
+              </div>
+              {!hasOrder ? (
+                <p className="text-sm text-muted-foreground">Complete checkout to customize how your chatbot looks.</p>
+              ) : isWebsiteOrder ? (
+                <p className="text-sm text-muted-foreground">
+                  Branding applies to AI chatbot orders. Your website package uses the details we&apos;ll collect with you
+                  directly.
+                </p>
+              ) : (
+                <div className="space-y-6 rounded-xl border border-border bg-card/50 p-4 md:p-5 shadow-sm">
                   <div>
-                    <label className="text-sm text-muted-foreground">Display name</label>
-                    <div className="text-sm text-foreground mt-1">{customer?.businessName ?? "—"}</div>
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Display name</label>
+                    <p className="text-sm text-foreground mt-1.5">{customer?.businessName ?? "—"}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm text-muted-foreground">Logo</label>
-                      <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center mt-1">
-                        <span className="text-foreground text-sm font-medium">{(customer?.businessName ?? "?")[0]}</span>
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Logo</label>
+                      <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mt-2 border border-border">
+                        <span className="text-foreground text-sm font-semibold">{(customer?.businessName ?? "?")[0]}</span>
                       </div>
                     </div>
                     <div>
-                      <label className="text-sm text-muted-foreground">Favicon</label>
-                      <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center mt-1">
-                        <span className="text-primary-foreground text-xs">✦</span>
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Favicon</label>
+                      <div
+                        className="w-12 h-12 rounded-xl flex items-center justify-center mt-2 border border-border"
+                        style={{ backgroundColor: accentDraft }}
+                      >
+                        <span className="text-white text-xs drop-shadow-sm">✦</span>
                       </div>
                     </div>
                   </div>
-                  <div className="bg-muted/50 rounded-lg p-3 border border-border">
+                  <div className="rounded-lg border border-border bg-muted/30 p-3">
+                    <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-2">Header preview</p>
                     <div className="flex items-center gap-2">
-                      <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center shrink-0" style={{ backgroundColor: customer?.primaryColor ?? "#000" }}>
-                        <span className="text-white text-xs">{initials}</span>
+                      <div
+                        className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-white text-xs font-medium"
+                        style={{ backgroundColor: accentDraft }}
+                      >
+                        {initials}
                       </div>
                       <div className="min-w-0">
                         <div className="text-sm font-medium text-foreground truncate">{displayName}</div>
@@ -1137,54 +1341,40 @@ function DashboardContent() {
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm text-muted-foreground block mb-2">Accent</label>
-                    <div className="flex items-center gap-3">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-2">
+                      Accent color
+                    </label>
+                    <div className="flex items-center gap-3 flex-wrap">
                       <input
                         type="color"
-                        defaultValue={customer?.primaryColor ?? "#000000"}
-                        className="w-10 h-10 rounded-lg cursor-pointer border border-border bg-transparent p-0.5"
+                        value={accentDraft}
+                        onChange={(e) => setAccentDraft(e.target.value)}
+                        className="h-11 w-14 rounded-lg cursor-pointer border border-border bg-transparent p-1"
+                        aria-label="Accent color"
                       />
-                      <span className="text-xs text-muted-foreground">Pick your brand color</span>
+                      <span className="text-xs text-muted-foreground">Updates the preview instantly</span>
                     </div>
                   </div>
-                  {customer && (["content_collection", "crawling", "indexing"].includes(customer.status) || (contentCount > 0 && ["dns_setup", "testing", "delivered"].includes(customer.status))) && (
-                    <div className="space-y-2">
-                      {lastCrawled && (
-                        <p className="text-xs text-muted-foreground">
-                          Last scanned: {lastCrawled.toLocaleDateString()}
-                          {isPaid && !canRescan && nextCrawlAvailable && (
-                            <span className="block">Rescan in {Math.ceil((nextCrawlAvailable.getTime() - Date.now()) / (24 * 60 * 60 * 1000))} days</span>
-                          )}
-                        </p>
-                      )}
-                      <button
-                        onClick={handleCrawl}
-                        disabled={crawling || (isPaid && !canRescan && contentCount > 0) || (!!isPaid && contentCount === 0 && customer.status === "crawling")}
-                        className={`w-full px-3 py-2 text-sm bg-primary text-primary-foreground rounded hover:opacity-90 disabled:opacity-50 transition-all ${crawling ? "animate-pulse" : ""}`}
-                      >
-                        {crawling
-                          ? "Crawling…"
-                          : !isPaid
-                            ? "Pay to scan"
-                            : contentCount
-                              ? (canRescan ? "Rescan site" : "Rescan (7-day cooldown)")
-                              : (customer.status === "crawling" ? "Building (in progress)…" : "Build my chatbot")}
-                      </button>
-                      {(crawling || (isPaid && contentCount === 0)) && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          This typically takes 2–8 minutes. We&apos;ll email you when it&apos;s ready.
-                        </p>
-                      )}
-                      {crawlError && <p className="text-xs text-destructive mt-1">{crawlError}</p>}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {hasOrder && !isWebsiteOrder && (
-                <div className="flex gap-2 mt-6">
-                  <button className="px-3 py-1.5 text-sm border border-border rounded text-foreground">Discard</button>
-                  <button className="px-3 py-1.5 text-sm bg-foreground text-background rounded">Save</button>
+                  <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
+                    <button
+                      type="button"
+                      onClick={handleDiscardBranding}
+                      className="px-4 py-2 text-sm border border-border rounded-lg text-foreground hover:bg-muted/60"
+                    >
+                      Discard
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveBranding}
+                      disabled={brandingSaveState === "saving"}
+                      className="px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                    >
+                      {brandingSaveState === "saving" ? "Saving…" : brandingSaveState === "saved" ? "Saved" : "Save"}
+                    </button>
+                    {brandingSaveState === "error" && (
+                      <span className="text-xs text-destructive self-center">Could not save. Try again.</span>
+                    )}
+                  </div>
                 </div>
               )}
             </>
@@ -1255,7 +1445,8 @@ function DashboardContent() {
                   <p className="text-sm font-medium text-foreground mb-1">Complete Training first</p>
                   <p className="text-sm text-muted-foreground mb-4">Build your chatbot to crawl your site. Then you&apos;ll unlock domain setup to go live at chat.yourdomain.com.</p>
                   <button
-                    onClick={() => setActivePanel("design")}
+                    type="button"
+                    onClick={() => setActivePanel("training")}
                     className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:opacity-90"
                   >
                     Go to Training →
@@ -1274,7 +1465,7 @@ function DashboardContent() {
 
         {/* Chat preview / Website order summary - on mobile full width when selected from sheet */}
         <div
-          className={`flex-1 min-w-0 md:min-w-[320px] p-4 flex flex-col bg-muted/10 max-md:pb-24 ${
+          className={`flex-1 min-w-0 md:min-w-[320px] p-3 md:p-5 flex flex-col bg-gradient-to-br from-muted/20 via-background to-muted/15 max-md:pb-24 ${
             mobileView === "preview" ? "max-md:flex" : "max-md:hidden"
           }`}
         >
@@ -1296,9 +1487,12 @@ function DashboardContent() {
           ) : customer ? (
             <div className="flex-1 flex flex-col min-h-0 min-w-0">
               {/* Device view toggle + preview frame */}
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-muted-foreground">Live preview</span>
-                <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-muted/50 border border-border">
+              <div className="flex items-center justify-between mb-3 shrink-0">
+                <div>
+                  <span className="text-xs font-medium text-foreground">Live preview</span>
+                  <p className="text-[10px] text-muted-foreground hidden sm:block">Your branded chat widget</p>
+                </div>
+                <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-muted/60 border border-border shadow-inner">
                   <button
                     onClick={() => setPreviewView("desktop")}
                     className={`p-1.5 rounded-md transition-colors ${previewView === "desktop" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
@@ -1322,10 +1516,10 @@ function DashboardContent() {
                   </button>
                 </div>
               </div>
-              <div className="flex-1 flex justify-center min-h-0 overflow-x-auto transition-[width] duration-200">
+              <div className="flex-1 flex justify-center items-stretch min-h-0 overflow-x-auto p-1 md:p-2 transition-[width] duration-200">
                 <div
-                  className={`h-full bg-card border border-border shadow-lg overflow-hidden flex flex-col min-h-0 ring-1 ring-black/5 transition-all duration-200 shrink-0 ${
-                    previewView === "desktop" ? "rounded-xl w-full" : previewView === "tablet" ? "rounded-2xl" : "rounded-[2rem]"
+                  className={`h-full max-h-full bg-card border-2 border-border/80 overflow-hidden flex flex-col min-h-0 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.25)] dark:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] ring-1 ring-black/[0.06] dark:ring-white/[0.08] transition-all duration-200 shrink-0 ${
+                    previewView === "desktop" ? "rounded-2xl w-full" : previewView === "tablet" ? "rounded-2xl" : "rounded-[2rem]"
                   }`}
                   style={
                     previewView === "tablet"
@@ -1335,7 +1529,12 @@ function DashboardContent() {
                         : undefined
                   }
                 >
-                  <CustomerChat customerId={customer.id} businessName={customer.businessName} primaryColor={customer.primaryColor ?? "#000"} compact={false} />
+                  <CustomerChat
+                    customerId={customer.id}
+                    businessName={customer.businessName}
+                    primaryColor={accentDraft || customer.primaryColor || "#000000"}
+                    compact={false}
+                  />
                 </div>
               </div>
             </div>

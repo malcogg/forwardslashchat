@@ -6,8 +6,8 @@ import { getOrCreateUser } from "@/lib/auth";
 
 /**
  * PATCH /api/customers/[id]
- * Update customer status. Requires auth + ownership.
- * Body: { status: "testing" | "delivered" }
+ * Update customer fields. Requires auth + ownership.
+ * Body: { status?: "testing" | "delivered"; primaryColor?: "#rrggbb" }
  */
 export async function PATCH(
   request: Request,
@@ -34,16 +34,34 @@ export async function PATCH(
   }
 
   const body = await request.json().catch(() => ({}));
-  const { status } = body as { status?: string };
+  const { status, primaryColor } = body as { status?: string; primaryColor?: string };
 
-  if (!status || !["testing", "delivered"].includes(status)) {
-    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+  if (primaryColor === undefined && status === undefined) {
+    return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
   }
 
-  await db
-    .update(customers)
-    .set({ status, updatedAt: new Date() })
-    .where(eq(customers.id, customerId));
+  if (primaryColor !== undefined) {
+    if (typeof primaryColor !== "string" || !/^#[0-9A-Fa-f]{6}$/.test(primaryColor)) {
+      return NextResponse.json({ error: "Invalid primaryColor (use #rrggbb)" }, { status: 400 });
+    }
+    await db
+      .update(customers)
+      .set({ primaryColor, updatedAt: new Date() })
+      .where(eq(customers.id, customerId));
+    if (status === undefined) {
+      return NextResponse.json({ success: true, primaryColor });
+    }
+  }
 
-  return NextResponse.json({ success: true, status });
+  if (status !== undefined) {
+    if (!["testing", "delivered"].includes(status)) {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
+    await db
+      .update(customers)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(customers.id, customerId));
+  }
+
+  return NextResponse.json({ success: true, status, primaryColor });
 }
