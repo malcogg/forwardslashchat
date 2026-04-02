@@ -39,7 +39,7 @@ const DROP_PATH_PARTS = [
   "/signup",
   "/sign-up",
   "/register",
-  "/admin",
+  "/fs-ops",
   "/tag/",
   "/category/",
   "/author/",

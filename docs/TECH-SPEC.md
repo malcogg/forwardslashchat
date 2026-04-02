@@ -130,7 +130,7 @@ db/
 ## 5. Auth & Middleware
 
 - **Clerk** for sign-in / sign-up / session
-- **Middleware** protects `/dashboard` and `/admin`; allows `/`, `/chat/demo`, sign-in, sign-up
+- **Middleware** protects `/dashboard` and `/fs-ops/*`; allows `/`, `/chat/demo`, sign-in, sign-up
 - **getOrCreateUser()** in `lib/auth.ts`: syncs Clerk user → `users` table, returns `{ userId, clerkUserId, email }`
 
 ---
@@ -164,7 +164,8 @@ db/
 | `FIRECRAWL_API_KEY` | Yes (for scan/crawl) | Firecrawl API key |
 | `STRIPE_SECRET_KEY` | Yes (checkout) | Stripe secret key |
 | `STRIPE_WEBHOOK_SECRET` | Yes (webhooks) | Stripe webhook signing secret |
-| `ADMIN_EMAILS` | Optional | Comma-separated emails for `/admin` |
+| `ADMIN_EMAILS` | Optional | Comma-separated emails for `/api/admin/*` |
+| `ADMIN_PATH_TOKEN` | Optional | Secret segment for admin UI at `/fs-ops/{token}` |
 | `NEXT_PUBLIC_STRATEGY_CALL_URL` | Optional | Cal.com link for upsell CTA (default: cal.com/forwardslash/30min) |
 | `NEXT_PUBLIC_APP_URL` / `VERCEL_URL` | Optional | Base URL for Stripe redirects |
 
