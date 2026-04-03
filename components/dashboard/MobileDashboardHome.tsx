@@ -113,9 +113,9 @@ export function MobileDashboardHome({
                       </div>
                       <span
                         className={`inline-block mt-2 text-[10px] font-medium px-2 py-0.5 rounded ${
-                          statusLabel === "Live"
+                          statusLabel === "Live" || statusLabel === "Delivered"
                             ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
-                            : statusLabel === "Domain Setup"
+                            : statusLabel === "Domain Setup" || statusLabel === "In progress"
                               ? "bg-amber-500/20 text-amber-700 dark:text-amber-400"
                               : "bg-muted text-muted-foreground"
                         }`}

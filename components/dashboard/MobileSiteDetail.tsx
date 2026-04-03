@@ -83,9 +83,9 @@ export function MobileSiteDetail({
       <div className="flex-1 overflow-y-auto p-4">
         <span
           className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full mb-4 ${
-            statusLabel === "Live"
+            statusLabel === "Live" || statusLabel === "Delivered"
               ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
-              : statusLabel === "Domain Setup"
+              : statusLabel === "Domain Setup" || statusLabel === "In progress"
                 ? "bg-amber-500/20 text-amber-700 dark:text-amber-400"
                 : "bg-muted text-muted-foreground"
           }`}

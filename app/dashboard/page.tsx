@@ -832,12 +832,19 @@ function DashboardContent() {
     redesign: "Website Redesign",
   };
 
+  /** Website SKUs are human-led; only payment + final delivery are meaningful milestones (no fake planning/design ticks). */
   const STATUS_STEPS = isWebsiteOrder
     ? [
-        { key: "payment", label: "Payment confirmed", done: ["paid", "processing", "delivered"].includes(order?.status ?? "") },
-        { key: "planning", label: "Planning & discovery", done: ["processing", "delivered"].includes(order?.status ?? "") },
-        { key: "design", label: "Design & build", done: ["processing", "delivered"].includes(order?.status ?? "") },
-        { key: "delivered", label: "Delivered", done: order?.status === "delivered" },
+        {
+          key: "payment",
+          label: "Payment received",
+          done: ["paid", "processing", "delivered"].includes(order?.status ?? ""),
+        },
+        {
+          key: "delivered",
+          label: "Site delivered",
+          done: order?.status === "delivered",
+        },
       ]
     : [
         { key: "payment", label: "Payment confirmed", done: ["paid", "processing", "delivered"].includes(order?.status ?? "") },
@@ -857,9 +864,9 @@ function DashboardContent() {
   const desktopNextAction = (() => {
     if (isWebsiteOrder) {
       if (!hasOrder) return "Choose a package at checkout to get started.";
-      if (!isPaid) return "Complete payment — we'll reach out to start your project.";
-      if (order?.status === "delivered") return "Delivered. We're here if you need anything else.";
-      return "We're preparing your project — watch your inbox for updates.";
+      if (!isPaid) return "Complete payment — then we’ll email you to kick off your website project.";
+      if (order?.status === "delivered") return "Project marked complete. Reach out if you need anything else.";
+      return "Our team is on it — check email for kickoff and updates. This progress isn’t automated like the chatbot path.";
     }
     if (!hasOrder) return "Scan your site or start checkout to build your AI chatbot.";
     if (!isPaid) return "Complete payment to unlock crawling and custom-domain deployment.";
@@ -1022,6 +1029,11 @@ function DashboardContent() {
               <p className="text-sm text-muted-foreground border-t border-border/60 pt-2 md:border-0 md:pt-0">
                 <span className="font-medium text-foreground">Next: </span>
                 {desktopNextAction}
+              </p>
+            )}
+            {isWebsiteOrder && isPaid && order?.status !== "delivered" && (
+              <p className="text-xs text-muted-foreground border-t border-border/60 pt-2 md:border-0 md:pt-0 md:mt-1 leading-relaxed">
+                Website builds are coordinated by email—there are no crawl or DNS robots behind this order. You’ll hear from us directly.
               </p>
             )}
           </div>
@@ -1348,7 +1360,13 @@ function DashboardContent() {
                     <div><span className="text-xs text-muted-foreground">Website</span><p className="text-sm text-foreground truncate">{customer?.websiteUrl ?? "—"}</p></div>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    We&apos;ll reach out soon to start your project. Questions? Email hello@forwardslash.chat
+                    We&apos;ll reach out by email to start your project. The steps at the top track payment and final delivery only—there&apos;s no auto crawl like chatbot orders.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Questions?{" "}
+                    <a href="mailto:hello@forwardslash.chat" className="text-primary hover:underline">
+                      hello@forwardslash.chat
+                    </a>
                   </p>
                 </div>
               ) : (
@@ -1650,10 +1668,23 @@ function DashboardContent() {
                   {order?.planSlug ? WEBSITE_PLAN_NAMES[order.planSlug] ?? order.planSlug : "Website"} — ${((order?.amountCents ?? 0) / 100).toLocaleString()}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Status: <span className="capitalize text-foreground">{order?.status ?? "pending"}</span>
+                  {order?.status === "delivered" ? (
+                    <>
+                      Status: <span className="text-foreground font-medium">Project complete</span>
+                    </>
+                  ) : order?.status === "paid" || order?.status === "processing" ? (
+                    <>
+                      Status: <span className="text-foreground font-medium">In progress</span>
+                      <span className="block mt-1 text-muted-foreground font-normal">We coordinate by email—no automated crawl for this order.</span>
+                    </>
+                  ) : (
+                    <>
+                      Status: <span className="capitalize text-foreground">{order?.status ?? "pending"}</span>
+                    </>
+                  )}
                 </p>
                 <p className="text-xs text-muted-foreground mt-4">
-                  We&apos;ll be in touch soon to start your project.
+                  We&apos;ll be in touch by email to start your project.
                 </p>
               </div>
             </div>

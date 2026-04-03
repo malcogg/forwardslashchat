@@ -14,7 +14,7 @@
 - [x] **Milestone toasts** — poll-driven toasts for payment confirmed, first content indexed, go-live; manual crawl still syncs ref to avoid duplicate “content ready” toast.
 - [x] **Automation job panel** — Training shows `automationJobs` (crawl + go-live) with status labels and failed hint.
 - [x] **Failed job UX (baseline)** — toast on crawl/go-live `failed` with `lastError` snippet + dismiss.
-- [ ] **Website-plan stepper** — align copy with reality (manual outreach vs bot automation); reduce confusion next to chatbot flow.
+- [x] **Website-plan stepper** — two milestones (paid → site delivered); note under stepper + Training; mobile labels and 2-segment progress.
 - [x] **Checkout / thank-you** — plan on success URL; chatbot vs website copy with ETA and dashboard/email expectations.
 
 ### Backend (reliability & honesty)
