@@ -22,6 +22,13 @@ import { MobileSiteDetail } from "@/components/dashboard/MobileSiteDetail";
 const PUBLIC_CNAME_TARGET =
   process.env.NEXT_PUBLIC_CNAME_TARGET || "cname.vercel-dns.com";
 
+function automationJobLabel(dedupeKey: string | null | undefined): string {
+  if (!dedupeKey) return "Automation";
+  if (dedupeKey.startsWith("auto_crawl_")) return "Site crawl & training";
+  if (dedupeKey.startsWith("go_live_")) return "Domain (go live)";
+  return "Automation";
+}
+
 function getDisplayName(user: { firstName?: string | null; lastName?: string | null; fullName?: string | null } | null | undefined): string {
   if (!user) return "Michael Francis";
   if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`;
@@ -315,6 +322,16 @@ function DashboardContent() {
   const [crawlError, setCrawlError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [successToast, setSuccessToast] = useState<{ message: string; cta?: string; ctaHref?: string } | null>(null);
+  const [errorToast, setErrorToast] = useState<string | null>(null);
+  /** Tracks last-seen automation state per order so poll-driven updates can show one-time toasts */
+  const automationMilestoneRef = useRef<{
+    orderId?: string;
+    orderStatus?: string;
+    contentCount?: number;
+    customerStatus?: string;
+    crawlJobStatus?: string;
+    goLiveJobStatus?: string;
+  }>({});
 
   const ONBOARDING_SEEN_KEY = "forwardslash_onboarding_seen";
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
@@ -518,7 +535,14 @@ function DashboardContent() {
         fetch(`/api/dashboard${orderId ? `?orderId=${encodeURIComponent(orderId)}` : ""}`, { credentials: "include", headers: { ...h } }),
         fetch("/api/orders/me", { credentials: "include", headers: { ...h } }),
       ]);
-      if (dashRes.ok) setData(await dashRes.json());
+      if (dashRes.ok) {
+        const dashJson = await dashRes.json();
+        setData(dashJson);
+        const oid = dashJson?.order?.id as string | undefined;
+        if (oid && automationMilestoneRef.current.orderId === oid) {
+          automationMilestoneRef.current.contentCount = dashJson?.contentCount ?? 0;
+        }
+      }
       if (ordersRes.ok) setMyOrders(await ordersRes.json());
       setSuccessToast({ message: "Content ready! Check your email for DNS instructions. Add your CNAME below to go live." });
       setActivePanel("domains");
@@ -549,6 +573,101 @@ function DashboardContent() {
   const isLive = customerStatus === "delivered";
   const isTestingOrLive = ["testing", "delivered"].includes(customerStatus);
   const isWebsiteOrder = order?.planSlug && ["starter", "new-build", "redesign"].includes(order.planSlug);
+
+  useEffect(() => {
+    if (loading || error || !order?.id || !customer || isWebsiteOrder) return;
+
+    const crawlJob = data?.automationJobs?.find((j) => j.dedupeKey === `auto_crawl_${order.id}`);
+    const goLiveJob = data?.automationJobs?.find((j) => j.dedupeKey === `go_live_${customer.id}`);
+    const crawlStatus = crawlJob?.status;
+    const goLiveStatus = goLiveJob?.status;
+
+    const r = automationMilestoneRef.current;
+    if (r.orderId !== order.id) {
+      automationMilestoneRef.current = {
+        orderId: order.id,
+        orderStatus: order.status,
+        contentCount,
+        customerStatus,
+        crawlJobStatus: crawlStatus,
+        goLiveJobStatus: goLiveStatus,
+      };
+      return;
+    }
+
+    const dismissMs = 9000;
+    let t: ReturnType<typeof setTimeout> | undefined;
+
+    if (order.status === "paid" && r.orderStatus && r.orderStatus !== "paid") {
+      setErrorToast(null);
+      setSuccessToast({
+        message:
+          "Payment confirmed — we're training your chatbot automatically. This usually takes a few minutes. We'll email you when your content is ready.",
+      });
+      t = setTimeout(() => setSuccessToast(null), dismissMs);
+    }
+
+    if ((r.contentCount ?? 0) === 0 && contentCount > 0) {
+      setSuccessToast({
+        message: `Training data ready — ${contentCount} page${contentCount === 1 ? "" : "s"} indexed. Check your email for DNS steps or open the Domains section.`,
+      });
+      t = setTimeout(() => setSuccessToast(null), 10_000);
+    }
+
+    if (customerStatus === "delivered" && r.customerStatus && r.customerStatus !== "delivered") {
+      setSuccessToast({
+        message: "Your chatbot is live!",
+        cta: "Visit chat",
+        ctaHref: `https://${customer.subdomain}.${customer.domain}`,
+      });
+      t = setTimeout(() => setSuccessToast(null), 10_000);
+    }
+
+    if (crawlStatus === "failed" && r.crawlJobStatus !== "failed") {
+      setSuccessToast(null);
+      const detail = crawlJob?.lastError?.trim();
+      setErrorToast(
+        detail
+          ? `Automatic training failed: ${detail.slice(0, 220)}${detail.length > 220 ? "…" : ""} — use “Build my chatbot” to retry.`
+          : "Automatic training failed. Use “Build my chatbot” to retry, or contact support if it keeps happening."
+      );
+      t = setTimeout(() => setErrorToast(null), 14_000);
+    }
+
+    if (goLiveStatus === "failed" && r.goLiveJobStatus !== "failed") {
+      setSuccessToast(null);
+      const detail = goLiveJob?.lastError?.trim();
+      setErrorToast(
+        detail
+          ? `Go-live job failed: ${detail.slice(0, 220)}${detail.length > 220 ? "…" : ""} — check DNS or use “Go live” again.`
+          : "We couldn't attach your domain automatically. Check your CNAME and try “Go live” again."
+      );
+      t = setTimeout(() => setErrorToast(null), 14_000);
+    }
+
+    automationMilestoneRef.current = {
+      orderId: order.id,
+      orderStatus: order.status,
+      contentCount,
+      customerStatus,
+      crawlJobStatus: crawlStatus,
+      goLiveJobStatus: goLiveStatus,
+    };
+
+    return () => {
+      if (t) clearTimeout(t);
+    };
+  }, [
+    loading,
+    error,
+    order?.id,
+    order?.status,
+    customer?.id,
+    contentCount,
+    customerStatus,
+    isWebsiteOrder,
+    data?.automationJobs,
+  ]);
 
   useEffect(() => {
     const hex = data?.customer?.primaryColor;
@@ -1144,6 +1263,19 @@ function DashboardContent() {
               </div>
             </div>
           )}
+          {errorToast && (
+            <div className="flex items-center justify-between gap-4 p-4 bg-destructive/10 border-b border-destructive/30 shrink-0">
+              <p className="text-sm font-medium text-foreground pr-2">{errorToast}</p>
+              <button
+                type="button"
+                onClick={() => setErrorToast(null)}
+                className="p-1 rounded hover:bg-destructive/15 text-muted-foreground shrink-0"
+                aria-label="Dismiss"
+              >
+                ×
+              </button>
+            </div>
+          )}
           <div className={`flex-1 overflow-y-auto max-md:pb-24 ${activePanel === "domains" ? "p-6" : "p-4 md:p-6"}`}>
           {activePanel === "training" && (
             <>
@@ -1221,6 +1353,47 @@ function DashboardContent() {
                 </div>
               ) : (
                 <div className="space-y-6">
+                  {isPaid && (data?.automationJobs?.length ?? 0) > 0 && (
+                    <div className="rounded-lg border border-border bg-muted/25 p-3 space-y-2">
+                      <p className="text-xs font-semibold text-foreground uppercase tracking-wide">Automation status</p>
+                      <ul className="space-y-2">
+                        {(data?.automationJobs ?? []).map((job) => (
+                          <li
+                            key={job.dedupeKey ?? job.type}
+                            className="flex flex-wrap items-center justify-between gap-2 text-sm"
+                          >
+                            <span className="text-foreground">{automationJobLabel(job.dedupeKey)}</span>
+                            <span
+                              className={
+                                job.status === "failed"
+                                  ? "text-destructive font-medium"
+                                  : job.status === "running"
+                                    ? "text-amber-600 dark:text-amber-400 font-medium"
+                                    : job.status === "succeeded"
+                                      ? "text-emerald-600 dark:text-emerald-400"
+                                      : "text-muted-foreground"
+                              }
+                            >
+                              {job.status === "queued"
+                                ? "Queued"
+                                : job.status === "running"
+                                  ? "Running…"
+                                  : job.status === "succeeded"
+                                    ? "Complete"
+                                    : job.status === "failed"
+                                      ? "Failed"
+                                      : job.status}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                      {(data?.automationJobs ?? []).some((j) => j.status === "failed") && (
+                        <p className="text-xs text-muted-foreground pt-1 border-t border-border">
+                          Fix the issue above or retry from this page. We&apos;ll email you when major steps finish.
+                        </p>
+                      )}
+                    </div>
+                  )}
                   {isPaid && (
                     <div className="rounded-xl border border-border bg-card/60 p-4 shadow-sm">
                       <div className="flex justify-between text-xs text-muted-foreground mb-2">

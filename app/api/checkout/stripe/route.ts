@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       websiteUrl,
       planSlug,
       addOns,
-      amountCents,
+      amountCents: clientAmountCents,
       pages,
       orderId,
     } = body as Record<string, unknown>;
@@ -81,11 +81,10 @@ export async function POST(request: Request) {
       typeof businessName !== "string" ||
       typeof domain !== "string" ||
       typeof websiteUrl !== "string" ||
-      !isValidPlanSlug(planSlug) ||
-      typeof amountCents !== "number"
+      !isValidPlanSlug(planSlug)
     ) {
       return NextResponse.json(
-        { error: "Missing or invalid: firstName, email, phone, businessName, domain, websiteUrl, planSlug, amountCents" },
+        { error: "Missing or invalid: firstName, email, phone, businessName, domain, websiteUrl, planSlug" },
         { status: 400 }
       );
     }
@@ -115,7 +114,6 @@ export async function POST(request: Request) {
     if (!safeWebsiteUrl || !isValidUrl(safeWebsiteUrl)) {
       return NextResponse.json({ error: "Valid website URL required" }, { status: 400 });
     }
-    // Note: amountCents is accepted for backward compatibility, but is NOT trusted for pricing.
 
     const rawAddOns = sanitizeAddOns(addOns);
     const safePlanSlug = String(planSlug) as CheckoutPlanSlug;
@@ -128,16 +126,38 @@ export async function POST(request: Request) {
       a === "dns" || a === "starter" || a === "new-build" || a === "redesign" || a === "social-media"
     );
 
-    const computed = computeCheckoutAmountCents({
-      planSlug: safePlanSlug,
-      addOns: billableAddOns,
-      pages: typeof pages === "number" ? pages : undefined,
-    });
+    let computed: ReturnType<typeof computeCheckoutAmountCents>;
+    try {
+      computed = computeCheckoutAmountCents({
+        planSlug: safePlanSlug,
+        addOns: billableAddOns,
+        pages: typeof pages === "number" && Number.isFinite(pages) ? Math.round(pages) : undefined,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Invalid checkout options";
+      return NextResponse.json({ error: msg }, { status: 400 });
+    }
 
     const bundleYears = computed.bundleYears;
     const dnsHelp = billableAddOns.includes("dns");
     const planName = planNameFromSlug(safePlanSlug);
     const serverAmountCents = computed.amountCents;
+
+    if (serverAmountCents < 50) {
+      return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
+    }
+
+    if (
+      typeof clientAmountCents === "number" &&
+      Number.isFinite(clientAmountCents) &&
+      Math.abs(clientAmountCents - serverAmountCents) > 2
+    ) {
+      console.warn("[checkout/stripe] client amountCents ignored (mismatch)", {
+        clientAmountCents,
+        serverAmountCents,
+        planSlug: safePlanSlug,
+      });
+    }
 
     // 1) Save lead (for abandonment emails, records)
     await db.insert(checkoutLeads).values({
