@@ -6,7 +6,30 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { PENDING_SCAN_URL_KEY } from "@/components/ScanModal";
 import { UserButton, useUser, useAuth } from "@clerk/nextjs";
-import { Globe, Check, ChevronDown, X, Monitor, Tablet, Smartphone, Copy, ExternalLink, Trash2, Bell, Lock, Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import {
+  Globe,
+  Check,
+  ChevronDown,
+  X,
+  Monitor,
+  Tablet,
+  Smartphone,
+  Copy,
+  ExternalLink,
+  Trash2,
+  Bell,
+  Lock,
+  PanelLeftClose,
+  PanelLeftOpen,
+  CreditCard,
+  Layers,
+  Globe2,
+  Sparkles,
+  PackageCheck,
+  GraduationCap,
+  Palette,
+  Link2,
+} from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CustomerChat } from "@/components/CustomerChat";
 import { ScanModal } from "@/components/ScanModal";
@@ -19,6 +42,9 @@ import { MobileAddSite } from "@/components/dashboard/MobileAddSite";
 import { MobileAccount } from "@/components/dashboard/MobileAccount";
 import { MobileSiteDetail } from "@/components/dashboard/MobileSiteDetail";
 import { GoLiveButton } from "@/components/dashboard/GoLiveButton";
+import { DesktopStepper } from "@/components/dashboard/DesktopStepper";
+import { DesktopNextStepCard } from "@/components/dashboard/DesktopNextStepCard";
+import { Button } from "@/components/ui/button";
 
 const PUBLIC_CNAME_TARGET =
   process.env.NEXT_PUBLIC_CNAME_TARGET || "cname.vercel-dns.com";
@@ -760,30 +786,49 @@ function DashboardContent() {
     redesign: "Website Redesign",
   };
 
+  const paymentReceived = ["paid", "processing", "delivered"].includes(order?.status ?? "");
+  const paymentStepLabel = paymentReceived ? "Payment received" : "Complete payment";
+
   /** Chatbot orders: full automated pipeline. Website-builder SKUs: separate product (human-led milestones on the order). */
   const STATUS_STEPS = isWebsiteOrder
     ? [
         {
           key: "payment",
-          label: "Payment received",
-          done: ["paid", "processing", "delivered"].includes(order?.status ?? ""),
+          label: paymentStepLabel,
+          done: paymentReceived,
         },
-        { key: "delivered", label: "Project delivered", done: order?.status === "delivered" },
+        {
+          key: "delivered",
+          label: order?.status === "delivered" ? "Project delivered" : "Delivery & handoff",
+          done: order?.status === "delivered",
+        },
       ]
     : [
-        { key: "payment", label: "Payment confirmed", done: ["paid", "processing", "delivered"].includes(order?.status ?? "") },
+        { key: "payment", label: paymentStepLabel, done: paymentReceived },
         {
           key: "content",
           label: "Content & training",
           done:
             (contentCount ?? 0) > 0 || ["dns_setup", "testing", "delivered"].includes(customer?.status ?? ""),
         },
-        { key: "dns", label: "DNS setup", done: ["testing", "delivered"].includes(customer?.status ?? "") },
+        { key: "dns", label: "DNS & domain", done: ["testing", "delivered"].includes(customer?.status ?? "") },
         { key: "live", label: "Chatbot live", done: customer?.status === "delivered" },
       ];
 
   const stepperPendingIndex = STATUS_STEPS.findIndex((s) => !s.done);
   const stepperCurrentIndex = stepperPendingIndex === -1 ? STATUS_STEPS.length - 1 : stepperPendingIndex;
+
+  const DESKTOP_STEPPER_STEPS = isWebsiteOrder
+    ? [
+        { ...STATUS_STEPS[0], icon: CreditCard },
+        { ...STATUS_STEPS[1], icon: PackageCheck },
+      ]
+    : [
+        { ...STATUS_STEPS[0], icon: CreditCard },
+        { ...STATUS_STEPS[1], icon: Layers },
+        { ...STATUS_STEPS[2], icon: Globe2 },
+        { ...STATUS_STEPS[3], icon: Sparkles },
+      ];
 
   const estimatedPageTotal = Math.max(
     1,
@@ -795,6 +840,11 @@ function DashboardContent() {
       ? `/checkout?plan=chatbot-2y&pages=${estimatedPageTotal}&url=${encodeURIComponent(customer.websiteUrl ?? "")}&orderId=${encodeURIComponent(order.id)}`
       : "/checkout?plan=chatbot-2y&pages=25";
 
+  const websiteCheckoutHref =
+    order && customer && order.planSlug && ["starter", "new-build", "redesign"].includes(order.planSlug)
+      ? `/checkout?plan=${order.planSlug}&url=${encodeURIComponent(customer.websiteUrl ?? "")}&orderId=${encodeURIComponent(order.id)}`
+      : "/checkout?plan=starter&pages=25";
+
   const desktopNextAction = (() => {
     if (isWebsiteOrder) {
       if (!hasOrder) return "Choose a website package at checkout to get started.";
@@ -803,7 +853,7 @@ function DashboardContent() {
       return "We’re preparing your website build — watch your inbox for next steps.";
     }
     if (!hasOrder) return "Scan your site or start checkout to build your AI chatbot.";
-    if (!isPaid) return "Complete payment to unlock crawling and custom-domain deployment.";
+    if (!isPaid) return "Finish checkout — then we’ll crawl your site and deploy to your domain.";
     if (contentCount === 0) {
       return customerStatus === "crawling"
         ? "Crawling your site now — usually 2–8 minutes."
@@ -847,21 +897,16 @@ function DashboardContent() {
     <main className="min-h-screen bg-background">
       {/* Desktop layout - hidden on mobile */}
       <div className="hidden md:flex md:flex-col md:h-screen md:max-h-[100dvh] overflow-hidden">
-      {/* Browser bar */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30 shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-red-400" />
-            <div className="w-3 h-3 rounded-full bg-yellow-400" />
-            <div className="w-3 h-3 rounded-full bg-green-400" />
-          </div>
-          <div className="flex items-center gap-2 px-3 py-1 bg-muted rounded-md text-xs text-muted-foreground ml-2">
-            <Globe className="w-3 h-3" />
-            forwardslash.chat/dashboard
-          </div>
+      {/* App header */}
+      <div className="flex items-center justify-between h-14 px-6 xl:px-8 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="text-sm font-semibold tracking-tight text-foreground truncate">ForwardSlash</span>
+          <span className="hidden sm:inline text-xs text-muted-foreground font-medium truncate">Dashboard</span>
         </div>
-        <div className="flex items-center gap-3">
-          <Link href="/" className="text-xs text-muted-foreground hover:text-foreground">← Home</Link>
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <Link href="/" className="text-xs text-muted-foreground hover:text-foreground hidden sm:inline">
+            Home
+          </Link>
           {myOrders.some((o) => o.order.status === "paid") && (
             <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">PRO</span>
           )}
@@ -920,161 +965,34 @@ function DashboardContent() {
       </div>
 
       {hasOrder && (
-        <div className="shrink-0 border-b border-border bg-gradient-to-b from-muted/40 to-background px-4 py-3 md:px-6">
-          <div className="max-w-6xl mx-auto flex flex-col gap-3">
-            <div className="flex flex-wrap items-center gap-2 md:gap-0 md:justify-between">
-              {STATUS_STEPS.map((step, i) => {
-                const isDone = step.done;
-                const isCurrent = i === stepperCurrentIndex && !isDone;
-                const isPast = isDone;
-                return (
-                  <div key={step.key} className="flex items-center gap-2 md:flex-1 md:min-w-0">
-                    {i > 0 && (
-                      <div
-                        className={`hidden md:block h-px flex-1 min-w-[8px] mx-1 rounded-full ${isPast || isCurrent ? "bg-primary/35" : "bg-border"}`}
-                        aria-hidden
-                      />
-                    )}
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold border-2 transition-colors ${
-                          isDone
-                            ? "border-emerald-500 bg-emerald-500 text-white"
-                            : isCurrent
-                              ? "border-primary bg-primary/10 text-primary"
-                              : "border-muted-foreground/30 text-muted-foreground"
-                        }`}
-                      >
-                        {isDone ? <Check className="w-4 h-4" /> : i + 1}
-                      </span>
-                      <span
-                        className={`text-xs md:text-sm font-medium truncate max-w-[140px] md:max-w-none ${
-                          isDone ? "text-foreground" : isCurrent ? "text-foreground" : "text-muted-foreground"
-                        }`}
-                      >
-                        {step.label}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+        <div className="shrink-0 border-b border-border/80 bg-muted/20">
+          <div className="py-6 md:py-8 space-y-5">
+            <DesktopStepper steps={DESKTOP_STEPPER_STEPS} currentIndex={stepperCurrentIndex} />
             {desktopNextAction && (
-              <p className="text-sm text-muted-foreground border-t border-border/60 pt-2 md:border-0 md:pt-0">
-                <span className="font-medium text-foreground">Next: </span>
-                {desktopNextAction}
-              </p>
-            )}
-            {!isWebsiteOrder && hasOrder && customer && (
-              <div className="rounded-xl border border-border bg-card/70 p-4 shadow-sm space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Do this next</p>
-                {!isPaid && (
-                  <>
-                    <p className="text-sm text-foreground">Complete payment to unlock crawling and your custom domain.</p>
-                    <Link
-                      href={chatbotCheckoutHref}
-                      className="inline-flex w-full justify-center px-4 py-2.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:opacity-90"
-                    >
-                      Complete payment
-                    </Link>
-                  </>
-                )}
-                {isPaid && isLive && (
-                  <a
-                    href={`https://${customer.subdomain}.${customer.domain}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex w-full justify-center items-center gap-2 px-4 py-2.5 text-sm font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    Open your chatbot
-                  </a>
-                )}
-                {isPaid && !isLive && contentCount === 0 && ["crawling", "indexing"].includes(customerStatus) && (
-                  <p className="text-sm text-muted-foreground">
-                    Training your site now — usually 2–8 minutes. We&apos;ll email you when it&apos;s ready.
-                  </p>
-                )}
-                {isPaid && !isLive && contentCount === 0 && !["crawling", "indexing"].includes(customerStatus) && (
-                  <>
-                    <p className="text-sm text-foreground">Run the first crawl to train your chatbot on your website.</p>
-                    <button
-                      type="button"
-                      onClick={handleCrawl}
-                      disabled={crawling}
-                      className="w-full px-4 py-2.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50"
-                    >
-                      {crawling ? "Starting…" : "Build my chatbot"}
-                    </button>
-                  </>
-                )}
-                {isPaid && !isLive && contentCount > 0 && customerStatus === "dns_setup" && (
-                  <>
-                    <p className="text-sm text-foreground">Add this CNAME at your DNS host, then verify it&apos;s propagating.</p>
-                    <pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto border border-border font-mono whitespace-pre-wrap">
-                      {`Host: ${customer.subdomain}\nValue: ${PUBLIC_CNAME_TARGET}`}
-                    </pre>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={copyCname}
-                        className="flex-1 min-w-[120px] px-3 py-2 text-sm border border-border rounded-lg hover:bg-muted"
-                      >
-                        {copied ? "Copied" : "Copy DNS record"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setActivePanel("domains")}
-                        className="flex-1 min-w-[120px] px-3 py-2 text-sm border border-border rounded-lg hover:bg-muted"
-                      >
-                        Full instructions
-                      </button>
-                    </div>
-                    <GoLiveButton
-                      customerId={customer.id}
-                      customerDomain={`${customer.subdomain}.${customer.domain}`}
-                      onSuccess={handleGoLiveSuccess}
-                      authHeaders={authHeaders}
-                    />
-                  </>
-                )}
-                {isPaid && !isLive && contentCount > 0 && customerStatus === "testing" && (
-                  <p className="text-sm text-muted-foreground">
-                    DNS verified — finishing setup on your domain. This usually completes within a few minutes.
-                  </p>
-                )}
-                {isPaid &&
-                  !isLive &&
-                  contentCount > 0 &&
-                  !["dns_setup", "testing", "delivered"].includes(customerStatus) && (
-                    <>
-                      <p className="text-sm text-foreground">When you&apos;re ready, add your domain record in the Domain section.</p>
-                      <button
-                        type="button"
-                        onClick={() => setActivePanel("domains")}
-                        className="w-full px-4 py-2.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:opacity-90"
-                      >
-                        Set up domain
-                      </button>
-                    </>
-                  )}
+              <div className="max-w-7xl mx-auto px-6 xl:px-8">
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  <span className="font-medium text-foreground">Current focus — </span>
+                  {desktopNextAction}
+                </p>
               </div>
             )}
             {isWebsiteOrder && isPaid && order?.status !== "delivered" && (
-              <p className="text-xs text-muted-foreground border-t border-border/60 pt-2 md:border-0 md:pt-0 md:mt-1 leading-relaxed">
-                This order is for our website-builder service — not the automated AI chatbot pipeline. We&apos;ll coordinate your
-                project by email.
-              </p>
+              <div className="max-w-7xl mx-auto px-6 xl:px-8">
+                <p className="text-xs text-muted-foreground leading-relaxed border-t border-border/60 pt-4">
+                  This order is for our website-builder service — not the automated AI chatbot pipeline. We&apos;ll coordinate
+                  your project by email.
+                </p>
+              </div>
             )}
           </div>
         </div>
       )}
 
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 min-w-0">
         {/* Sidebar - collapsible on desktop, hidden on mobile */}
         <aside
-          className={`hidden md:flex border-r border-border bg-muted/20 flex-col shrink-0 transition-[width] duration-200 ${
-            sidebarCollapsed ? "w-16 p-2" : "w-56 p-4"
+          className={`hidden md:flex border-r border-sidebar-border bg-sidebar flex-col shrink-0 transition-[width] duration-200 ${
+            sidebarCollapsed ? "w-16 p-2" : "w-60 p-4"
           }`}
         >
           <div className={`flex items-center gap-2 mb-6 ${sidebarCollapsed ? "justify-center" : ""}`}>
@@ -1169,37 +1087,41 @@ function DashboardContent() {
             </div>
           )}
 
-          <nav className={`space-y-0.5 flex-1 ${sidebarCollapsed ? "flex flex-col items-center" : ""}`}>
+          <nav className={`space-y-1 flex-1 ${sidebarCollapsed ? "flex flex-col items-center" : ""}`}>
             <button
               type="button"
               onClick={() => setActivePanel("training")}
-              className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded text-left ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "training" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`}
+              className={`w-full flex items-center gap-3 px-2.5 py-2 text-sm rounded-lg text-left transition-colors ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "training" ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"}`}
               title="Training"
             >
-              <span className="w-5 shrink-0">{contentCount > 0 ? <Check className="w-4 h-4 text-green-500" /> : <span className="text-muted-foreground/50">○</span>}</span>
+              <span className="w-5 shrink-0 flex justify-center">
+                {contentCount > 0 ? <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : <GraduationCap className="w-4 h-4 opacity-70" />}
+              </span>
               {!sidebarCollapsed && "Training"}
             </button>
             <button
               type="button"
               onClick={() => setActivePanel("design")}
-              className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded text-left ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "design" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`}
+              className={`w-full flex items-center gap-3 px-2.5 py-2 text-sm rounded-lg text-left transition-colors ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "design" ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"}`}
               title="Design"
             >
-              <span className="w-5 shrink-0">{customer && contentCount > 0 ? <Check className="w-4 h-4 text-green-500" /> : <span className="text-muted-foreground/50">○</span>}</span>
+              <span className="w-5 shrink-0 flex justify-center">
+                {customer && contentCount > 0 ? <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : <Palette className="w-4 h-4 opacity-70" />}
+              </span>
               {!sidebarCollapsed && "Design"}
             </button>
             <button
               onClick={() => setActivePanel("domains")}
               title={!sidebarCollapsed && !isWebsiteOrder && (contentCount ?? 0) === 0 ? "Complete Training first" : "Domain"}
-              className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded text-left ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "domains" ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`}
+              className={`w-full flex items-center gap-3 px-2.5 py-2 text-sm rounded-lg text-left transition-colors ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "domains" ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"}`}
             >
-              <span className="w-5 shrink-0">
+              <span className="w-5 shrink-0 flex justify-center">
                 {["testing", "delivered"].includes(customer?.status ?? "") ? (
-                  <Check className="w-4 h-4 text-green-500" />
+                  <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 ) : !isWebsiteOrder && (contentCount ?? 0) === 0 ? (
-                  <Lock className="w-3.5 h-3.5 text-muted-foreground/60" />
+                  <Lock className="w-4 h-4 text-muted-foreground/60" />
                 ) : (
-                  <span className="text-muted-foreground/50">○</span>
+                  <Link2 className="w-4 h-4 opacity-70" />
                 )}
               </span>
               {!sidebarCollapsed && "Domain"}
@@ -1276,13 +1198,10 @@ function DashboardContent() {
           </button>
         </aside>
 
-        {/* Center panel: Design | Domains - compact on desktop (Rork-style), resizable feel */}
+        <div className="flex flex-1 min-h-0 min-w-0 flex-col xl:flex-row">
+        {/* Work area: actions & panels (~40% width at xl); preview is the hero column */}
         <div
-          className={`border-r border-border overflow-y-auto shrink-0 flex flex-col min-w-0 ${
-            activePanel === "domains"
-              ? "md:w-80 md:min-w-[240px] md:max-w-[420px]"
-              : "md:w-[min(100%,420px)] md:min-w-[260px] md:max-w-[460px]"
-          } flex-1 ${mobileView === "preview" ? "max-md:hidden" : ""}`}
+          className={`flex flex-col min-h-0 min-w-0 overflow-hidden border-b xl:border-b-0 xl:border-r border-border/80 bg-background/50 xl:w-[42%] xl:max-w-2xl xl:shrink-0 flex-1 xl:flex-none ${mobileView === "preview" ? "max-md:hidden" : ""}`}
         >
           {successToast && (
             <div className="flex items-center justify-between gap-4 p-4 bg-emerald-500/15 border-b border-emerald-500/30 shrink-0">
@@ -1318,7 +1237,28 @@ function DashboardContent() {
               </button>
             </div>
           )}
-          <div className={`flex-1 overflow-y-auto max-md:pb-24 ${activePanel === "domains" ? "p-6" : "p-4 md:p-6"}`}>
+          <div className={`flex-1 overflow-y-auto max-md:pb-24 ${activePanel === "domains" ? "p-6" : "p-5 md:p-6 xl:p-8"} space-y-8`}>
+          {hasOrder && customer && (
+            <DesktopNextStepCard
+              isWebsiteOrder={!!isWebsiteOrder}
+              hasOrder={hasOrder}
+              customer={customer}
+              isPaid={isPaid}
+              isLive={isLive}
+              contentCount={contentCount}
+              customerStatus={customerStatus}
+              crawling={crawling}
+              copied={copied}
+              chatbotCheckoutHref={chatbotCheckoutHref}
+              websiteCheckoutHref={websiteCheckoutHref}
+              copyCname={copyCname}
+              setActivePanel={setActivePanel}
+              handleCrawl={handleCrawl}
+              handleGoLiveSuccess={handleGoLiveSuccess}
+              authHeaders={authHeaders}
+              orderDelivered={order?.status === "delivered"}
+            />
+          )}
           {activePanel === "training" && (
             <>
               {hasOrder && !isPaid && contentCount > 0 && !isWebsiteOrder && (
@@ -1333,9 +1273,13 @@ function DashboardContent() {
                   </Link>
                 </div>
               )}
-              <div className="mb-6">
+              <div className="mb-2">
                 <h2 className="text-lg font-semibold text-foreground tracking-tight">Training</h2>
-                <p className="text-sm text-muted-foreground mt-1">Crawl your site and train the chatbot on your content.</p>
+                <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
+                  {hasOrder && !isPaid && !isWebsiteOrder
+                    ? "After you pay, we’ll crawl your site and train your assistant. Use the Next step card above to check out."
+                    : "Crawl your site and train the chatbot on your content."}
+                </p>
               </div>
 
               {!hasOrder ? (
@@ -1478,28 +1422,36 @@ function DashboardContent() {
                             )}
                           </p>
                         )}
-                        <button
-                          type="button"
-                          onClick={handleCrawl}
-                          disabled={
-                            crawling ||
-                            (isPaid && !canRescan && contentCount > 0) ||
-                            (!!isPaid && contentCount === 0 && customer.status === "crawling")
-                          }
-                          className={`w-full px-4 py-2.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 transition-all ${crawling ? "animate-pulse" : ""}`}
-                        >
-                          {crawling
-                            ? "Crawling…"
-                            : !isPaid
-                              ? "Pay to scan"
-                              : contentCount
-                                ? canRescan
-                                  ? "Rescan site"
-                                  : "Rescan (7-day cooldown)"
-                                : customer.status === "crawling"
-                                  ? "Building (in progress)…"
-                                  : "Build my chatbot"}
-                        </button>
+                        {!isPaid && hasOrder && !isWebsiteOrder ? (
+                          <Button variant="outline" size="lg" className="w-full h-11 font-medium border-border/80" asChild>
+                            <Link href={chatbotCheckoutHref}>Continue to checkout</Link>
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant={isPaid ? "default" : "secondary"}
+                            size="lg"
+                            className={`w-full h-11 font-semibold ${crawling ? "animate-pulse" : ""}`}
+                            onClick={handleCrawl}
+                            disabled={
+                              crawling ||
+                              (isPaid && !canRescan && contentCount > 0) ||
+                              (!!isPaid && contentCount === 0 && customer.status === "crawling")
+                            }
+                          >
+                            {crawling
+                              ? "Crawling…"
+                              : !isPaid
+                                ? "Pay to scan"
+                                : contentCount
+                                  ? canRescan
+                                    ? "Rescan site"
+                                    : "Rescan (7-day cooldown)"
+                                  : customer.status === "crawling"
+                                    ? "Building (in progress)…"
+                                    : "Build my chatbot"}
+                          </Button>
+                        )}
                         {(crawling || (isPaid && contentCount === 0)) && (
                           <p className="text-xs text-muted-foreground mt-1">
                             This typically takes 2–8 minutes. We&apos;ll email you when it&apos;s ready.
@@ -1515,9 +1467,11 @@ function DashboardContent() {
 
           {activePanel === "design" && (
             <>
-              <div className="mb-6">
+              <div className="mb-8 pb-2 border-b border-border/60">
                 <h2 className="text-lg font-semibold text-foreground tracking-tight">Branding</h2>
-                <p className="text-sm text-muted-foreground mt-1">Changes show in the live preview on the right.</p>
+                <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
+                  Changes show in the live preview — adjust accent color to match your brand.
+                </p>
               </div>
               {!hasOrder ? (
                 <p className="text-sm text-muted-foreground">Complete checkout to customize how your chatbot looks.</p>
@@ -1606,7 +1560,10 @@ function DashboardContent() {
 
           {activePanel === "domains" && (
             <>
-              <h2 className="text-lg font-semibold text-foreground mb-4">Domain</h2>
+              <div className="mb-6 pb-2 border-b border-border/60">
+                <h2 className="text-lg font-semibold text-foreground tracking-tight">Domain</h2>
+                <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">Connect chat.yourdomain.com when your content is ready.</p>
+              </div>
               {isWebsiteOrder ? (
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
@@ -1684,9 +1641,9 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* Chat preview / Website order summary - on mobile full width when selected from sheet */}
+        {/* Chat preview — hero column on xl */}
         <div
-          className={`flex-1 min-w-0 md:min-w-[320px] p-3 md:p-5 flex flex-col bg-gradient-to-br from-muted/20 via-background to-muted/15 max-md:pb-24 ${
+          className={`flex-1 min-h-0 min-w-0 flex flex-col p-4 md:p-6 xl:p-8 xl:pl-6 bg-gradient-to-br from-muted/15 via-background to-muted/25 max-md:pb-24 ${
             mobileView === "preview" ? "max-md:flex" : "max-md:hidden"
           }`}
         >
@@ -1723,12 +1680,14 @@ function DashboardContent() {
           ) : customer ? (
             <div className="flex-1 flex flex-col min-h-0 min-w-0">
               {/* Device view toggle + preview frame */}
-              <div className="flex items-center justify-between mb-3 shrink-0">
+              <div className="flex items-start justify-between gap-4 mb-4 xl:mb-6 shrink-0">
                 <div>
-                  <span className="text-xs font-medium text-foreground">Live preview</span>
-                  <p className="text-[10px] text-muted-foreground hidden sm:block">Your branded chat widget</p>
+                  <h2 className="text-base font-semibold text-foreground tracking-tight">Live preview</h2>
+                  <p className="text-sm text-muted-foreground mt-1 max-w-md leading-relaxed">
+                    Your branded chat widget — sample conversation below. Try sending a message like a visitor would.
+                  </p>
                 </div>
-                <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-muted/60 border border-border shadow-inner">
+                <div className="flex items-center gap-0.5 p-1 rounded-xl bg-muted/50 border border-border/80 shadow-sm shrink-0">
                   <button
                     onClick={() => setPreviewView("desktop")}
                     className={`p-1.5 rounded-md transition-colors ${previewView === "desktop" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
@@ -1752,10 +1711,10 @@ function DashboardContent() {
                   </button>
                 </div>
               </div>
-              <div className="flex-1 flex justify-center items-stretch min-h-0 overflow-x-auto p-1 md:p-2 transition-[width] duration-200">
+              <div className="flex-1 flex justify-center items-stretch min-h-0 overflow-x-auto p-1 md:p-2 xl:p-0 transition-[width] duration-200">
                 <div
-                  className={`h-full max-h-full bg-card border-2 border-border/80 overflow-hidden flex flex-col min-h-0 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.25)] dark:shadow-[0_24px_60px_-12px_rgba(0,0,0,0.55)] ring-1 ring-black/[0.06] dark:ring-white/[0.08] transition-all duration-200 shrink-0 ${
-                    previewView === "desktop" ? "rounded-2xl w-full" : previewView === "tablet" ? "rounded-2xl" : "rounded-[2rem]"
+                  className={`flex flex-col h-full min-h-[380px] xl:min-h-[520px] max-h-full bg-card border border-border/90 overflow-hidden shadow-[0_24px_64px_-16px_rgba(0,0,0,0.2)] dark:shadow-[0_28px_80px_-20px_rgba(0,0,0,0.55)] ring-1 ring-black/[0.04] dark:ring-white/[0.06] transition-all duration-200 shrink-0 ${
+                    previewView === "desktop" ? "rounded-2xl w-full max-w-4xl" : previewView === "tablet" ? "rounded-2xl" : "rounded-[2rem]"
                   }`}
                   style={
                     previewView === "tablet"
@@ -1770,6 +1729,7 @@ function DashboardContent() {
                     businessName={customer.businessName}
                     primaryColor={accentDraft || customer.primaryColor || "#000000"}
                     compact={false}
+                    previewDemo
                   />
                 </div>
               </div>
@@ -1788,6 +1748,7 @@ function DashboardContent() {
               </Link>
             </div>
           )}
+        </div>
         </div>
       </div>
       </div>

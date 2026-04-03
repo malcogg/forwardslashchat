@@ -8,11 +8,23 @@ import { ChatMessageContent } from "@/components/chat/ChatMessageContent";
 import { ChatCards } from "@/components/chat/ChatCards";
 import type { ChatCardBlock } from "@/components/chat/chat-types";
 
+const PREVIEW_DEMO_MESSAGES = [
+  { id: "preview-u1", role: "user" as const, content: "What services do you offer?" },
+  {
+    id: "preview-a1",
+    role: "assistant" as const,
+    content:
+      "Thanks for asking! We focus on **consulting**, **delivery**, and **ongoing support** — all tailored to your goals. Want a quick overview or pricing?",
+  },
+];
+
 interface CustomerChatProps {
   customerId: string;
   businessName: string;
   primaryColor?: string;
   compact?: boolean;
+  /** Seed a sample thread in the dashboard preview so the widget feels alive before the user chats. */
+  previewDemo?: boolean;
 }
 
 export function CustomerChat({
@@ -20,6 +32,7 @@ export function CustomerChat({
   businessName,
   primaryColor = "#059669",
   compact = false,
+  previewDemo = false,
 }: CustomerChatProps) {
   const [messageBlocks, setMessageBlocks] = useState<Record<number, ChatCardBlock[]>>({});
   const nextAssistantIndexRef = useRef(0);
@@ -27,6 +40,7 @@ export function CustomerChat({
   const { messages, input, setInput, append, isLoading } = useChat({
     api: "/api/chat",
     body: { customerId },
+    initialMessages: previewDemo ? PREVIEW_DEMO_MESSAGES : undefined,
     onFinish: useCallback(
       async (finalMessage: { content?: string }) => {
         const content = finalMessage?.content;
@@ -50,13 +64,13 @@ export function CustomerChat({
   });
 
   const suggestions = useMemo(() => {
-    if (messages.length > 0) return [];
+    if (messages.length > 0 || previewDemo) return [];
     return [
       "What services do you offer?",
       "Tell me about your products",
       "How do I get in touch?",
     ];
-  }, [messages.length]);
+  }, [messages.length, previewDemo]);
 
   const send = (text: string) => {
     const t = sanitizeChatMessage(text);
