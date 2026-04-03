@@ -527,13 +527,22 @@ function CheckoutContent() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground mt-4">Hosting included. One-time payment. No monthly fees.</p>
-          <p className="text-xs text-muted-foreground mt-2">
-            After payment,{" "}
-            <Link href="/thank-you" className="text-primary hover:underline">
-              create an account
-            </Link>{" "}
-            to track your order and get updates.
-          </p>
+          {isWebsitePlan && websitePlan ? (
+            <p className="text-xs text-muted-foreground mt-2">
+              After payment, you&apos;ll get a confirmation page and we&apos;ll email you to kick off your website project. Create an account anytime to see this order on your dashboard.
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground mt-2">
+              After payment, we automatically crawl and train your chatbot (usually about{" "}
+              <span className="text-foreground font-medium">5–15 minutes</span>
+              ). Your dashboard shows live progress; we also email you when your content is ready and when to add your DNS record for{" "}
+              <span className="text-foreground font-medium">chat.yourdomain.com</span>.{" "}
+              <Link href="/thank-you" className="text-primary hover:underline">
+                After checkout
+              </Link>
+              , create an account to track everything.
+            </p>
+          )}
 
           {detailsComplete && orderTotalDollars != null && orderTotalDollars > 0 ? (
             <div className="mt-6">

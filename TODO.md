@@ -15,7 +15,7 @@
 - [x] **Automation job panel** — Training shows `automationJobs` (crawl + go-live) with status labels and failed hint.
 - [x] **Failed job UX (baseline)** — toast on crawl/go-live `failed` with `lastError` snippet + dismiss.
 - [ ] **Website-plan stepper** — align copy with reality (manual outreach vs bot automation); reduce confusion next to chatbot flow.
-- [ ] **Checkout / thank-you** — consistent “what happens next” + ETA for chatbot path (match dashboard).
+- [x] **Checkout / thank-you** — plan on success URL; chatbot vs website copy with ETA and dashboard/email expectations.
 
 ### Backend (reliability & honesty)
 - [ ] **Crawl robustness** — configurable limits, clearer timeouts; align `limit` with plan/pages across scan vs customer crawl.

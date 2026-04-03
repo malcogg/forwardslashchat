@@ -9,9 +9,13 @@ import { Check, Calendar } from "lucide-react";
 
 const CAL_LINK = process.env.NEXT_PUBLIC_STRATEGY_CALL_URL || "https://cal.com/forwardslash/30min";
 
+const WEBSITE_PLAN_SLUGS = new Set(["starter", "new-build", "redesign"]);
+
 function ThankYouContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
+  const planSlug = searchParams.get("plan") ?? "";
+  const isWebsiteOrder = WEBSITE_PLAN_SLUGS.has(planSlug);
 
   const signUpUrl = orderId
     ? `/sign-up?redirect_url=${encodeURIComponent(`/dashboard?orderId=${orderId}`)}`
@@ -29,15 +33,25 @@ function ThankYouContent() {
           <h1 className="font-serif text-2xl md:text-3xl text-foreground mb-2">
             Thanks for your order!
           </h1>
-          <p className="text-muted-foreground mb-8">
-            We&apos;ve received your payment and we&apos;re building your chatbot now. Check your dashboard in a few minutes.
-          </p>
+          {isWebsiteOrder ? (
+            <p className="text-muted-foreground mb-8">
+              We&apos;ve received your payment for your website project. Our team will reach out by email shortly to schedule discovery and next steps. You can still create an account to see your order on the dashboard.
+            </p>
+          ) : (
+            <p className="text-muted-foreground mb-8">
+              We&apos;re training your AI chatbot on your site automatically. Most crawls finish within{" "}
+              <strong className="text-foreground font-medium">about 5–15 minutes</strong> (larger sites can take longer). Watch the{" "}
+              <strong className="text-foreground font-medium">Training</strong> section on your dashboard for live status, and check your inbox—we email you when content is ready and when it&apos;s time to add DNS.
+            </p>
+          )}
           <div className="rounded-xl border border-border bg-card p-6 space-y-4">
             <p className="text-sm font-medium text-foreground">
               Create an account to track your order and get updates.
             </p>
             <p className="text-xs text-muted-foreground">
-              You&apos;ll see your order status and when your content is ready in your dashboard.
+              {isWebsiteOrder
+                ? "Your dashboard shows this website order and our team will coordinate with you directly."
+                : "You&apos;ll see automation status (crawl, DNS, go-live), in-dashboard messages, and the same steps we email you about."}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <Link

@@ -282,7 +282,7 @@ export async function POST(request: Request) {
     const baseUrl =
       process.env.NEXT_PUBLIC_APP_URL ??
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-    const successUrl = `${baseUrl}/thank-you?orderId=${order.id}`;
+    const successUrl = `${baseUrl}/thank-you?orderId=${encodeURIComponent(order.id)}&plan=${encodeURIComponent(safePlanSlug)}`;
     const cancelUrl = `${baseUrl}/checkout`;
 
     const addOnLabels = billableAddOns.length > 0 ? ` + ${billableAddOns.join(", ")}` : "";
