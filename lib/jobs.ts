@@ -135,6 +135,28 @@ export async function markJobFailed(job: JobRow, error: unknown): Promise<void> 
       .update(jobs)
       .set({ status: "failed", lastError: msg.slice(0, 4000), updatedAt: new Date() })
       .where(eq(jobs.id, job.id));
+
+    let payloadSummary = "";
+    try {
+      const p = job.payload;
+      payloadSummary = p && typeof p === "object" ? JSON.stringify(p).slice(0, 2000) : String(p ?? "").slice(0, 2000);
+    } catch {
+      payloadSummary = "(unparseable)";
+    }
+    void import("./job-failure-alert")
+      .then((m) =>
+        m.notifyAdminsJobPermanentlyFailed({
+          jobId: job.id,
+          type: job.type,
+          dedupeKey: job.dedupeKey,
+          lastError: msg.slice(0, 4000),
+          attempts,
+          maxAttempts,
+          payloadSummary,
+        }),
+      )
+      .catch(() => {});
+
     return;
   }
 

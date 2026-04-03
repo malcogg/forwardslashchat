@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, Check, Copy, ExternalLink } from "lucide-react";
+import { GoLiveButton } from "@/components/dashboard/GoLiveButton";
 import { getProgressSteps, getPlanLabel, getSiteStatusLabel } from "./mobile-types";
 
 const PUBLIC_CNAME_TARGET =
@@ -34,6 +35,8 @@ type MobileSiteDetailProps = {
   canRescan: boolean;
   copied: boolean;
   onCopyUrl: () => void;
+  authHeaders: () => Promise<HeadersInit>;
+  onGoLiveSuccess: () => void | Promise<void>;
 };
 
 export function MobileSiteDetail({
@@ -45,6 +48,8 @@ export function MobileSiteDetail({
   canRescan,
   copied,
   onCopyUrl,
+  authHeaders,
+  onGoLiveSuccess,
 }: MobileSiteDetailProps) {
   const { order, customer, contentCount = 0 } = siteData;
   const isWebsiteOrder = order.planSlug && ["starter", "new-build", "redesign"].includes(order.planSlug);
@@ -128,6 +133,22 @@ export function MobileSiteDetail({
             </div>
           ))}
         </div>
+
+        {!isWebsiteOrder && customer?.status === "dns_setup" && contentCount > 0 && customer.subdomain && customer.domain && (
+          <div className="mt-6 rounded-xl border border-border bg-card/60 p-4 space-y-3">
+            <h2 className="text-sm font-semibold text-foreground">Connect your domain</h2>
+            <p className="text-xs text-muted-foreground">
+              Add a CNAME: <span className="font-mono text-foreground">{customer.subdomain}</span> →{" "}
+              <span className="font-mono text-foreground">{cnameValue}</span>
+            </p>
+            <GoLiveButton
+              customerId={customer.id}
+              customerDomain={`${customer.subdomain}.${customer.domain}`}
+              onSuccess={onGoLiveSuccess}
+              authHeaders={authHeaders}
+            />
+          </div>
+        )}
 
         {/* Chatbot URL */}
         {!isWebsiteOrder && (

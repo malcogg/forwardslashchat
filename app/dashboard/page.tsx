@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useRef, useMemo } from "react";
+import { useState, useEffect, Suspense, useRef, useMemo, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -18,6 +18,7 @@ import { MobileDashboardHome } from "@/components/dashboard/MobileDashboardHome"
 import { MobileAddSite } from "@/components/dashboard/MobileAddSite";
 import { MobileAccount } from "@/components/dashboard/MobileAccount";
 import { MobileSiteDetail } from "@/components/dashboard/MobileSiteDetail";
+import { GoLiveButton } from "@/components/dashboard/GoLiveButton";
 
 const PUBLIC_CNAME_TARGET =
   process.env.NEXT_PUBLIC_CNAME_TARGET || "cname.vercel-dns.com";
@@ -38,115 +39,6 @@ function getDisplayName(user: { firstName?: string | null; lastName?: string | n
 
 function getInitials(name: string): string {
   return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
-}
-
-function GoLiveButton({
-  customerId,
-  customerDomain,
-  onSuccess,
-  authHeaders,
-}: {
-  customerId: string;
-  customerDomain: string;
-  onSuccess: () => void;
-  authHeaders: () => Promise<HeadersInit>;
-}) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<"idle" | "queued" | "running" | "done">("idle");
-
-  useEffect(() => {
-    if (status !== "queued" && status !== "running") return;
-    let stopped = false;
-    const tick = async () => {
-      try {
-        const headers = { ...(await authHeaders()) };
-        const res = await fetch(`/api/customers/${customerId}/go-live`, {
-          method: "GET",
-          headers,
-          credentials: "include",
-          cache: "no-store",
-        });
-        if (!res.ok) return;
-        const json = (await res.json()) as {
-          customerStatus?: string;
-          job?: { status?: string; lastError?: string } | null;
-        };
-        const cs = String(json.customerStatus ?? "");
-        if (cs === "delivered") {
-          setStatus("done");
-          setLoading(false);
-          onSuccess();
-          window.open(`https://${customerDomain}`, "_blank");
-          return;
-        }
-        const js = String(json.job?.status ?? "");
-        if (js === "failed") {
-          setLoading(false);
-          setStatus("idle");
-          setError(json.job?.lastError ?? "Go live failed. Check your DNS and try again.");
-          return;
-        }
-        if (js === "running") setStatus("running");
-        else setStatus("queued");
-      } catch {
-        // ignore
-      }
-    };
-    tick();
-    const interval = setInterval(() => {
-      if (stopped) return;
-      tick();
-    }, 8_000);
-    return () => {
-      stopped = true;
-      clearInterval(interval);
-    };
-  }, [status, customerId, customerDomain]);
-
-  return (
-    <div className="mt-4 space-y-2">
-      <button
-        onClick={async () => {
-          setError(null);
-          setLoading(true);
-          try {
-            const headers = { "Content-Type": "application/json", ...(await authHeaders()) };
-            const res = await fetch(`/api/customers/${customerId}/go-live`, {
-              method: "POST",
-              headers,
-              credentials: "include",
-            });
-            const json = await res.json().catch(() => ({}));
-            if (!res.ok) {
-              throw new Error((json as { error?: string }).error ?? "Go live failed");
-            }
-            setStatus("queued");
-            setLoading(true);
-          } catch (e) {
-            setError(e instanceof Error ? e.message : "Go live failed");
-            setLoading(false);
-          } finally {
-            // no-op
-          }
-        }}
-        disabled={loading}
-        className="w-full px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-70 flex items-center justify-center gap-2"
-      >
-        {loading
-          ? status === "running"
-            ? "Attaching domain…"
-            : "Waiting for DNS…"
-          : "Go live — Add my domain"}
-      </button>
-      {error && <p className="text-sm text-destructive">{error}</p>}
-      {loading && !error && (
-        <p className="text-xs text-muted-foreground">
-          We’ll keep checking your DNS and attach your domain automatically once it propagates.
-        </p>
-      )}
-    </div>
-  );
 }
 
 function DashboardContent() {
@@ -555,6 +447,37 @@ function DashboardContent() {
     }
   };
 
+  const refreshDashboard = useCallback(async () => {
+    if (!canCallApi) return null;
+    const headers = await authHeaders();
+    const url = `/api/dashboard${orderId ? `?orderId=${encodeURIComponent(orderId)}` : ""}`;
+    const res = await fetch(url, { credentials: "include", cache: "no-store", headers: { ...headers } });
+    let json: unknown = null;
+    if (res.ok) {
+      json = await res.json();
+      setData(json as typeof data);
+    }
+    const h2 = await authHeaders();
+    const r2 = await fetch("/api/orders/me", { credentials: "include", headers: { ...h2 } });
+    if (r2.ok) setMyOrders(await r2.json());
+    return json;
+  }, [canCallApi, orderId, getToken]);
+
+  const handleGoLiveSuccess = useCallback(async () => {
+    const json = (await refreshDashboard()) as {
+      customer?: { subdomain?: string; domain?: string };
+    } | null;
+    const c = json?.customer;
+    if (c?.subdomain && c?.domain) {
+      setSuccessToast({
+        message: "Your chatbot is live!",
+        cta: "Visit your chat",
+        ctaHref: `https://${c.subdomain}.${c.domain}`,
+      });
+      setTimeout(() => setSuccessToast(null), 6000);
+    }
+  }, [refreshDashboard]);
+
   const copyCname = () => {
     const cname = `Type: CNAME\nHost: ${customer?.subdomain ?? "chat"}\nValue: ${PUBLIC_CNAME_TARGET}`;
     navigator.clipboard.writeText(cname).then(() => {
@@ -640,8 +563,8 @@ function DashboardContent() {
       const detail = goLiveJob?.lastError?.trim();
       setErrorToast(
         detail
-          ? `Go-live job failed: ${detail.slice(0, 220)}${detail.length > 220 ? "…" : ""} — check DNS or use “Go live” again.`
-          : "We couldn't attach your domain automatically. Check your CNAME and try “Go live” again."
+          ? `Go-live job failed: ${detail.slice(0, 220)}${detail.length > 220 ? "…" : ""} — check DNS or tap “Check DNS now” again.`
+          : "We couldn't attach your domain automatically. Check your CNAME and try “Check DNS now” again."
       );
       t = setTimeout(() => setErrorToast(null), 14_000);
     }
@@ -707,7 +630,7 @@ function DashboardContent() {
       configs.push({
         id: "dns_watching",
         title: "Watching your DNS",
-        body: "We check regularly for your CNAME. When it propagates, we attach chat.yourdomain to Vercel for you. You can still test from the dashboard or use “Go live” to retry.",
+        body: "We check regularly for your CNAME. When it propagates, we attach chat.yourdomain to Vercel for you. You can still use “Check DNS now” to retry verification.",
       });
     }
     if (isPaid && contentCount > 0 && isTestingOrLive && !isLive) {
@@ -867,6 +790,11 @@ function DashboardContent() {
     myOrders.find((o) => o.order.id === order?.id)?.estimatedPages ?? 25
   );
 
+  const chatbotCheckoutHref =
+    customer && order
+      ? `/checkout?plan=chatbot-2y&pages=${estimatedPageTotal}&url=${encodeURIComponent(customer.websiteUrl ?? "")}&orderId=${encodeURIComponent(order.id)}`
+      : "/checkout?plan=chatbot-2y&pages=25";
+
   const desktopNextAction = (() => {
     if (isWebsiteOrder) {
       if (!hasOrder) return "Choose a website package at checkout to get started.";
@@ -882,7 +810,7 @@ function DashboardContent() {
         : "We crawl automatically after payment — or press Build my chatbot below if you're still waiting.";
     }
     if (customerStatus === "dns_setup")
-      return "Open the Domain tab and add your CNAME — we attach chat.yourdomain on Vercel when DNS propagates.";
+      return "Add the CNAME below, then use Check DNS now — we attach chat.yourdomain on Vercel when DNS propagates.";
     if (customerStatus === "testing") return "DNS verified — finishing setup on your domain.";
     if (isLive) return "You're live — share your chat link with visitors.";
     return null;
@@ -1036,6 +964,101 @@ function DashboardContent() {
                 <span className="font-medium text-foreground">Next: </span>
                 {desktopNextAction}
               </p>
+            )}
+            {!isWebsiteOrder && hasOrder && customer && (
+              <div className="rounded-xl border border-border bg-card/70 p-4 shadow-sm space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Do this next</p>
+                {!isPaid && (
+                  <>
+                    <p className="text-sm text-foreground">Complete payment to unlock crawling and your custom domain.</p>
+                    <Link
+                      href={chatbotCheckoutHref}
+                      className="inline-flex w-full justify-center px-4 py-2.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:opacity-90"
+                    >
+                      Complete payment
+                    </Link>
+                  </>
+                )}
+                {isPaid && isLive && (
+                  <a
+                    href={`https://${customer.subdomain}.${customer.domain}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex w-full justify-center items-center gap-2 px-4 py-2.5 text-sm font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Open your chatbot
+                  </a>
+                )}
+                {isPaid && !isLive && contentCount === 0 && ["crawling", "indexing"].includes(customerStatus) && (
+                  <p className="text-sm text-muted-foreground">
+                    Training your site now — usually 2–8 minutes. We&apos;ll email you when it&apos;s ready.
+                  </p>
+                )}
+                {isPaid && !isLive && contentCount === 0 && !["crawling", "indexing"].includes(customerStatus) && (
+                  <>
+                    <p className="text-sm text-foreground">Run the first crawl to train your chatbot on your website.</p>
+                    <button
+                      type="button"
+                      onClick={handleCrawl}
+                      disabled={crawling}
+                      className="w-full px-4 py-2.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50"
+                    >
+                      {crawling ? "Starting…" : "Build my chatbot"}
+                    </button>
+                  </>
+                )}
+                {isPaid && !isLive && contentCount > 0 && customerStatus === "dns_setup" && (
+                  <>
+                    <p className="text-sm text-foreground">Add this CNAME at your DNS host, then verify it&apos;s propagating.</p>
+                    <pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto border border-border font-mono whitespace-pre-wrap">
+                      {`Host: ${customer.subdomain}\nValue: ${PUBLIC_CNAME_TARGET}`}
+                    </pre>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={copyCname}
+                        className="flex-1 min-w-[120px] px-3 py-2 text-sm border border-border rounded-lg hover:bg-muted"
+                      >
+                        {copied ? "Copied" : "Copy DNS record"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActivePanel("domains")}
+                        className="flex-1 min-w-[120px] px-3 py-2 text-sm border border-border rounded-lg hover:bg-muted"
+                      >
+                        Full instructions
+                      </button>
+                    </div>
+                    <GoLiveButton
+                      customerId={customer.id}
+                      customerDomain={`${customer.subdomain}.${customer.domain}`}
+                      onSuccess={handleGoLiveSuccess}
+                      authHeaders={authHeaders}
+                    />
+                  </>
+                )}
+                {isPaid && !isLive && contentCount > 0 && customerStatus === "testing" && (
+                  <p className="text-sm text-muted-foreground">
+                    DNS verified — finishing setup on your domain. This usually completes within a few minutes.
+                  </p>
+                )}
+                {isPaid &&
+                  !isLive &&
+                  contentCount > 0 &&
+                  !["dns_setup", "testing", "delivered"].includes(customerStatus) && (
+                    <>
+                      <p className="text-sm text-foreground">When you&apos;re ready, add your domain record in the Domain section.</p>
+                      <button
+                        type="button"
+                        onClick={() => setActivePanel("domains")}
+                        className="w-full px-4 py-2.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:opacity-90"
+                      >
+                        Set up domain
+                      </button>
+                    </>
+                  )}
+              </div>
             )}
             {isWebsiteOrder && isPaid && order?.status !== "delivered" && (
               <p className="text-xs text-muted-foreground border-t border-border/60 pt-2 md:border-0 md:pt-0 md:mt-1 leading-relaxed">
@@ -1621,12 +1644,9 @@ function DashboardContent() {
                     <GoLiveButton
                       customerId={customer.id}
                       customerDomain={`${customer.subdomain}.${customer.domain}`}
-                      onSuccess={() => {
-                        setData((d) => (d?.customer ? { ...d, customer: { ...d.customer, status: "delivered" } } : d));
-                        setSuccessToast({ message: "Your chatbot is live!", cta: "Visit your chat", ctaHref: `https://${customer.subdomain}.${customer.domain}` });
-                        setTimeout(() => setSuccessToast(null), 6000);
-                      }}
+                      onSuccess={handleGoLiveSuccess}
                       authHeaders={authHeaders}
+                      className="mt-4"
                     />
                   )}
                   {customer.status === "delivered" && (
@@ -1791,6 +1811,8 @@ function DashboardContent() {
             canRescan={canRescan}
             copied={copied}
             onCopyUrl={copyCname}
+            authHeaders={authHeaders}
+            onGoLiveSuccess={handleGoLiveSuccess}
           />
         ) : mobileScreen === "site-detail" && orderId ? (
           <div className="flex flex-col flex-1 items-center justify-center p-6">
