@@ -14,7 +14,7 @@
 - [x] **Milestone toasts** — poll-driven toasts for payment confirmed, first content indexed, go-live; manual crawl still syncs ref to avoid duplicate “content ready” toast.
 - [x] **Automation job panel** — Training shows `automationJobs` (crawl + go-live) with status labels and failed hint.
 - [x] **Failed job UX (baseline)** — toast on crawl/go-live `failed` with `lastError` snippet + dismiss.
-- [x] **Website-plan stepper** — two milestones (paid → site delivered); note under stepper + Training; mobile labels and 2-segment progress.
+- [x] **Website-plan stepper** — same 4 automated milestones as chatbot (crawl/DNS/live) with website-specific labels; copy matches Stripe `auto_crawl` + parallel email-led website build.
 - [x] **Checkout / thank-you** — plan on success URL; chatbot vs website copy with ETA and dashboard/email expectations.
 
 ### Backend (reliability & honesty)

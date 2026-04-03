@@ -529,7 +529,10 @@ function CheckoutContent() {
           <p className="text-xs text-muted-foreground mt-4">Hosting included. One-time payment. No monthly fees.</p>
           {isWebsitePlan && websitePlan ? (
             <p className="text-xs text-muted-foreground mt-2">
-              After payment, you&apos;ll get a confirmation page and we&apos;ll email you to kick off your website project. Create an account anytime to see this order on your dashboard.
+              After payment we automatically scan your current site for your AI assistant (same as chatbot orders—about{" "}
+              <span className="text-foreground font-medium">5–15 minutes</span>
+              ). We also email you to coordinate your new website design and build. Your dashboard shows crawl, DNS, and go-live
+              progress.
             </p>
           ) : (
             <p className="text-xs text-muted-foreground mt-2">

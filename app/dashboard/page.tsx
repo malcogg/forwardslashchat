@@ -422,13 +422,10 @@ function DashboardContent() {
 
   // After payment: poll until crawl finishes and (if applicable) status reaches delivered (DNS + auto go-live).
   useEffect(() => {
-    const isWebsiteOrder =
-      data?.order?.planSlug && ["starter", "new-build", "redesign"].includes(data.order.planSlug);
     const cust = data?.customer?.status ?? "";
     const shouldPoll =
       !!data?.order?.id &&
       data.order.status === "paid" &&
-      !isWebsiteOrder &&
       ((data?.contentCount ?? 0) === 0 || ["crawling", "dns_setup", "testing"].includes(cust));
     if (!shouldPoll) return;
     const currentOrderId = orderId ?? data.order.id;
@@ -459,7 +456,6 @@ function DashboardContent() {
   }, [
     orderId,
     data?.order?.id,
-    data?.order?.planSlug,
     data?.order?.status,
     data?.contentCount,
     data?.customer?.status,
@@ -575,7 +571,7 @@ function DashboardContent() {
   const isWebsiteOrder = order?.planSlug && ["starter", "new-build", "redesign"].includes(order.planSlug);
 
   useEffect(() => {
-    if (loading || error || !order?.id || !customer || isWebsiteOrder) return;
+    if (loading || error || !order?.id || !customer) return;
 
     const crawlJob = data?.automationJobs?.find((j) => j.dedupeKey === `auto_crawl_${order.id}`);
     const goLiveJob = data?.automationJobs?.find((j) => j.dedupeKey === `go_live_${customer.id}`);
@@ -601,8 +597,9 @@ function DashboardContent() {
     if (order.status === "paid" && r.orderStatus && r.orderStatus !== "paid") {
       setErrorToast(null);
       setSuccessToast({
-        message:
-          "Payment confirmed — we're training your chatbot automatically. This usually takes a few minutes. We'll email you when your content is ready.",
+        message: isWebsiteOrder
+          ? "Payment confirmed — we’re scanning your site and training your assistant automatically. Usually a few minutes; we’ll email you when content is ready."
+          : "Payment confirmed — we're training your chatbot automatically. This usually takes a few minutes. We'll email you when your content is ready.",
       });
       t = setTimeout(() => setSuccessToast(null), dismissMs);
     }
@@ -616,7 +613,7 @@ function DashboardContent() {
 
     if (customerStatus === "delivered" && r.customerStatus && r.customerStatus !== "delivered") {
       setSuccessToast({
-        message: "Your chatbot is live!",
+        message: isWebsiteOrder ? "Your assistant is live on your domain!" : "Your chatbot is live!",
         cta: "Visit chat",
         ctaHref: `https://${customer.subdomain}.${customer.domain}`,
       });
@@ -626,10 +623,13 @@ function DashboardContent() {
     if (crawlStatus === "failed" && r.crawlJobStatus !== "failed") {
       setSuccessToast(null);
       const detail = crawlJob?.lastError?.trim();
+      const retryHint = isWebsiteOrder
+        ? "Retry scan below or contact support if it keeps failing."
+        : "Use “Build my chatbot” to retry, or contact support if it keeps happening.";
       setErrorToast(
         detail
-          ? `Automatic training failed: ${detail.slice(0, 220)}${detail.length > 220 ? "…" : ""} — use “Build my chatbot” to retry.`
-          : "Automatic training failed. Use “Build my chatbot” to retry, or contact support if it keeps happening."
+          ? `Automatic scan failed: ${detail.slice(0, 220)}${detail.length > 220 ? "…" : ""} — ${retryHint}`
+          : `Automatic scan failed. ${retryHint}`
       );
       t = setTimeout(() => setErrorToast(null), 14_000);
     }
@@ -687,7 +687,11 @@ function DashboardContent() {
       configs.push({ id: "site_added", title: "You added a site", body: "Complete checkout to unlock your AI chatbot. We'll train it on your content and deploy it at chat.yourdomain.com." });
     }
     if (isWebsiteOrder && isPaid) {
-      configs.push({ id: "website_order", title: "Website order confirmed", body: "We've received your payment. We'll reach out soon to start planning your website project." });
+      configs.push({
+        id: "website_order",
+        title: "Website order confirmed",
+        body: "We've received your payment. We're automatically scanning your site for your AI assistant; we'll also email you to plan your website build.",
+      });
     }
     if (isPaid && contentCount === 0 && !isWebsiteOrder) {
       configs.push({ id: "payment_confirmed", title: "Payment confirmed", body: "We're building your chatbot automatically now. This usually takes a few minutes. If nothing happens after ~2 minutes, click “Build my chatbot” in Training." });
@@ -832,26 +836,22 @@ function DashboardContent() {
     redesign: "Website Redesign",
   };
 
-  /** Website SKUs are human-led; only payment + final delivery are meaningful milestones (no fake planning/design ticks). */
-  const STATUS_STEPS = isWebsiteOrder
-    ? [
-        {
-          key: "payment",
-          label: "Payment received",
-          done: ["paid", "processing", "delivered"].includes(order?.status ?? ""),
-        },
-        {
-          key: "delivered",
-          label: "Site delivered",
-          done: order?.status === "delivered",
-        },
-      ]
-    : [
-        { key: "payment", label: "Payment confirmed", done: ["paid", "processing", "delivered"].includes(order?.status ?? "") },
-        { key: "content", label: "Content & training", done: (contentCount ?? 0) > 0 || ["dns_setup", "testing", "delivered"].includes(customer?.status ?? "") },
-        { key: "dns", label: "DNS setup", done: ["testing", "delivered"].includes(customer?.status ?? "") },
-        { key: "live", label: "Chatbot live", done: customer?.status === "delivered" },
-      ];
+  /** Website + chatbot share the same automated crawl, DNS, and go-live jobs; labels differ slightly for website SKUs. */
+  const STATUS_STEPS = [
+    { key: "payment", label: "Payment confirmed", done: ["paid", "processing", "delivered"].includes(order?.status ?? "") },
+    {
+      key: "content",
+      label: isWebsiteOrder ? "Site scan & training" : "Content & training",
+      done:
+        (contentCount ?? 0) > 0 || ["dns_setup", "testing", "delivered"].includes(customer?.status ?? ""),
+    },
+    { key: "dns", label: "DNS setup", done: ["testing", "delivered"].includes(customer?.status ?? "") },
+    {
+      key: "live",
+      label: isWebsiteOrder ? "Assistant live" : "Chatbot live",
+      done: customer?.status === "delivered",
+    },
+  ];
 
   const stepperPendingIndex = STATUS_STEPS.findIndex((s) => !s.done);
   const stepperCurrentIndex = stepperPendingIndex === -1 ? STATUS_STEPS.length - 1 : stepperPendingIndex;
@@ -862,23 +862,31 @@ function DashboardContent() {
   );
 
   const desktopNextAction = (() => {
-    if (isWebsiteOrder) {
-      if (!hasOrder) return "Choose a package at checkout to get started.";
-      if (!isPaid) return "Complete payment — then we’ll email you to kick off your website project.";
-      if (order?.status === "delivered") return "Project marked complete. Reach out if you need anything else.";
-      return "Our team is on it — check email for kickoff and updates. This progress isn’t automated like the chatbot path.";
+    if (!hasOrder) {
+      return isWebsiteOrder
+        ? "Choose a website package at checkout to get started."
+        : "Scan your site or start checkout to build your AI chatbot.";
     }
-    if (!hasOrder) return "Scan your site or start checkout to build your AI chatbot.";
-    if (!isPaid) return "Complete payment to unlock crawling and custom-domain deployment.";
+    if (!isPaid) {
+      return isWebsiteOrder
+        ? "Complete payment — we’ll start the automated site scan and email you about your website project."
+        : "Complete payment to unlock crawling and custom-domain deployment.";
+    }
     if (contentCount === 0) {
       return customerStatus === "crawling"
-        ? "Crawling your site now — usually 2–8 minutes."
-        : "We crawl automatically after payment — or press Build my chatbot below if you're still waiting.";
+        ? "Scanning your site now — usually 2–8 minutes."
+        : isWebsiteOrder
+          ? "We scan automatically after payment — or press Run automated scan below if you’re still waiting."
+          : "We crawl automatically after payment — or press Build my chatbot below if you're still waiting.";
     }
     if (customerStatus === "dns_setup")
       return "Open the Domain tab and add your CNAME — we attach chat.yourdomain on Vercel when DNS propagates.";
     if (customerStatus === "testing") return "DNS verified — finishing setup on your domain.";
-    if (isLive) return "You're live — share your chat link with visitors.";
+    if (isLive) {
+      return isWebsiteOrder
+        ? "Your assistant is live — share the link. We’ll still email you about your website build milestones."
+        : "You're live — share your chat link with visitors.";
+    }
     return null;
   })();
 
@@ -1031,9 +1039,10 @@ function DashboardContent() {
                 {desktopNextAction}
               </p>
             )}
-            {isWebsiteOrder && isPaid && order?.status !== "delivered" && (
+            {isWebsiteOrder && isPaid && (
               <p className="text-xs text-muted-foreground border-t border-border/60 pt-2 md:border-0 md:pt-0 md:mt-1 leading-relaxed">
-                Website builds are coordinated by email—there are no crawl or DNS robots behind this order. You’ll hear from us directly.
+                Crawl, DNS, and go-live run automatically like chatbot orders. Your custom website work is coordinated by email
+                in parallel.
               </p>
             )}
           </div>
@@ -1359,8 +1368,116 @@ function DashboardContent() {
                     <div><span className="text-xs text-muted-foreground">Domain</span><p className="text-sm text-foreground">{customer?.domain ?? "—"}</p></div>
                     <div><span className="text-xs text-muted-foreground">Website</span><p className="text-sm text-foreground truncate">{customer?.websiteUrl ?? "—"}</p></div>
                   </div>
+                  {isPaid && (data?.automationJobs?.length ?? 0) > 0 && (
+                    <div className="rounded-lg border border-border bg-muted/25 p-3 space-y-2">
+                      <p className="text-xs font-semibold text-foreground uppercase tracking-wide">Automation status</p>
+                      <ul className="space-y-2">
+                        {(data?.automationJobs ?? []).map((job) => (
+                          <li
+                            key={job.dedupeKey ?? job.type}
+                            className="flex flex-wrap items-center justify-between gap-2 text-sm"
+                          >
+                            <span className="text-foreground">{automationJobLabel(job.dedupeKey)}</span>
+                            <span
+                              className={
+                                job.status === "failed"
+                                  ? "text-destructive font-medium"
+                                  : job.status === "running"
+                                    ? "text-amber-600 dark:text-amber-400 font-medium"
+                                    : job.status === "succeeded"
+                                      ? "text-emerald-600 dark:text-emerald-400"
+                                      : "text-muted-foreground"
+                              }
+                            >
+                              {job.status === "queued"
+                                ? "Queued"
+                                : job.status === "running"
+                                  ? "Running…"
+                                  : job.status === "succeeded"
+                                    ? "Complete"
+                                    : job.status === "failed"
+                                      ? "Failed"
+                                      : job.status}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                      {(data?.automationJobs ?? []).some((j) => j.status === "failed") && (
+                        <p className="text-xs text-muted-foreground pt-1 border-t border-border">
+                          Fix the issue above or retry from this page. We&apos;ll email you when major steps finish.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {isPaid && (
+                    <div className="rounded-xl border border-border bg-card/60 p-4 shadow-sm">
+                      <div className="flex justify-between text-xs text-muted-foreground mb-2">
+                        <span className="font-medium text-foreground">Pages indexed</span>
+                        <span>
+                          {contentCount} / {estimatedPageTotal}
+                        </span>
+                      </div>
+                      <div className="h-2.5 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-emerald-500 transition-[width] duration-500 ease-out"
+                          style={{
+                            width: `${Math.min(100, Math.round((contentCount / estimatedPageTotal) * 100))}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {customer &&
+                    isPaid &&
+                    (["content_collection", "crawling", "indexing"].includes(customer.status) ||
+                      (contentCount > 0 && ["dns_setup", "testing", "delivered"].includes(customer.status))) && (
+                      <div className="space-y-2">
+                        {lastCrawled && (
+                          <p className="text-xs text-muted-foreground">
+                            Last scanned: {lastCrawled.toLocaleDateString()}
+                            {isPaid && !canRescan && nextCrawlAvailable && (
+                              <span className="block">
+                                Rescan in {Math.ceil((nextCrawlAvailable.getTime() - Date.now()) / (24 * 60 * 60 * 1000))}{" "}
+                                days
+                              </span>
+                            )}
+                          </p>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handleCrawl}
+                          disabled={
+                            crawling ||
+                            (isPaid && !canRescan && contentCount > 0) ||
+                            (!!isPaid && contentCount === 0 && customer.status === "crawling")
+                          }
+                          className={`w-full px-4 py-2.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 transition-all ${crawling ? "animate-pulse" : ""}`}
+                        >
+                          {crawling
+                            ? "Scanning…"
+                            : !isPaid
+                              ? "Pay to scan"
+                              : contentCount
+                                ? canRescan
+                                  ? "Rescan site"
+                                  : "Rescan (7-day cooldown)"
+                                : customer.status === "crawling"
+                                  ? "Scan in progress…"
+                                  : isWebsiteOrder
+                                    ? "Run automated scan"
+                                    : "Build my chatbot"}
+                        </button>
+                        {(crawling || (isPaid && contentCount === 0)) && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            This typically takes 2–8 minutes. We&apos;ll email you when it&apos;s ready.
+                          </p>
+                        )}
+                        {crawlError && <p className="text-xs text-destructive mt-1">{crawlError}</p>}
+                      </div>
+                    )}
                   <p className="text-xs text-muted-foreground">
-                    We&apos;ll reach out by email to start your project. The steps at the top track payment and final delivery only—there&apos;s no auto crawl like chatbot orders.
+                    Your website design and launch are coordinated by our team over email—automated steps above power your AI
+                    assistant on your domain.
                   </p>
                   <p className="text-xs text-muted-foreground">
                     Questions?{" "}
@@ -1675,7 +1792,9 @@ function DashboardContent() {
                   ) : order?.status === "paid" || order?.status === "processing" ? (
                     <>
                       Status: <span className="text-foreground font-medium">In progress</span>
-                      <span className="block mt-1 text-muted-foreground font-normal">We coordinate by email—no automated crawl for this order.</span>
+                      <span className="block mt-1 text-muted-foreground font-normal">
+                        Automated assistant setup runs in parallel with your website project—we&apos;ll email you for both.
+                      </span>
                     </>
                   ) : (
                     <>

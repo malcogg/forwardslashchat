@@ -25,13 +25,8 @@ export type OrderRow = {
 export function getSiteStatusLabel(order: OrderRow["order"], customer: OrderRow["customer"] | undefined, contentCount: number): string {
   if (!customer) return "Payment";
   const isWebsite = order.planSlug && ["starter", "new-build", "redesign"].includes(order.planSlug);
-  if (isWebsite) {
-    if (order.status === "delivered") return "Delivered";
-    if (order.status === "processing") return "In progress";
-    if (order.status === "paid") return "In progress";
-    return "Awaiting payment";
-  }
-  if (customer.status === "delivered") return "Live";
+  if (isWebsite && order.status === "delivered") return "Delivered";
+  if (customer.status === "delivered") return isWebsite ? "Delivered" : "Live";
   if (["testing", "dns_setup"].includes(customer.status ?? "")) return "Domain Setup";
   if (contentCount > 0 || (customer.status && !["content_collection"].includes(customer.status))) return "Domain Setup";
   if (order.status === "paid") return "Training AI";
@@ -63,15 +58,13 @@ export function getPlanLabel(order: OrderRow["order"], estimatedPages: number): 
 
 export function getProgressSteps(order: OrderRow["order"], customer: OrderRow["customer"] | undefined, contentCount: number) {
   const isWebsite = order.planSlug && ["starter", "new-build", "redesign"].includes(order.planSlug);
-  if (isWebsite) {
-    return [
-      { key: "payment", label: "Paid", done: ["paid", "processing", "delivered"].includes(order.status ?? "") },
-      { key: "delivered", label: "Delivered", done: order.status === "delivered" },
-    ];
-  }
   return [
     { key: "payment", label: "Payment", done: ["paid", "processing", "delivered"].includes(order.status ?? "") },
-    { key: "content", label: "AI Training", done: contentCount > 0 || ["dns_setup", "testing", "delivered"].includes(customer?.status ?? "") },
+    {
+      key: "content",
+      label: isWebsite ? "Scan & train" : "AI Training",
+      done: contentCount > 0 || ["dns_setup", "testing", "delivered"].includes(customer?.status ?? ""),
+    },
     { key: "dns", label: "Domain Setup", done: ["testing", "delivered"].includes(customer?.status ?? "") },
     { key: "live", label: "Live", done: customer?.status === "delivered" },
   ];

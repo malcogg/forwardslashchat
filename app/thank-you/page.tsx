@@ -35,7 +35,11 @@ function ThankYouContent() {
           </h1>
           {isWebsiteOrder ? (
             <p className="text-muted-foreground mb-8">
-              We&apos;ve received your payment for your website project. Our team will reach out by email shortly to schedule discovery and next steps. You can still create an account to see your order on the dashboard.
+              We&apos;ve received your payment. We start an{" "}
+              <strong className="text-foreground font-medium">automated scan of your current site</strong> for your AI assistant
+              (usually about 5–15 minutes)—same flow as chatbot orders. Our team will also email you to coordinate your{" "}
+              <strong className="text-foreground font-medium">website design and build</strong>. Track automation on your dashboard
+              under Training.
             </p>
           ) : (
             <p className="text-muted-foreground mb-8">
@@ -50,7 +54,7 @@ function ThankYouContent() {
             </p>
             <p className="text-xs text-muted-foreground">
               {isWebsiteOrder
-                ? "Your dashboard shows this website order and our team will coordinate with you directly."
+                ? "You&apos;ll see crawl, DNS, and go-live status plus email updates for your website project."
                 : "You&apos;ll see automation status (crawl, DNS, go-live), in-dashboard messages, and the same steps we email you about."}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
