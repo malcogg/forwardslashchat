@@ -1,68 +1,63 @@
-# ForwardSlash.Chat — dashboard design system
+# ForwardSlash.Chat — dashboard design system (compact desktop)
 
-This document describes the visual language used on the **desktop dashboard** (≥1024px). It aligns with Tailwind CSS variables in `app/globals.css`, shadcn-style primitives in `components/ui/`, and 2026 SaaS patterns: clarity, whitespace, and one obvious primary action per view.
+Visual language for the **desktop dashboard** (≥1280px `xl` breakpoint). Goals: **low cognitive load**, **one pay/checkout path per screen**, and **dense but readable** layouts inspired by Linear / Vercel — not empty, but efficient.
 
-## Principles
+## Core principles
 
-- **One primary path** — Each card or section exposes a single dominant CTA; secondary actions are outline or ghost.
-- **Progress truth** — Step labels reflect *actual* state (e.g. “Complete payment” until paid, then “Payment received”).
-- **Preview as hero** — The live chat preview owns the right column (~55–60% width at `xl`) so customers see the product while they work through setup.
-- **Quiet chrome** — Surfaces use borders and soft backgrounds; avoid heavy gradients except for intentional emphasis (success, upsell).
+1. **Single dominant checkout action** — If the **Next step** card shows “Complete payment”, do not repeat full-width pay buttons in Training or a pulsing sidebar CTA for the same flow. Use at most one text link elsewhere (“Open cart” for multi-site bundles).
+2. **Compact vertical rhythm** — Stepper + context should fit in **~72–96px** total height (excluding borders). Prefer tighter `py-3` / `py-4` over `py-8`.
+3. **Work column first** — At `xl`, the **left** column is **~55–60%** for next step + panels; the **right** column is **~40–45%** for live preview (polished frame, not necessarily the widest column).
+4. **Status at a glance** — Crawled/pages use **pills** (`Badge`) or small inline stats, not large red numbers unless something is wrong.
+5. **Progress truth** — Step labels match state (“Complete payment” until paid, then “Payment received”).
 
-## Spacing
+## Spacing (compact)
 
-| Token / use        | Value                          |
-|--------------------|--------------------------------|
-| Page padding       | `px-6` header, `px-6`–`px-8` main |
-| Section gap        | `gap-6`–`gap-8` between major blocks |
-| Card padding       | `p-5`–`p-6`                    |
-| Stack inside cards | `space-y-3`–`space-y-4`        |
+| Use | Tailwind / value |
+|-----|------------------|
+| App header height | `h-12` (48px) |
+| Stepper strip | `py-3`, gap `gap-2` between step clusters |
+| Main column padding | `p-4 md:p-5 xl:p-6` |
+| Stack between cards | `space-y-4`–`space-y-5` (not `space-y-8`) |
+| Card internal | `p-4`, headers `pb-2` |
+| Sidebar | `w-56` expanded; nav `py-1.5` rows |
 
 ## Typography
 
-- **Page / panel titles** — `text-lg font-semibold tracking-tight text-foreground`
-- **Eyebrow / labels** — `text-[11px] font-semibold uppercase tracking-wider text-muted-foreground`
-- **Body** — `text-sm text-muted-foreground` with `leading-relaxed` for paragraphs
-- **Mono (DNS)** — `text-xs font-mono` in `bg-muted` wells
+- **Card title** — `text-base font-semibold tracking-tight`
+- **Eyebrow** — `text-[10px] uppercase tracking-wider text-muted-foreground font-semibold`
+- **Body** — `text-sm text-muted-foreground leading-snug` (avoid long paragraphs; prefer bullets or one line)
+- **Mono / DNS** — `text-xs font-mono` in `rounded-md bg-muted/80 px-2 py-1.5`
 
-Font stacks come from `tailwind.config.ts` (`font-sans`, `font-serif` for marketing only).
+## Surfaces
 
-## Color & surfaces
+- Cards: `rounded-lg border border-border/70 bg-card shadow-sm`
+- Subtle hover: `hover:border-border hover:shadow-md transition-shadow duration-200`
+- Primary CTA: `Button` default or `variant="cta"` (emerald) — **one per viewport region** (next card OR sidebar bundle, not both for the same intent)
 
-- Use semantic tokens: `background`, `foreground`, `card`, `border`, `muted`, `primary`, `destructive`.
-- **Success / live** — `emerald-600` / `emerald-500` for primary success buttons and completed step checkmarks.
-- **Cards** — `rounded-xl border border-border/80 bg-card shadow-sm` or `shadow-[0_1px_0_rgba(0,0,0,0.04)]` in light mode.
+## Stepper
+
+- Icon cells: `h-9 w-9 rounded-lg` (not `h-11` / heavy rings)
+- Connectors: `h-0.5`, `mt-[18px]` aligned to icon center
+- Current: small `text-[9px] uppercase text-primary` under label, or badge inline — avoid duplicating a full sentence below the whole stepper
+
+## Layout recap
+
+```
+[Header: logo · nav · PRO · bell · avatar]
+[Compact stepper row — full width, max-w-7xl]
+[Sidebar |  Work column (~58%)  |  Preview (~42%) ]
+```
 
 ## Components
 
-- **Buttons** — `components/ui/button.tsx` (`Button`): `default` for primary on-brand, `cta` / emerald for high-intent actions, `outline` for secondary, `ghost` for toolbar actions.
-- **Badge** — `components/ui/badge.tsx` for small status chips (e.g. “Training”, “DNS”).
-- **Card** — `components/ui/card.tsx` for “Next step”, settings blocks, and preview framing.
-
-## Layout (desktop dashboard)
-
-1. **Top bar** — Minimal app header (brand + dashboard label + notifications, theme, user). No decorative browser dots.
-2. **Stepper row** — Full width, max `max-w-7xl mx-auto`, horizontal steps with **icons**, connector lines, and clear current vs complete states.
-3. **Context line** — Single sentence under the stepper (“Next: …”) — no duplicate CTAs here.
-4. **Body** — Flex row:
-   - **Sidebar** (~15rem expanded): nav, scan sites, footer stats, collapse control. Background `bg-sidebar` / `border-sidebar-border`.
-   - **Work area** (~40–45% at `xl`): scrollable column with toasts, **Next step** card, then Training / Design / Domain content.
-   - **Preview** (remaining ~55–60% at `xl`): large framed widget, device toggles, optional demo conversation in `CustomerChat`.
-
-Below `xl`, preview stacks or shares space per existing `lg` rules.
-
-## Motion
-
-- Prefer CSS transitions on `colors`, `shadow`, `opacity` (150–200ms).
-- Keep Framer Motion for existing cart CTA pulse only unless expanding deliberately.
+- `components/ui/button.tsx`, `card.tsx`, `badge.tsx` — prefer `size="sm"` for secondary; `default`/`lg` for the single primary action in a card.
+- `DesktopStepper`, `DesktopNextStepCard` — tuned for compact spacing; copy stays short.
 
 ## Accessibility
 
-- Icon-only controls need `aria-label`.
-- Stepper steps should be readable in order; current step uses `aria-current="step"` where applicable.
-- Focus rings: `focus-visible:ring-2 focus-visible:ring-ring` (via `Button`).
+- Keep `aria-current="step"` on the active step.
+- Don’t remove focus rings; compact ≠ invisible focus.
 
-## Future
+## Mobile
 
-- Add `components/ui/separator.tsx` and `components/ui/tabs.tsx` if panels grow further.
-- Consider `scroll-area` for long DNS / log content.
+Unchanged shell (`md:hidden`); this doc applies to **`hidden md:flex`** desktop tree only.

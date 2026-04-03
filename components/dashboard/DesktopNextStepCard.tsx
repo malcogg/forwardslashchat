@@ -28,7 +28,6 @@ export type DesktopNextStepCardProps = {
   websiteCheckoutHref: string;
   copyCname: () => void;
   setActivePanel: (p: "training" | "design" | "domains") => void;
-  handleCrawl: () => void;
   handleGoLiveSuccess: () => void | Promise<void>;
   authHeaders: () => Promise<HeadersInit>;
   orderDelivered?: boolean;
@@ -48,7 +47,6 @@ export function DesktopNextStepCard({
   websiteCheckoutHref,
   copyCname,
   setActivePanel,
-  handleCrawl,
   handleGoLiveSuccess,
   authHeaders,
   orderDelivered,
@@ -58,11 +56,11 @@ export function DesktopNextStepCard({
   if (isWebsiteOrder) {
     const payHref = websiteCheckoutHref;
     return (
-      <Card className="border-border/80 shadow-[0_1px_0_rgba(0,0,0,0.04)] dark:shadow-none">
-        <CardHeader className="pb-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Current focus</p>
-          <CardTitle className="text-lg">Website project</CardTitle>
-          <CardDescription>
+      <Card className="rounded-lg border-border/70 shadow-sm">
+        <CardHeader className="p-4 pb-2 space-y-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Next</p>
+          <CardTitle className="text-base">Website project</CardTitle>
+          <CardDescription className="text-xs leading-snug">
             {!isPaid
               ? "Complete payment to confirm your website package. We’ll email you to schedule kickoff."
               : orderDelivered
@@ -71,8 +69,8 @@ export function DesktopNextStepCard({
           </CardDescription>
         </CardHeader>
         {!isPaid && (
-          <CardContent className="pt-0">
-            <Button asChild size="lg" className="w-full h-11 text-base font-semibold">
+          <CardContent className="p-4 pt-2">
+            <Button asChild className="w-full font-semibold">
               <Link href={payHref}>Complete payment</Link>
             </Button>
           </CardContent>
@@ -82,25 +80,25 @@ export function DesktopNextStepCard({
   }
 
   return (
-    <Card className="border-border/80 shadow-[0_1px_0_rgba(0,0,0,0.04)] dark:shadow-none">
-      <CardHeader className="pb-2">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Next step</p>
-        <CardTitle className="text-lg">Keep your chatbot moving</CardTitle>
+    <Card className="rounded-lg border-border/70 shadow-sm">
+      <CardHeader className="p-4 pb-2 space-y-1">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Next step</p>
+        <CardTitle className="text-base">Finish setup</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4 pt-0">
+      <CardContent className="space-y-3 p-4 pt-2">
         {!isPaid && (
           <>
-            <CardDescription>
-              Payment unlocks automatic crawling, training on your pages, and custom-domain deployment.
+            <CardDescription className="text-xs leading-snug">
+              One checkout unlocks crawl, training, and custom domain.
             </CardDescription>
-            <Button asChild size="lg" className="w-full h-11 text-base font-semibold">
+            <Button asChild className="w-full font-semibold">
               <Link href={chatbotCheckoutHref}>Complete payment</Link>
             </Button>
           </>
         )}
 
         {isPaid && isLive && (
-          <Button variant="cta" size="lg" className="w-full h-11 text-base font-semibold" asChild>
+          <Button variant="cta" className="w-full font-semibold" asChild>
             <a href={`https://${customer.subdomain}.${customer.domain}`} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-4 w-4" />
               Open your chatbot
@@ -109,43 +107,35 @@ export function DesktopNextStepCard({
         )}
 
         {isPaid && !isLive && contentCount === 0 && ["crawling", "indexing"].includes(customerStatus) && (
-          <div className="flex items-start gap-3 rounded-lg border border-border/80 bg-muted/40 px-4 py-3">
-            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-500 animate-pulse" aria-hidden />
+          <div className="flex items-start gap-2.5 rounded-md border border-border/80 bg-muted/40 px-3 py-2.5">
+            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500 animate-pulse" aria-hidden />
             <div>
               <p className="text-sm font-medium text-foreground">Training in progress</p>
-              <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                Usually 2–8 minutes. We&apos;ll email you when your content is ready — no action needed right now.
-              </p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-snug">~2–8 min. We&apos;ll email when ready.</p>
             </div>
           </div>
         )}
 
         {isPaid && !isLive && contentCount === 0 && !["crawling", "indexing"].includes(customerStatus) && (
-          <>
-            <CardDescription>
-              Start the first crawl so we can index your site and train your assistant.
-            </CardDescription>
-            <Button size="lg" className="w-full h-11 text-base font-semibold" onClick={handleCrawl} disabled={crawling}>
-              {crawling ? "Starting…" : "Build my chatbot"}
-            </Button>
-          </>
+          <CardDescription className="text-xs leading-snug">
+            Start in <strong className="text-foreground font-medium">Training</strong> — use &quot;Build my chatbot&quot; below.
+          </CardDescription>
         )}
 
         {isPaid && !isLive && contentCount > 0 && customerStatus === "dns_setup" && (
           <>
-            <CardDescription>
-              Add this CNAME at your DNS provider. When it propagates, tap the button and we&apos;ll attach your domain on
-              Vercel.
+            <CardDescription className="text-xs leading-snug">
+              Add CNAME at your DNS host, then verify.
             </CardDescription>
-            <pre className="rounded-lg border border-border bg-muted/60 px-3 py-3 text-xs font-mono text-foreground whitespace-pre-wrap leading-relaxed">
+            <pre className="rounded-md border border-border bg-muted/60 px-2.5 py-2 text-[11px] font-mono text-foreground whitespace-pre-wrap leading-relaxed">
               {`Host: ${customer.subdomain}\nTarget: ${PUBLIC_CNAME_TARGET}`}
             </pre>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" className="flex-1 min-w-[140px]" onClick={copyCname}>
-                {copied ? "Copied" : "Copy DNS record"}
+              <Button type="button" variant="outline" size="sm" className="flex-1 min-w-[120px]" onClick={copyCname}>
+                {copied ? "Copied" : "Copy DNS"}
               </Button>
-              <Button type="button" variant="outline" className="flex-1 min-w-[140px]" onClick={() => setActivePanel("domains")}>
-                Full instructions
+              <Button type="button" variant="outline" size="sm" className="flex-1 min-w-[120px]" onClick={() => setActivePanel("domains")}>
+                Details
               </Button>
             </div>
             <GoLiveButton
@@ -158,13 +148,11 @@ export function DesktopNextStepCard({
         )}
 
         {isPaid && !isLive && contentCount > 0 && customerStatus === "testing" && (
-          <div className="flex items-start gap-3 rounded-lg border border-border/80 bg-muted/40 px-4 py-3">
-            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-emerald-500 animate-pulse" aria-hidden />
+          <div className="flex items-start gap-2.5 rounded-md border border-border/80 bg-muted/40 px-3 py-2.5">
+            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500 animate-pulse" aria-hidden />
             <div>
-              <p className="text-sm font-medium text-foreground">Finishing domain setup</p>
-              <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                DNS is verified. We&apos;re completing SSL and routing — typically a few minutes.
-              </p>
+              <p className="text-sm font-medium text-foreground">Finishing SSL</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-snug">DNS OK — routing updates in a few minutes.</p>
             </div>
           </div>
         )}
@@ -174,9 +162,9 @@ export function DesktopNextStepCard({
           contentCount > 0 &&
           !["dns_setup", "testing", "delivered"].includes(customerStatus) && (
             <>
-              <CardDescription>Open the Domain section when you&apos;re ready to add your CNAME and go live.</CardDescription>
-              <Button size="lg" className="w-full h-11 text-base font-semibold" onClick={() => setActivePanel("domains")}>
-                Set up domain
+              <CardDescription className="text-xs leading-snug">Add your domain record when ready.</CardDescription>
+              <Button className="w-full font-semibold" onClick={() => setActivePanel("domains")}>
+                Open Domain
               </Button>
             </>
           )}

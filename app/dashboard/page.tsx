@@ -45,6 +45,7 @@ import { GoLiveButton } from "@/components/dashboard/GoLiveButton";
 import { DesktopStepper } from "@/components/dashboard/DesktopStepper";
 import { DesktopNextStepCard } from "@/components/dashboard/DesktopNextStepCard";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 const PUBLIC_CNAME_TARGET =
   process.env.NEXT_PUBLIC_CNAME_TARGET || "cname.vercel-dns.com";
@@ -845,27 +846,6 @@ function DashboardContent() {
       ? `/checkout?plan=${order.planSlug}&url=${encodeURIComponent(customer.websiteUrl ?? "")}&orderId=${encodeURIComponent(order.id)}`
       : "/checkout?plan=starter&pages=25";
 
-  const desktopNextAction = (() => {
-    if (isWebsiteOrder) {
-      if (!hasOrder) return "Choose a website package at checkout to get started.";
-      if (!isPaid) return "Complete payment — we’ll email you to kick off your website project.";
-      if (order?.status === "delivered") return "Project marked complete. Reach out if you need anything else.";
-      return "We’re preparing your website build — watch your inbox for next steps.";
-    }
-    if (!hasOrder) return "Scan your site or start checkout to build your AI chatbot.";
-    if (!isPaid) return "Finish checkout — then we’ll crawl your site and deploy to your domain.";
-    if (contentCount === 0) {
-      return customerStatus === "crawling"
-        ? "Crawling your site now — usually 2–8 minutes."
-        : "We crawl automatically after payment — or press Build my chatbot below if you're still waiting.";
-    }
-    if (customerStatus === "dns_setup")
-      return "Add the CNAME below, then use Check DNS now — we attach chat.yourdomain on Vercel when DNS propagates.";
-    if (customerStatus === "testing") return "DNS verified — finishing setup on your domain.";
-    if (isLive) return "You're live — share your chat link with visitors.";
-    return null;
-  })();
-
   const handleSaveBranding = async () => {
     const c = data?.customer;
     if (!c) return;
@@ -895,13 +875,17 @@ function DashboardContent() {
 
   return (
     <main className="min-h-screen bg-background">
-      {/* Desktop layout - hidden on mobile */}
+      {/*
+        Desktop (md+): compact shell — short header, dense stepper strip, slim sidebar, then
+        xl: two columns (~58% work / ~42% live preview). One checkout CTA when unpaid (Next step card);
+        sidebar bundle CTA hidden on that screen to reduce noise. Training holds crawl/rescan only after pay.
+      */}
       <div className="hidden md:flex md:flex-col md:h-screen md:max-h-[100dvh] overflow-hidden">
       {/* App header */}
-      <div className="flex items-center justify-between h-14 px-6 xl:px-8 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shrink-0">
-        <div className="flex items-center gap-3 min-w-0">
-          <span className="text-sm font-semibold tracking-tight text-foreground truncate">ForwardSlash</span>
-          <span className="hidden sm:inline text-xs text-muted-foreground font-medium truncate">Dashboard</span>
+      <div className="flex items-center justify-between h-12 px-4 sm:px-6 xl:px-8 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-sm font-semibold tracking-tight text-foreground truncate">ForwardSlash.Chat</span>
+          <span className="hidden sm:inline text-[11px] text-muted-foreground font-medium truncate">Dashboard</span>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <Link href="/" className="text-xs text-muted-foreground hover:text-foreground hidden sm:inline">
@@ -965,22 +949,13 @@ function DashboardContent() {
       </div>
 
       {hasOrder && (
-        <div className="shrink-0 border-b border-border/80 bg-muted/20">
-          <div className="py-6 md:py-8 space-y-5">
+        <div className="shrink-0 border-b border-border/80 bg-muted/15">
+          <div className="py-3 md:py-3.5 space-y-2">
             <DesktopStepper steps={DESKTOP_STEPPER_STEPS} currentIndex={stepperCurrentIndex} />
-            {desktopNextAction && (
-              <div className="max-w-7xl mx-auto px-6 xl:px-8">
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  <span className="font-medium text-foreground">Current focus — </span>
-                  {desktopNextAction}
-                </p>
-              </div>
-            )}
             {isWebsiteOrder && isPaid && order?.status !== "delivered" && (
-              <div className="max-w-7xl mx-auto px-6 xl:px-8">
-                <p className="text-xs text-muted-foreground leading-relaxed border-t border-border/60 pt-4">
-                  This order is for our website-builder service — not the automated AI chatbot pipeline. We&apos;ll coordinate
-                  your project by email.
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 xl:px-8">
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  Website-builder order — we&apos;ll coordinate by email (not the automated chatbot pipeline).
                 </p>
               </div>
             )}
@@ -992,10 +967,10 @@ function DashboardContent() {
         {/* Sidebar - collapsible on desktop, hidden on mobile */}
         <aside
           className={`hidden md:flex border-r border-sidebar-border bg-sidebar flex-col shrink-0 transition-[width] duration-200 ${
-            sidebarCollapsed ? "w-16 p-2" : "w-60 p-4"
+            sidebarCollapsed ? "w-14 p-2" : "w-56 p-3"
           }`}
         >
-          <div className={`flex items-center gap-2 mb-6 ${sidebarCollapsed ? "justify-center" : ""}`}>
+          <div className={`flex items-center gap-2 mb-4 ${sidebarCollapsed ? "justify-center" : ""}`}>
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
               <span className="text-primary-foreground text-xs font-medium">{initials}</span>
             </div>
@@ -1138,7 +1113,7 @@ function DashboardContent() {
                 <p className="text-xs font-semibold text-foreground mt-0.5">Web design & marketing</p>
                 <p className="text-[10px] text-muted-foreground mt-1">Full overhauls for local businesses →</p>
               </button>
-              <div className="pt-6 border-t border-border mt-4">
+              <div className="pt-4 border-t border-border mt-3">
                 {(() => {
                   const hasPaidOrder = myOrders.some((o) => o.order.status === "paid");
                   const totalPages = myOrders.reduce((s, o) => s + (o.estimatedPages ?? 25), 0);
@@ -1148,32 +1123,37 @@ function DashboardContent() {
                     .reduce((s, o) => s + (o.estimatedPages ?? 25), 0);
                   const cartPrice = getPriceFromPagesAndYears(selectedPages, 2);
                   const hasSites = myOrders.length > 0;
+                  const viewingUnpaidChatbotOrder = !!(order && customer && !isPaid && !isWebsiteOrder);
                   return (
                     <>
-                      <div className="text-xs text-muted-foreground">Content pages</div>
-                      <div className="text-sm font-medium text-red-500 dark:text-red-400">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Pages</p>
+                      <Badge
+                        variant="outline"
+                        className={`mt-1.5 tabular-nums text-xs font-medium ${
+                          totalCrawled > 0 ? "border-emerald-500/40 text-emerald-800 dark:text-emerald-400" : "text-muted-foreground"
+                        }`}
+                      >
                         {totalCrawled} / {totalPages > 0 ? totalPages : "—"} crawled
-                      </div>
-                      {hasSites && !hasPaidOrder && (
-                        <motion.button
+                      </Badge>
+                      {hasSites && !hasPaidOrder && !viewingUnpaidChatbotOrder && (
+                        <Button
+                          type="button"
+                          variant="cta"
+                          size="sm"
+                          className="w-full mt-3 font-semibold shadow-sm hover:shadow-md transition-shadow"
+                          onClick={openCartModal}
+                        >
+                          Bundle all sites — ${cartPrice?.toLocaleString() ?? "—"}
+                        </Button>
+                      )}
+                      {hasSites && !hasPaidOrder && viewingUnpaidChatbotOrder && (
+                        <button
                           type="button"
                           onClick={openCartModal}
-                          className="w-full mt-3 flex items-center justify-center gap-2 rounded-xl py-3 px-4 text-sm font-semibold text-white overflow-hidden"
-                          style={{
-                            background: "linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%)",
-                            boxShadow: "0 0 24px rgba(16,185,129,0.4)",
-                          }}
-                          animate={{
-                            boxShadow: [
-                              "0 0 24px rgba(16,185,129,0.4)",
-                              "0 0 40px rgba(16,185,129,0.6)",
-                              "0 0 24px rgba(16,185,129,0.4)",
-                            ],
-                          }}
-                          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                          className="mt-3 w-full text-left text-[11px] text-primary font-medium hover:underline"
                         >
-                          <span>Get AI chatbot for all — ${cartPrice?.toLocaleString() ?? "—"}</span>
-                        </motion.button>
+                          Multiple sites? Open bundle checkout →
+                        </button>
                       )}
                     </>
                   );
@@ -1199,12 +1179,12 @@ function DashboardContent() {
         </aside>
 
         <div className="flex flex-1 min-h-0 min-w-0 flex-col xl:flex-row">
-        {/* Work area: actions & panels (~40% width at xl); preview is the hero column */}
+        {/* Work area ~58% at xl — compact cards + panels; preview ~42% */}
         <div
-          className={`flex flex-col min-h-0 min-w-0 overflow-hidden border-b xl:border-b-0 xl:border-r border-border/80 bg-background/50 xl:w-[42%] xl:max-w-2xl xl:shrink-0 flex-1 xl:flex-none ${mobileView === "preview" ? "max-md:hidden" : ""}`}
+          className={`flex flex-col min-h-0 min-w-0 overflow-hidden border-b xl:border-b-0 xl:border-r border-border/80 bg-background/50 xl:w-[58%] xl:max-w-3xl xl:shrink-0 flex-1 xl:flex-none ${mobileView === "preview" ? "max-md:hidden" : ""}`}
         >
           {successToast && (
-            <div className="flex items-center justify-between gap-4 p-4 bg-emerald-500/15 border-b border-emerald-500/30 shrink-0">
+            <div className="flex items-center justify-between gap-3 p-3 bg-emerald-500/15 border-b border-emerald-500/30 shrink-0">
               <p className="text-sm font-medium text-foreground flex items-center gap-2">
                 <Check className="w-4 h-4 text-emerald-600 shrink-0" />
                 {successToast.message}
@@ -1225,7 +1205,7 @@ function DashboardContent() {
             </div>
           )}
           {errorToast && (
-            <div className="flex items-center justify-between gap-4 p-4 bg-destructive/10 border-b border-destructive/30 shrink-0">
+            <div className="flex items-center justify-between gap-3 p-3 bg-destructive/10 border-b border-destructive/30 shrink-0">
               <p className="text-sm font-medium text-foreground pr-2">{errorToast}</p>
               <button
                 type="button"
@@ -1237,7 +1217,7 @@ function DashboardContent() {
               </button>
             </div>
           )}
-          <div className={`flex-1 overflow-y-auto max-md:pb-24 ${activePanel === "domains" ? "p-6" : "p-5 md:p-6 xl:p-8"} space-y-8`}>
+          <div className={`flex-1 overflow-y-auto max-md:pb-24 ${activePanel === "domains" ? "p-5" : "p-4 md:p-5 xl:p-6"} space-y-5`}>
           {hasOrder && customer && (
             <DesktopNextStepCard
               isWebsiteOrder={!!isWebsiteOrder}
@@ -1253,7 +1233,6 @@ function DashboardContent() {
               websiteCheckoutHref={websiteCheckoutHref}
               copyCname={copyCname}
               setActivePanel={setActivePanel}
-              handleCrawl={handleCrawl}
               handleGoLiveSuccess={handleGoLiveSuccess}
               authHeaders={authHeaders}
               orderDelivered={order?.status === "delivered"}
@@ -1261,26 +1240,32 @@ function DashboardContent() {
           )}
           {activePanel === "training" && (
             <>
-              {hasOrder && !isPaid && contentCount > 0 && !isWebsiteOrder && (
-                <div className="mb-6 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-                  <p className="text-sm font-medium text-foreground mb-1">Scraping complete! We have {contentCount} pages of data ready.</p>
-                  <p className="text-sm text-muted-foreground mb-3">Payment unlocks full training of your custom AI chatbot. We use your scraped data to fine-tune and deploy a ready-to-use chatbot at chat.yourdomain.com.</p>
-                  <Link
-                    href={`/checkout?plan=chatbot-2y&pages=25&url=${encodeURIComponent(customer?.websiteUrl ?? "")}&orderId=${encodeURIComponent(order?.id ?? "")}`}
-                    className="inline-block px-4 py-2 text-sm font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-opacity"
-                  >
-                    Pay to unlock training →
-                  </Link>
+              <div className="flex flex-wrap items-start justify-between gap-3 mb-1">
+                <div>
+                  <h2 className="text-base font-semibold text-foreground tracking-tight">Training</h2>
+                  <p className="text-xs text-muted-foreground mt-1 leading-snug max-w-md">
+                    {hasOrder && !isPaid && !isWebsiteOrder
+                      ? "Pay in Next step — then run your first crawl here."
+                      : "Crawl your site and train the assistant on your pages."}
+                  </p>
+                </div>
+                {hasOrder && customer && !isWebsiteOrder && (
+                  <Badge variant="outline" className="shrink-0 tabular-nums text-[11px] font-medium text-muted-foreground">
+                    {contentCount} / {estimatedPageTotal} pages
+                  </Badge>
+                )}
+              </div>
+              {customer && !isWebsiteOrder && hasOrder && !isPaid && contentCount > 0 && (
+                <div className="mb-4 rounded-md border border-emerald-500/25 bg-emerald-500/[0.06] px-3 py-2 text-xs leading-snug">
+                  <span className="font-medium text-foreground">{contentCount} pages indexed</span>
+                  <span className="text-muted-foreground"> — complete payment in Next step to train.</span>
                 </div>
               )}
-              <div className="mb-2">
-                <h2 className="text-lg font-semibold text-foreground tracking-tight">Training</h2>
-                <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
-                  {hasOrder && !isPaid && !isWebsiteOrder
-                    ? "After you pay, we’ll crawl your site and train your assistant. Use the Next step card above to check out."
-                    : "Crawl your site and train the chatbot on your content."}
+              {customer && !isWebsiteOrder && hasOrder && !isPaid && contentCount === 0 && (
+                <p className="text-xs text-muted-foreground mb-4 leading-snug">
+                  Complete payment in <strong className="text-foreground font-medium">Next step</strong>, then start your crawl below.
                 </p>
-              </div>
+              )}
 
               {!hasOrder ? (
                 <div className="space-y-4">
@@ -1408,13 +1393,16 @@ function DashboardContent() {
                     </div>
                   )}
                   {customer &&
+                    !isWebsiteOrder &&
+                    hasOrder &&
+                    isPaid &&
                     (["content_collection", "crawling", "indexing"].includes(customer.status) ||
                       (contentCount > 0 && ["dns_setup", "testing", "delivered"].includes(customer.status))) && (
                       <div className="space-y-2">
                         {lastCrawled && (
                           <p className="text-xs text-muted-foreground">
                             Last scanned: {lastCrawled.toLocaleDateString()}
-                            {isPaid && !canRescan && nextCrawlAvailable && (
+                            {!canRescan && nextCrawlAvailable && contentCount > 0 && (
                               <span className="block">
                                 Rescan in {Math.ceil((nextCrawlAvailable.getTime() - Date.now()) / (24 * 60 * 60 * 1000))}{" "}
                                 days
@@ -1422,39 +1410,30 @@ function DashboardContent() {
                             )}
                           </p>
                         )}
-                        {!isPaid && hasOrder && !isWebsiteOrder ? (
-                          <Button variant="outline" size="lg" className="w-full h-11 font-medium border-border/80" asChild>
-                            <Link href={chatbotCheckoutHref}>Continue to checkout</Link>
-                          </Button>
-                        ) : (
-                          <Button
-                            type="button"
-                            variant={isPaid ? "default" : "secondary"}
-                            size="lg"
-                            className={`w-full h-11 font-semibold ${crawling ? "animate-pulse" : ""}`}
-                            onClick={handleCrawl}
-                            disabled={
-                              crawling ||
-                              (isPaid && !canRescan && contentCount > 0) ||
-                              (!!isPaid && contentCount === 0 && customer.status === "crawling")
-                            }
-                          >
-                            {crawling
-                              ? "Crawling…"
-                              : !isPaid
-                                ? "Pay to scan"
-                                : contentCount
-                                  ? canRescan
-                                    ? "Rescan site"
-                                    : "Rescan (7-day cooldown)"
-                                  : customer.status === "crawling"
-                                    ? "Building (in progress)…"
-                                    : "Build my chatbot"}
-                          </Button>
-                        )}
-                        {(crawling || (isPaid && contentCount === 0)) && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            This typically takes 2–8 minutes. We&apos;ll email you when it&apos;s ready.
+                        <Button
+                          type="button"
+                          variant="default"
+                          className={`w-full font-semibold ${crawling ? "animate-pulse" : ""}`}
+                          onClick={handleCrawl}
+                          disabled={
+                            crawling ||
+                            (!canRescan && contentCount > 0) ||
+                            (contentCount === 0 && customer.status === "crawling")
+                          }
+                        >
+                          {crawling
+                            ? "Crawling…"
+                            : contentCount
+                              ? canRescan
+                                ? "Rescan site"
+                                : "Rescan (7-day cooldown)"
+                              : customer.status === "crawling"
+                                ? "Building…"
+                                : "Build my chatbot"}
+                        </Button>
+                        {(crawling || contentCount === 0) && (
+                          <p className="text-xs text-muted-foreground mt-1 leading-snug">
+                            Usually 2–8 minutes. We&apos;ll email when ready.
                           </p>
                         )}
                         {crawlError && <p className="text-xs text-destructive mt-1">{crawlError}</p>}
@@ -1467,8 +1446,8 @@ function DashboardContent() {
 
           {activePanel === "design" && (
             <>
-              <div className="mb-8 pb-2 border-b border-border/60">
-                <h2 className="text-lg font-semibold text-foreground tracking-tight">Branding</h2>
+              <div className="mb-5 pb-2 border-b border-border/60">
+                <h2 className="text-base font-semibold text-foreground tracking-tight">Branding</h2>
                 <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
                   Changes show in the live preview — adjust accent color to match your brand.
                 </p>
@@ -1641,9 +1620,9 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* Chat preview — hero column on xl */}
+        {/* Live preview — right column, framed widget */}
         <div
-          className={`flex-1 min-h-0 min-w-0 flex flex-col p-4 md:p-6 xl:p-8 xl:pl-6 bg-gradient-to-br from-muted/15 via-background to-muted/25 max-md:pb-24 ${
+          className={`flex-1 min-h-0 min-w-0 flex flex-col p-4 md:p-5 xl:p-6 bg-gradient-to-br from-muted/10 via-background to-muted/20 max-md:pb-24 ${
             mobileView === "preview" ? "max-md:flex" : "max-md:hidden"
           }`}
         >
@@ -1680,11 +1659,11 @@ function DashboardContent() {
           ) : customer ? (
             <div className="flex-1 flex flex-col min-h-0 min-w-0">
               {/* Device view toggle + preview frame */}
-              <div className="flex items-start justify-between gap-4 mb-4 xl:mb-6 shrink-0">
+              <div className="flex items-start justify-between gap-3 mb-3 shrink-0">
                 <div>
                   <h2 className="text-base font-semibold text-foreground tracking-tight">Live preview</h2>
-                  <p className="text-sm text-muted-foreground mt-1 max-w-md leading-relaxed">
-                    Your branded chat widget — sample conversation below. Try sending a message like a visitor would.
+                  <p className="text-xs text-muted-foreground mt-0.5 max-w-sm leading-snug">
+                    Branded widget + sample thread — send a message to try it.
                   </p>
                 </div>
                 <div className="flex items-center gap-0.5 p-1 rounded-xl bg-muted/50 border border-border/80 shadow-sm shrink-0">
