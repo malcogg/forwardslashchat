@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { customers, orders, stripeEvents, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { enqueueJob } from "@/lib/jobs";
+import { isChatbotPlan, type CheckoutPlanSlug } from "@/lib/checkout-pricing";
 import { addRescanCredits } from "@/lib/credit-balance";
 
 /**
@@ -113,31 +114,38 @@ export async function POST(request: Request) {
       .set({ orderId })
       .where(eq(stripeEvents.eventId, event.id));
 
+    const [orderRow] = await db.select().from(orders).where(eq(orders.id, orderId));
+
     let notifyForJob = notifyEmail;
-    if (!notifyForJob) {
-      const [orderRow] = await db.select().from(orders).where(eq(orders.id, orderId));
-      if (orderRow?.userId) {
-        const [u] = await db.select().from(users).where(eq(users.id, orderRow.userId));
-        notifyForJob = u?.email ?? undefined;
-      }
+    if (!notifyForJob && orderRow?.userId) {
+      const [u] = await db.select().from(users).where(eq(users.id, orderRow.userId));
+      notifyForJob = u?.email ?? undefined;
     }
 
-    // Auto-fulfillment: enqueue background crawl/build (deduped by orderId)
-    try {
-      const [customer] = await db.select().from(customers).where(eq(customers.orderId, orderId));
-      if (customer) {
-        await enqueueJob({
-          type: "auto_crawl_customer",
-          dedupeKey: `auto_crawl_${orderId}`,
-          payload: {
-            orderId,
-            customerId: customer.id,
-            notifyEmail: notifyForJob ?? null,
-          },
-        });
+    // AI chatbot plans only: hands-off crawl → train → DNS/go-live pipeline. Website-builder SKUs are a separate product.
+    const planSlug = orderRow?.planSlug ?? "";
+    const isChatbotCheckout =
+      typeof planSlug === "string" &&
+      planSlug.length > 0 &&
+      isChatbotPlan(planSlug as CheckoutPlanSlug);
+
+    if (isChatbotCheckout) {
+      try {
+        const [customer] = await db.select().from(customers).where(eq(customers.orderId, orderId));
+        if (customer) {
+          await enqueueJob({
+            type: "auto_crawl_customer",
+            dedupeKey: `auto_crawl_${orderId}`,
+            payload: {
+              orderId,
+              customerId: customer.id,
+              notifyEmail: notifyForJob ?? null,
+            },
+          });
+        }
+      } catch (e) {
+        console.error("[stripe webhook] enqueue auto crawl failed:", e);
       }
-    } catch (e) {
-      console.error("[stripe webhook] enqueue auto crawl failed:", e);
     }
   }
 

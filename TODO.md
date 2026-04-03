@@ -2,6 +2,7 @@
 - **Owner**: `FS` (full-stack), `BE`, `FE`, `Ops`
 - **Improve existing** = ship on current architecture
 - **Automation + new** = expand pipeline / infra
+- **Product split:** **AI chatbot** plans (`starter-bot`, `chatbot-1y`, `chatbot-2y`) = hands-off automation (Stripe webhook → `auto_crawl` → jobs → DNS/go-live). **Website-builder** SKUs (`starter`, `new-build`, `redesign`) = separate service; no auto-crawl enqueue from webhook.
 
 ---
 

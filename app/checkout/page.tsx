@@ -529,10 +529,9 @@ function CheckoutContent() {
           <p className="text-xs text-muted-foreground mt-4">Hosting included. One-time payment. No monthly fees.</p>
           {isWebsitePlan && websitePlan ? (
             <p className="text-xs text-muted-foreground mt-2">
-              After payment we automatically scan your current site for your AI assistant (same as chatbot orders—about{" "}
-              <span className="text-foreground font-medium">5–15 minutes</span>
-              ). We also email you to coordinate your new website design and build. Your dashboard shows crawl, DNS, and go-live
-              progress.
+              After payment, we&apos;ll email you to start your website project. For a{" "}
+              <span className="text-foreground font-medium">fully automated AI chatbot</span> trained on your site and hosted at
+              chat.yourdomain.com, use the chatbot plans instead.
             </p>
           ) : (
             <p className="text-xs text-muted-foreground mt-2">
