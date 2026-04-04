@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { DashboardMockup } from "@/components/landing/DashboardMockup";
 import { LIMITS, sanitizeWebsiteUrl, isValidUrl } from "@/lib/validation";
@@ -85,9 +86,9 @@ export function HeroSection({ onScanClick }: HeroSectionProps) {
             We scan your site, train a custom AI on your content, and deploy it at chat.yourdomain.com. One upfront payment. Hosting included.
           </p>
 
-          <div className="mt-8 max-w-xl mx-auto">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1 relative">
+          <div className="mt-8 max-w-2xl mx-auto">
+            <div className="flex flex-col lg:flex-row gap-3 lg:items-end">
+              <div className="flex-1 min-w-0 relative">
                 <input
                   ref={inputRef}
                   type="url"
@@ -110,16 +111,23 @@ export function HeroSection({ onScanClick }: HeroSectionProps) {
                   ))}
                 </datalist>
               </div>
-              <Button
-                variant="cta"
-                size="lg"
-                onClick={handleScan}
-                className="shrink-0"
-              >
-                Scan your site
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full lg:w-auto">
+                <Button variant="cta" size="lg" onClick={handleScan} className="w-full sm:w-auto shrink-0">
+                  Scan your site
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  asChild
+                  className="w-full sm:w-auto shrink-0 border-border bg-background/80 hover:bg-muted/60"
+                >
+                  <Link href="/services">No website yet? Get a site + AI</Link>
+                </Button>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-3">One-time payment • Your domain • Delivered in 3–10 days</p>
+            <p className="text-xs text-muted-foreground mt-3 text-center lg:text-left">
+              One-time payment • Your domain • Delivered in 3–10 days
+            </p>
           </div>
         </div>
 
