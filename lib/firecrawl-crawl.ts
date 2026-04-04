@@ -14,13 +14,23 @@ export function getFirecrawlPollConfig(): { maxWaitSeconds: number; pollInterval
   };
 }
 
+export type RunFirecrawlCrawlOptions = {
+  /** Called after the job is created and on each status poll (for persisted dashboard progress). */
+  onProgress?: (info: {
+    firecrawlJobId: string;
+    firecrawlStatus: string;
+    elapsedSeconds: number;
+  }) => void | Promise<void>;
+};
+
 /**
  * Start a v2 crawl and poll until completed, failed, or timeout.
  */
 export async function runFirecrawlCrawl(
   apiKey: string,
   url: string,
-  limit: number
+  limit: number,
+  options?: RunFirecrawlCrawlOptions
 ): Promise<{
   success: boolean;
   data?: FirecrawlPage[];
@@ -51,6 +61,16 @@ export async function runFirecrawlCrawl(
   const { maxWaitSeconds, pollIntervalSeconds } = getFirecrawlPollConfig();
   let elapsed = 0;
 
+  const emit = async (firecrawlStatus: string) => {
+    await options?.onProgress?.({
+      firecrawlJobId: crawlJobId,
+      firecrawlStatus,
+      elapsedSeconds: elapsed,
+    });
+  };
+
+  await emit("started");
+
   while (elapsed < maxWaitSeconds) {
     await new Promise((r) => setTimeout(r, pollIntervalSeconds * 1000));
     elapsed += pollIntervalSeconds;
@@ -70,6 +90,9 @@ export async function runFirecrawlCrawl(
       data?: FirecrawlPage[];
       error?: string;
     };
+
+    const remote = status.status ?? "unknown";
+    await emit(remote);
 
     if (!status.success) return { success: false, error: status.error ?? "Crawl error", crawlJobId };
     if (status.status === "failed") return { success: false, error: status.error ?? "Crawl failed", crawlJobId };

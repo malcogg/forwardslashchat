@@ -32,7 +32,7 @@
 
 ## B — Add for automation (net-new or major upgrades)
 
-- [ ] **Background crawl progress** — persist “crawl started / N pages / complete” (or Firecrawl job id) for UI; avoid 3m blocking assumptions.
+- [x] **Background crawl progress** — `customers.crawl_progress` jsonb (phase, Firecrawl job id, status, elapsed, errors); Firecrawl poll writes progress; dashboard 5s refresh during manual crawl + 15s poll when crawl active; Training + mobile rescan show live line.
 - [ ] **Email every milestone** — paid, crawl started (optional), crawl complete, DNS reminder, go-live success / failure (audit gaps vs Resend templates).
 - [ ] **DNS self-check UI** — poll or manual “Check DNS” calling existing go-live path; show propagation hints.
 - [ ] **Cron coverage** — ensure job runner retries + alerts on stuck `running` jobs.

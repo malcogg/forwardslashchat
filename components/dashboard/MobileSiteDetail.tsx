@@ -2,6 +2,7 @@
 
 import { ArrowLeft, Check, Copy, ExternalLink } from "lucide-react";
 import { GoLiveButton } from "@/components/dashboard/GoLiveButton";
+import type { CrawlProgressSnapshot } from "@/lib/crawl-progress-types";
 import { getProgressSteps, getPlanLabel, getSiteStatusLabel } from "./mobile-types";
 
 const PUBLIC_CNAME_TARGET =
@@ -22,6 +23,7 @@ type SiteData = {
     domain?: string;
     subdomain?: string;
     status?: string;
+    crawlProgress?: CrawlProgressSnapshot | null;
   } | null;
   contentCount?: number;
 };
@@ -206,6 +208,31 @@ export function MobileSiteDetail({
             >
               {crawling ? "Scanning…" : canRescan ? "Rescan Site" : "Rescan (7-day cooldown)"}
             </button>
+            {(() => {
+              const cp = customer?.crawlProgress;
+              if (!cp) return null;
+              if (cp.phase === "failed") {
+                return (
+                  <p className="text-xs text-destructive leading-snug">
+                    Scan failed: {cp.error?.slice(0, 180) ?? "Error"}
+                  </p>
+                );
+              }
+              if (!["starting", "firecrawl", "saving"].includes(cp.phase)) return null;
+              return (
+                <p className="text-xs text-muted-foreground leading-snug tabular-nums">
+                  {cp.phase === "starting" && "Connecting to Firecrawl…"}
+                  {cp.phase === "firecrawl" && (
+                    <>
+                      Scan in progress
+                      {cp.firecrawlStatus ? ` · ${cp.firecrawlStatus}` : ""}
+                      {typeof cp.elapsedSeconds === "number" ? ` · ~${cp.elapsedSeconds}s` : ""}
+                    </>
+                  )}
+                  {cp.phase === "saving" && "Saving pages…"}
+                </p>
+              );
+            })()}
           </div>
         )}
 

@@ -7,6 +7,7 @@ import {
   boolean,
   jsonb,
 } from "drizzle-orm/pg-core";
+import type { CrawlProgressSnapshot } from "@/lib/crawl-progress-types";
 
 // Per-user credit allocation (your Firecrawl account is shared; each user gets a slice)
 // 1 page = 1 credit. One crawl ≈ 50 credits. Adjust via FIRECRAWL_CREDITS_* env vars.
@@ -100,6 +101,8 @@ export const customers = pgTable("customers", {
   prepaidUntil: timestamp("prepaid_until", { withTimezone: true }),
   lastCrawledAt: timestamp("last_crawled_at", { withTimezone: true }), // for 7-day rescan cooldown
   status: text("status").notNull().default("pending"), // pending | content_collection | crawling | indexing | dns_setup | testing | delivered
+  /** In-flight crawl UI + Firecrawl correlation; cleared when crawl completes successfully. */
+  crawlProgress: jsonb("crawl_progress").$type<CrawlProgressSnapshot | null>(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

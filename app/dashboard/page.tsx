@@ -35,6 +35,7 @@ import { CustomerChat } from "@/components/CustomerChat";
 import { ScanModal } from "@/components/ScanModal";
 import { DashboardMobileSheet, type MobileSheetPanel } from "@/components/DashboardMobileSheet";
 import { getPriceFromPagesAndYears } from "@/lib/pricing";
+import type { CrawlProgressSnapshot } from "@/lib/crawl-progress-types";
 import type { MobileScreen } from "@/components/dashboard/mobile-types";
 import { MobileBottomNav } from "@/components/dashboard/MobileBottomNav";
 import { MobileDashboardHome } from "@/components/dashboard/MobileDashboardHome";
@@ -209,6 +210,7 @@ function DashboardContent() {
       lastCrawledAt: string | null;
       status: string;
       primaryColor: string | null;
+      crawlProgress?: CrawlProgressSnapshot | null;
     } | null;
     contentCount?: number;
     crawlShortfallHint?: string | null;
@@ -346,11 +348,16 @@ function DashboardContent() {
     const isWebsitePlan =
       data?.order?.planSlug && ["starter", "new-build", "redesign"].includes(data.order.planSlug);
     const cust = data?.customer?.status ?? "";
+    const cp = data?.customer?.crawlProgress;
+    const crawlPhasesLive =
+      cp?.phase === "starting" || cp?.phase === "firecrawl" || cp?.phase === "saving";
     const shouldPoll =
       !!data?.order?.id &&
       data.order.status === "paid" &&
       !isWebsitePlan &&
-      ((data?.contentCount ?? 0) === 0 || ["crawling", "dns_setup", "testing"].includes(cust));
+      ((data?.contentCount ?? 0) === 0 ||
+        ["crawling", "dns_setup", "testing"].includes(cust) ||
+        crawlPhasesLive);
     if (!shouldPoll) return;
     const currentOrderId = orderId ?? data.order.id;
     let ticks = 0;
@@ -384,6 +391,7 @@ function DashboardContent() {
     data?.order?.status,
     data?.contentCount,
     data?.customer?.status,
+    data?.customer?.crawlProgress,
   ]);
 
   useEffect(() => {
@@ -490,6 +498,21 @@ function DashboardContent() {
     if (r2.ok) setMyOrders(await r2.json());
     return json;
   }, [canCallApi, orderId, getToken]);
+
+  // While a manual crawl request is in flight, refresh dashboard often so `crawl_progress` from Firecrawl polls appears.
+  useEffect(() => {
+    if (!crawling) return;
+    let ticks = 0;
+    const id = setInterval(() => {
+      ticks++;
+      if (ticks > 120) {
+        clearInterval(id);
+        return;
+      }
+      void refreshDashboard();
+    }, 5000);
+    return () => clearInterval(id);
+  }, [crawling, refreshDashboard]);
 
   const handleGoLiveSuccess = useCallback(async () => {
     const json = (await refreshDashboard()) as {
@@ -1437,11 +1460,41 @@ function DashboardContent() {
                                 ? "Building…"
                                 : "Build my chatbot"}
                         </Button>
-                        {(crawling || contentCount === 0) && (
-                          <p className="text-xs text-muted-foreground mt-1 leading-snug">
-                            Usually 2–8 minutes. We&apos;ll email when ready.
-                          </p>
-                        )}
+                        {(() => {
+                          const cp = customer.crawlProgress ?? null;
+                          if (cp?.phase === "failed") {
+                            return (
+                              <p className="text-xs text-destructive mt-1 leading-snug">
+                                Scan failed: {cp.error?.slice(0, 220) ?? "Unknown error"}
+                                {cp.firecrawlJobId ? ` · job ${cp.firecrawlJobId.slice(0, 8)}…` : ""}
+                              </p>
+                            );
+                          }
+                          if (cp && ["starting", "firecrawl", "saving"].includes(cp.phase)) {
+                            return (
+                              <p className="text-xs text-muted-foreground mt-1 leading-snug tabular-nums">
+                                {cp.phase === "starting" && "Connecting to Firecrawl…"}
+                                {cp.phase === "firecrawl" && (
+                                  <>
+                                    Scan in progress
+                                    {cp.firecrawlStatus ? ` · ${cp.firecrawlStatus}` : ""}
+                                    {typeof cp.elapsedSeconds === "number" ? ` · ~${cp.elapsedSeconds}s` : ""}
+                                    {cp.requestedLimit != null ? ` · up to ${cp.requestedLimit} pages` : ""}
+                                  </>
+                                )}
+                                {cp.phase === "saving" && "Saving pages to your chatbot…"}
+                              </p>
+                            );
+                          }
+                          if (crawling || contentCount === 0) {
+                            return (
+                              <p className="text-xs text-muted-foreground mt-1 leading-snug">
+                                Usually 2–8 minutes. We&apos;ll email when ready.
+                              </p>
+                            );
+                          }
+                          return null;
+                        })()}
                         {crawlError && <p className="text-xs text-destructive mt-1">{crawlError}</p>}
                       </div>
                     )}
@@ -1744,7 +1797,17 @@ function DashboardContent() {
           <MobileSiteDetail
             siteData={{
               order: data.order,
-              customer: data.customer ?? null,
+              customer: data.customer
+                ? {
+                    id: data.customer.id,
+                    businessName: data.customer.businessName,
+                    websiteUrl: data.customer.websiteUrl,
+                    domain: data.customer.domain,
+                    subdomain: data.customer.subdomain,
+                    status: data.customer.status,
+                    crawlProgress: data.customer.crawlProgress ?? null,
+                  }
+                : null,
               contentCount: data.contentCount ?? 0,
             }}
             estimatedPages={myOrders.find((o) => o.order.id === orderId)?.estimatedPages ?? 25}

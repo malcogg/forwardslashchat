@@ -14,6 +14,11 @@ import { deductRescanCredits, getRescanCreditsBalance } from "@/lib/credit-balan
 import { enqueueGoLiveForCustomer } from "@/lib/jobs";
 import { resolveEffectiveCrawlLimit } from "@/lib/crawl-limits";
 import { logCrawlFilterShortfall, logCrawlOutcome, runFirecrawlCrawl } from "@/lib/firecrawl-crawl";
+import {
+  crawlProgressNow,
+  createCrawlProgressPollerWriter,
+  setCustomerCrawlProgress,
+} from "@/lib/crawl-progress";
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
   .split(",")
@@ -135,7 +140,22 @@ export async function POST(
     );
   }
 
-  const result = await runFirecrawlCrawl(apiKey, url, crawlLimit);
+  const prevStatus = customer.status;
+  await db
+    .update(customers)
+    .set({
+      status: "crawling",
+      crawlProgress: crawlProgressNow({
+        phase: "starting",
+        source: "manual_api",
+        requestedLimit: crawlLimit,
+      }),
+      updatedAt: new Date(),
+    })
+    .where(eq(customers.id, customerId));
+
+  const onPoll = createCrawlProgressPollerWriter(customerId, "manual_api", crawlLimit);
+  const result = await runFirecrawlCrawl(apiKey, url, crawlLimit, { onProgress: onPoll });
   if (!result.success || !result.data) {
     logCrawlOutcome({
       source: "manual_api",
@@ -148,10 +168,34 @@ export async function POST(
       crawlJobId: result.crawlJobId,
       error: result.error,
     });
+    await setCustomerCrawlProgress(
+      customerId,
+      crawlProgressNow({
+        phase: "failed",
+        source: "manual_api",
+        requestedLimit: crawlLimit,
+        error: result.error ?? "Crawl failed",
+        firecrawlJobId: result.crawlJobId,
+      })
+    );
+    await db
+      .update(customers)
+      .set({ status: prevStatus, updatedAt: new Date() })
+      .where(eq(customers.id, customerId));
     return NextResponse.json({ error: result.error ?? "Crawl failed" }, { status: 500 });
   }
 
   const rawPageCount = result.data.length;
+
+  await setCustomerCrawlProgress(
+    customerId,
+    crawlProgressNow({
+      phase: "saving",
+      source: "manual_api",
+      requestedLimit: crawlLimit,
+      firecrawlJobId: result.crawlJobId,
+    })
+  );
 
   // Delete existing content for this customer
   await db.delete(content).where(eq(content.customerId, customerId));
@@ -212,7 +256,12 @@ export async function POST(
   const now = new Date();
   await db
     .update(customers)
-    .set({ status: "dns_setup", updatedAt: now, lastCrawledAt: now })
+    .set({
+      status: "dns_setup",
+      updatedAt: now,
+      lastCrawledAt: now,
+      crawlProgress: null,
+    })
     .where(eq(customers.id, customerId));
 
   // Send crawl complete + DNS instructions emails

@@ -9,6 +9,11 @@ import { normalizeContentUrl, shouldKeepCrawledPage } from "@/lib/content-filter
 import { enqueueGoLiveForCustomer } from "@/lib/jobs";
 import { resolveEffectiveCrawlLimit } from "@/lib/crawl-limits";
 import { logCrawlFilterShortfall, logCrawlOutcome, runFirecrawlCrawl } from "@/lib/firecrawl-crawl";
+import {
+  crawlProgressNow,
+  createCrawlProgressPollerWriter,
+  setCustomerCrawlProgress,
+} from "@/lib/crawl-progress";
 
 export async function autoCrawlCustomer(input: {
   customerId: string;
@@ -36,6 +41,7 @@ export async function autoCrawlCustomer(input: {
     .where(eq(content.customerId, customer.id));
   const existingCount = Number(existing?.cnt ?? 0);
   if (existingCount > 0) {
+    await setCustomerCrawlProgress(customer.id, null);
     if (customer.status !== "delivered") {
       try {
         await enqueueGoLiveForCustomer(customer.id);
@@ -58,13 +64,21 @@ export async function autoCrawlCustomer(input: {
 
   const crawlLimit = resolveEffectiveCrawlLimit(customer.estimatedPages, input.maxPages ?? null);
 
-  // Mark as crawling (best-effort)
   await db
     .update(customers)
-    .set({ status: "crawling", updatedAt: new Date() })
+    .set({
+      status: "crawling",
+      crawlProgress: crawlProgressNow({
+        phase: "starting",
+        source: "auto_crawl_customer",
+        requestedLimit: crawlLimit,
+      }),
+      updatedAt: new Date(),
+    })
     .where(eq(customers.id, customer.id));
 
-  const result = await runFirecrawlCrawl(apiKey, url, crawlLimit);
+  const onPoll = createCrawlProgressPollerWriter(customer.id, "auto_crawl_customer", crawlLimit);
+  const result = await runFirecrawlCrawl(apiKey, url, crawlLimit, { onProgress: onPoll });
   if (!result.success || !result.data) {
     logCrawlOutcome({
       source: "auto_crawl_customer",
@@ -77,10 +91,34 @@ export async function autoCrawlCustomer(input: {
       crawlJobId: result.crawlJobId,
       error: result.error,
     });
+    await setCustomerCrawlProgress(
+      customer.id,
+      crawlProgressNow({
+        phase: "failed",
+        source: "auto_crawl_customer",
+        requestedLimit: crawlLimit,
+        error: result.error ?? "Crawl failed",
+        firecrawlJobId: result.crawlJobId,
+      })
+    );
+    await db
+      .update(customers)
+      .set({ status: "content_collection", updatedAt: new Date() })
+      .where(eq(customers.id, customer.id));
     return { ok: false, pages: 0, error: result.error ?? "Crawl failed" };
   }
 
   const rawPageCount = result.data.length;
+
+  await setCustomerCrawlProgress(
+    customer.id,
+    crawlProgressNow({
+      phase: "saving",
+      source: "auto_crawl_customer",
+      requestedLimit: crawlLimit,
+      firecrawlJobId: result.crawlJobId,
+    })
+  );
 
   // Replace content
   await db.delete(content).where(eq(content.customerId, customer.id));
@@ -125,7 +163,12 @@ export async function autoCrawlCustomer(input: {
   const now = new Date();
   await db
     .update(customers)
-    .set({ status: "dns_setup", updatedAt: now, lastCrawledAt: now })
+    .set({
+      status: "dns_setup",
+      updatedAt: now,
+      lastCrawledAt: now,
+      crawlProgress: null,
+    })
     .where(eq(customers.id, customer.id));
 
   // Notify user (best-effort): Stripe session email, else linked app user.
