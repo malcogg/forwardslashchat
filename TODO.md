@@ -20,7 +20,7 @@
 
 ### Backend (reliability & honesty)
 - [x] **Crawl robustness** — shared Firecrawl runner + env timeouts/poll; `FIRECRAWL_CRAWL_PAGE_MAX` / `AUTO_CRAWL_MAX_PAGES` operator cap; auto-crawl limit follows `estimated_pages` (no stale 200 default); structured `crawl_outcome` / `crawl_filter_shortfall` logs; dashboard `crawlShortfallHint` when indexed pages lag estimate.
-- [ ] **Job observability** — structured logs (orderId, customerId, job id, dedupeKey); optional admin view of job errors.
+- [x] **Job observability** — structured `job_*` JSON logs (`job_claimed`, `job_succeeded`, `job_retry_scheduled`, `job_failed_permanent`) with `jobId`, `dedupeKey`, `customerId`, `orderId`; `GET /api/admin/jobs?status=failed&limit=50` for recent failures.
 - [ ] **Chat context** — document/limit behavior of full-page stuffing until P2 RAG lands.
 
 ### Already in good shape (keep as-is while extending)

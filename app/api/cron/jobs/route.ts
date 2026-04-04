@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
         throw new Error(`Unknown job type: ${job.type}`);
       }
 
-      await markJobSucceeded(job.id);
+      await markJobSucceeded(job);
       succeeded++;
     } catch (e) {
       failed++;
