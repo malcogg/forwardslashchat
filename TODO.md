@@ -19,7 +19,7 @@
 - [x] **Checkout / thank-you** — plan on success URL; chatbot vs website copy with ETA and dashboard/email expectations.
 
 ### Backend (reliability & honesty)
-- [ ] **Crawl robustness** — configurable limits, clearer timeouts; align `limit` with plan/pages across scan vs customer crawl.
+- [x] **Crawl robustness** — shared Firecrawl runner + env timeouts/poll; `FIRECRAWL_CRAWL_PAGE_MAX` / `AUTO_CRAWL_MAX_PAGES` operator cap; auto-crawl limit follows `estimated_pages` (no stale 200 default); structured `crawl_outcome` / `crawl_filter_shortfall` logs; dashboard `crawlShortfallHint` when indexed pages lag estimate.
 - [ ] **Job observability** — structured logs (orderId, customerId, job id, dedupeKey); optional admin view of job errors.
 - [ ] **Chat context** — document/limit behavior of full-page stuffing until P2 RAG lands.
 

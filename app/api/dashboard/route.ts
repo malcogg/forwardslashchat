@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { orders, customers, content, jobs } from "@/db/schema";
 import { eq, desc, count, inArray } from "drizzle-orm";
 import { getOrCreateUser } from "@/lib/auth";
+import { buildCrawlShortfallHint } from "@/lib/crawl-coverage-hint";
 
 export const dynamic = "force-dynamic";
 
@@ -87,11 +88,22 @@ export async function GET(request: Request) {
         )
     : [];
 
+  const crawlShortfallHint =
+    customer && order
+      ? buildCrawlShortfallHint({
+          planSlug: order.planSlug,
+          estimatedPages: customer.estimatedPages,
+          contentCount,
+          customerStatus: customer.status,
+        })
+      : null;
+
   return NextResponse.json({
     order,
     customer: customer ?? null,
     contentCount,
     automationJobs,
+    crawlShortfallHint,
   });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

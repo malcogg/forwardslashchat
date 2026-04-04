@@ -211,6 +211,7 @@ function DashboardContent() {
       primaryColor: string | null;
     } | null;
     contentCount?: number;
+    crawlShortfallHint?: string | null;
     automationJobs?: {
       type: string;
       status: string;
@@ -1390,6 +1391,11 @@ function DashboardContent() {
                           }}
                         />
                       </div>
+                      {data?.crawlShortfallHint && (
+                        <p className="text-xs text-amber-800 dark:text-amber-200/90 bg-amber-500/10 border border-amber-500/20 rounded-md px-2.5 py-2 mt-3 leading-snug">
+                          {data.crawlShortfallHint}
+                        </p>
+                      )}
                     </div>
                   )}
                   {customer &&

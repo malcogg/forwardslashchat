@@ -28,7 +28,6 @@ export async function GET(req: NextRequest) {
   if (denied) return denied;
 
   const maxPerRun = Math.min(25, Math.max(1, Number(process.env.JOBS_MAX_PER_RUN ?? 5)));
-  const maxPages = Math.min(500, Math.max(10, Number(process.env.AUTO_CRAWL_MAX_PAGES ?? 200)));
 
   let processed = 0;
   let succeeded = 0;
@@ -48,15 +47,16 @@ export async function GET(req: NextRequest) {
         if (!customerId) throw new Error("Missing payload.customerId");
 
         const overrideMaxPagesRaw = payload.maxPages;
-        const overrideMaxPages = typeof overrideMaxPagesRaw === "number"
-          ? Math.min(500, Math.max(10, Math.round(overrideMaxPagesRaw)))
-          : null;
+        const overrideMaxPages =
+          typeof overrideMaxPagesRaw === "number"
+            ? Math.min(500, Math.max(10, Math.round(overrideMaxPagesRaw)))
+            : null;
 
         const res = await autoCrawlCustomer({
           customerId,
           notifyEmail,
           reason: "payment",
-          maxPages: overrideMaxPages ?? maxPages,
+          maxPages: overrideMaxPages,
         });
         if (!res.ok) throw new Error(res.error ?? "Auto crawl failed");
       } else if (job.type === JOB_TYPE_GO_LIVE) {
