@@ -3,14 +3,22 @@ import { openai } from "@ai-sdk/openai";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { content, customers, orders } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { sanitizeChatMessage } from "@/lib/validation";
 import { checkAndIncrementRateLimit } from "@/lib/rate-limit";
+import {
+  buildWebsiteKnowledgeContext,
+  resolveChatContextMaxChars,
+  resolveChatHistoryMessageLimit,
+  resolveChatMaxOutputTokens,
+} from "@/lib/chat-context";
 
 /**
  * POST /api/chat
  * Body: { customerId: string, messages: { role: string; content: string }[] }
  * Streams LLM response using customer's crawled content.
+ *
+ * Context assembly and limits: `docs/CHAT-CONTEXT.md`, `lib/chat-context.ts`.
  */
 export async function POST(request: Request) {
   try {
@@ -60,19 +68,11 @@ export async function POST(request: Request) {
     const rows = await db
       .select()
       .from(content)
-      .where(eq(content.customerId, customerId));
+      .where(eq(content.customerId, customerId))
+      .orderBy(asc(content.createdAt), asc(content.url));
 
-    // Prompt stuffing guardrail: cap total context size (chars) to avoid runaway token costs.
-    const MAX_CONTEXT_CHARS = 60_000;
-    let used = 0;
-    const parts: string[] = [];
-    for (const r of rows) {
-      const chunk = `## ${r.title}\nURL: ${r.url}\n\n${r.content}`;
-      if (used + chunk.length > MAX_CONTEXT_CHARS) break;
-      parts.push(chunk);
-      used += chunk.length;
-    }
-    const context = parts.join("\n\n---\n\n");
+    const maxContextChars = resolveChatContextMaxChars();
+    const { context } = buildWebsiteKnowledgeContext(rows, maxContextChars);
 
     const systemPrompt = `You are a helpful AI assistant for ${customer.businessName}. Answer questions using ONLY the following content from their website. Do not make up information. If the content doesn't contain relevant information, say so politely. Include links when relevant. Format responses in markdown.
 
@@ -101,7 +101,7 @@ ${context || "(No content yet - the chatbot is still being built.)"}`;
       system: systemPrompt,
       messages: safeMessages,
       maxSteps: 1,
-      maxTokens: Math.min(1200, Math.max(128, Number(process.env.CHAT_MAX_TOKENS ?? 600))),
+      maxTokens: resolveChatMaxOutputTokens(),
       maxRetries: 1,
     });
 

@@ -21,7 +21,7 @@
 ### Backend (reliability & honesty)
 - [x] **Crawl robustness** — shared Firecrawl runner + env timeouts/poll; `FIRECRAWL_CRAWL_PAGE_MAX` / `AUTO_CRAWL_MAX_PAGES` operator cap; auto-crawl limit follows `estimated_pages` (no stale 200 default); structured `crawl_outcome` / `crawl_filter_shortfall` logs; dashboard `crawlShortfallHint` when indexed pages lag estimate.
 - [x] **Job observability** — structured `job_*` JSON logs (`job_claimed`, `job_succeeded`, `job_retry_scheduled`, `job_failed_permanent`) with `jobId`, `dedupeKey`, `customerId`, `orderId`; `GET /api/admin/jobs?status=failed&limit=50` for recent failures.
-- [ ] **Chat context** — document/limit behavior of full-page stuffing until P2 RAG lands.
+- [x] **Chat context** — `docs/CHAT-CONTEXT.md` + `lib/chat-context.ts` (env-tunable caps, stable page order, stuffing semantics); `POST /api/chat` uses shared helpers.
 
 ### Already in good shape (keep as-is while extending)
 - Stripe webhook idempotency (`stripe_events`), auto-enqueue `auto_crawl_customer` on paid session.
