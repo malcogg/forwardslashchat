@@ -28,6 +28,27 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+/** Pre-dashboard questionnaire (Path A: has website / Path B: no website). One row per user. */
+export const userOnboarding = pgTable("user_onboarding", {
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .primaryKey(),
+  path: text("path").notNull(),
+  referralSource: text("referral_source"),
+  hasExistingAiChat: boolean("has_existing_ai_chat"),
+  industry: text("industry"),
+  dnsHelpPreference: text("dns_help_preference"),
+  assistantPrimaryUse: text("assistant_primary_use"),
+  websiteUrlSnapshot: text("website_url_snapshot"),
+  noSiteProjectNote: text("no_site_project_note"),
+  noSiteTimeline: text("no_site_timeline"),
+  skippedStepIds: jsonb("skipped_step_ids").$type<string[]>().notNull().default([]),
+  extra: jsonb("extra").$type<Record<string, unknown>>().notNull().default({}),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Track reminder emails sent (payment_reminder_1, payment_reminder_2, payment_reminder_3)
 export const reminderSent = pgTable("reminder_sent", {
   id: uuid("id").primaryKey().defaultRandom(),
