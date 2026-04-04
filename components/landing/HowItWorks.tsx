@@ -3,17 +3,43 @@
 import { useRef } from "react";
 import Link from "next/link";
 import { motion, useInView } from "framer-motion";
-import { Search, Palette, Globe, CreditCard, Rocket } from "lucide-react";
+import { Search, Brain, Globe, CreditCard, Rocket } from "lucide-react";
 
 const MotionPath = motion.path;
 import { Button } from "@/components/ui/button";
 
+/** Matches the real product: scan → train → DNS → Stripe checkout → auto deploy. */
 const CARDS = [
-  { step: 1, title: "Scan Your Site", description: "Enter your URL — we crawl and extract your content instantly.", icon: Search },
-  { step: 2, title: "Add Your Brand", description: "We take care of the rest — AI trains on your real content.", icon: Palette },
-  { step: 3, title: "Connect Domain", description: "Set chat.yourbrand.com — fully branded, seamless integration.", icon: Globe },
-  { step: 4, title: "Pay Once", description: "Starting From $799 — hosting included, zero monthly fees forever.", icon: CreditCard },
-  { step: 5, title: "Go Live!", description: "Deploy instantly — your AI starts answering visitors 24/7.", icon: Rocket },
+  {
+    step: 1,
+    title: "Scan your site",
+    description: "Paste your URL — we crawl public pages and map what your AI can learn from.",
+    icon: Search,
+  },
+  {
+    step: 2,
+    title: "Train on your content",
+    description: "We build a private knowledge base from your site copy so answers stay on-brand.",
+    icon: Brain,
+  },
+  {
+    step: 3,
+    title: "Connect your domain",
+    description: "Point DNS once — your assistant lives at chat.yourdomain.com (we guide you).",
+    icon: Globe,
+  },
+  {
+    step: 4,
+    title: "Pay once",
+    description: "Plans from $129 (Starter) up — hosting included, no monthly platform fees.",
+    icon: CreditCard,
+  },
+  {
+    step: 5,
+    title: "Go live",
+    description: "Your AI answers visitors 24/7 on your branded chat URL.",
+    icon: Rocket,
+  },
 ] as const;
 
 const cardVariants = {
@@ -30,14 +56,22 @@ export function HowItWorks() {
   const inView = useInView(sectionRef, { once: true, amount: 0.15 });
 
   return (
-    <section id="how-it-works" className="py-24 px-6 bg-background" ref={sectionRef}>
+    <section id="how-it-works" className="py-24 px-6 bg-muted/30 dark:bg-muted/10" ref={sectionRef}>
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12 md:mb-16">
-          <h2 className="font-serif text-4xl md:text-5xl font-bold text-foreground mb-4">
-            How It Works
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-400/90 mb-3">
+            From URL to live chat
+          </p>
+          <h2 className="font-serif text-4xl md:text-5xl font-bold text-foreground mb-4 text-balance">
+            How it really works
           </h2>
-          <p className="text-base text-muted-foreground max-w-xl mx-auto">
-            Get your custom AI chatbot live in minutes to hours — no subscriptions, no hassle.
+          <p className="text-base text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            When you already have a website, this is the path: scan, train, connect DNS, pay once, and your chatbot goes
+            live. No website yet?{" "}
+            <Link href="/services" className="text-emerald-700 dark:text-emerald-400 font-medium hover:underline underline-offset-4">
+              See website + AI packages
+            </Link>
+            .
           </p>
         </div>
 
@@ -79,15 +113,24 @@ export function HowItWorks() {
                   variants={cardVariants}
                   initial="hidden"
                   animate={inView ? "visible" : "hidden"}
-                  className="group relative bg-card rounded-xl pt-12 pb-6 px-6 md:pt-14 md:pb-8 md:px-8 border border-border shadow-sm
-                    transition-all duration-300 hover:scale-[1.03] hover:shadow-md hover:shadow-emerald-500/10"
+                  className={`group relative rounded-xl pt-12 pb-6 px-6 md:pt-14 md:pb-8 md:px-8 border shadow-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-md hover:shadow-emerald-500/10 ${
+                    index === CARDS.length - 1
+                      ? "bg-card border-emerald-500/30 ring-1 ring-emerald-500/20"
+                      : "bg-card border-border"
+                  }`}
                 >
                   {/* Badge: overlaps top of card, center aligns with connecting line */}
                   <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-20 w-12 h-12 rounded-full bg-emerald-600 text-white flex items-center justify-center text-lg font-bold shrink-0 ring-4 ring-background">
                     {card.step}
                   </div>
-                  <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-muted/40 flex items-center justify-center text-muted-foreground">
-                    <Icon className="w-7 h-7" />
+                  <div
+                    className={`w-14 h-14 mx-auto mb-4 rounded-xl flex items-center justify-center ${
+                      index === CARDS.length - 1
+                        ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/25"
+                        : "bg-background text-emerald-800 dark:text-emerald-400 border border-border/80 shadow-sm"
+                    }`}
+                  >
+                    <Icon className="w-7 h-7" strokeWidth={index === CARDS.length - 1 ? 2.25 : 2} />
                   </div>
                   <h3 className="text-xl font-semibold text-foreground text-center mb-3">
                     {card.title}
@@ -101,10 +144,13 @@ export function HowItWorks() {
           </div>
         </div>
 
-        <div className="mt-12 text-center">
-          <Button asChild variant="cta" size="lg">
+        <div className="mt-12 text-center space-y-3">
+          <Button asChild variant="cta" size="lg" className="rounded-full px-8">
             <Link href="#scan">Scan your website</Link>
           </Button>
+          <p className="text-sm text-muted-foreground">
+            Starting in minutes — finish checkout when you&apos;re ready.
+          </p>
         </div>
       </div>
     </section>
