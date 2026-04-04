@@ -1,18 +1,43 @@
 "use client";
 
+import { Suspense, useEffect, useLayoutEffect, useRef, useState, useCallback } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useChat } from "ai/react";
 import type { Message, JSONValue } from "ai";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import Link from "next/link";
-import { ArrowUp } from "lucide-react";
-import { useEffect, useRef, useState, useCallback } from "react";
-import { sanitizeChatMessage, LIMITS } from "@/lib/validation";
+import { ArrowUp, Plus } from "lucide-react";
+import {
+  sanitizeChatMessage,
+  LIMITS,
+  sanitizeFirstName,
+  sanitizeEmail,
+  sanitizePhone,
+  isValidEmail,
+} from "@/lib/validation";
 import { ChatMessageContent } from "@/components/chat/ChatMessageContent";
 import { ChatCards } from "@/components/chat/ChatCards";
 import { getDemoCardsForMessage, shouldShowBlogPill } from "@/lib/demo-cards";
 import { Button } from "@/components/ui/button";
 
 const CAL_LINK = process.env.NEXT_PUBLIC_STRATEGY_CALL_URL || "https://cal.com/forwardslash/30min";
+
+/** Bumped when lead copy/steps change so returning visitors see the new intro once. */
+const LEAD_STORAGE_DONE = "fs_demo_lead_v2";
+
+const LEAD_ASK_NAME =
+  "Hi! I'm the ForwardSlash demo assistant. To follow up and show you what's possible, may I have your **first name**? (Type **skip** to try the demo without sharing contact info.)";
+
+const LEAD_ASK_EMAIL = (name: string) =>
+  `Thanks, ${name}! What's your **email** so we can reach you if needed? (Type **skip** to continue without email.)`;
+
+const LEAD_ASK_PHONE = `Almost done — what's the best **phone number** to reach you? **Optional** — type **skip** or leave blank.`;
+
+const LEAD_THANKS =
+  "Thanks — your details are saved. Ask me anything about ForwardSlash.Chat, pricing, how it works, or what's included.";
+
+const LEAD_SKIP_THANKS =
+  "No problem — you can ask me anything about ForwardSlash.Chat, pricing, how it works, or what's included.";
 
 const PILL_SUGGESTIONS = [
   "What is ForwardSlash.Chat?",
@@ -170,12 +195,221 @@ function newMessageId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-export default function DemoChatPage() {
+type LeadLine = { role: "user" | "assistant"; content: string };
+
+async function postDemoLead(body: Record<string, unknown>) {
+  const res = await fetch("/api/chat/demo/lead", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? "Could not save");
+  }
+  return res.json() as Promise<{ ok?: boolean }>;
+}
+
+function DemoLeadCapture({ onComplete }: { onComplete: () => void }) {
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const [lines, setLines] = useState<LeadLine[]>([]);
+  const [step, setStep] = useState<"name" | "email" | "phone">("name");
+  const [firstName, setFirstName] = useState("");
+  const [emailDraft, setEmailDraft] = useState("");
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const seeded = useRef(false);
+
+  useEffect(() => {
+    if (seeded.current) return;
+    seeded.current = true;
+    setLines([{ role: "assistant", content: LEAD_ASK_NAME }]);
+  }, []);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [lines]);
+
+  const pushPair = (userText: string, assistantContent: string) => {
+    setLines((prev) => [
+      ...prev,
+      { role: "user", content: userText },
+      { role: "assistant", content: assistantContent },
+    ]);
+  };
+
+  const submit = async () => {
+    let raw = sanitizeChatMessage(input);
+    if (step === "phone" && input.trim() === "") {
+      raw = "skip";
+    }
+    if (!raw || busy) return;
+    setInput("");
+    setErr(null);
+    const lower = raw.toLowerCase();
+
+    if (step === "name") {
+      if (lower === "skip") {
+        setBusy(true);
+        try {
+          await postDemoLead({ skipped: true });
+          sessionStorage.setItem(LEAD_STORAGE_DONE, "skipped");
+          pushPair(raw, LEAD_SKIP_THANKS);
+          window.setTimeout(onComplete, 400);
+        } catch (e) {
+          setErr(e instanceof Error ? e.message : "Save failed");
+        } finally {
+          setBusy(false);
+        }
+        return;
+      }
+      const name = sanitizeFirstName(raw);
+      if (!name) {
+        setErr("Please enter your first name, or type skip.");
+        return;
+      }
+      setFirstName(name);
+      setStep("email");
+      pushPair(raw, LEAD_ASK_EMAIL(name));
+      return;
+    }
+
+    if (step === "email") {
+      if (lower === "skip") {
+        setBusy(true);
+        try {
+          await postDemoLead({ skipped: true });
+          sessionStorage.setItem(LEAD_STORAGE_DONE, "skipped");
+          pushPair(raw, LEAD_SKIP_THANKS);
+          window.setTimeout(onComplete, 400);
+        } catch (e) {
+          setErr(e instanceof Error ? e.message : "Save failed");
+        } finally {
+          setBusy(false);
+        }
+        return;
+      }
+      const em = sanitizeEmail(raw);
+      if (!isValidEmail(em)) {
+        setErr("Please enter a valid email, or type skip.");
+        return;
+      }
+      setEmailDraft(em);
+      setStep("phone");
+      pushPair(raw, LEAD_ASK_PHONE);
+      return;
+    }
+
+    if (step === "phone") {
+      setBusy(true);
+      try {
+        const phone =
+          lower === "skip" || raw.trim() === "" ? null : sanitizePhone(raw);
+        await postDemoLead({
+          skipped: false,
+          firstName,
+          email: emailDraft,
+          phone: phone && phone.length > 0 ? phone : null,
+        });
+        sessionStorage.setItem(LEAD_STORAGE_DONE, "1");
+        pushPair(raw.trim() === "" || lower === "skip" ? "skip" : raw, LEAD_THANKS);
+        window.setTimeout(onComplete, 400);
+      } catch (e) {
+        setErr(e instanceof Error ? e.message : "Save failed");
+      } finally {
+        setBusy(false);
+      }
+    }
+  };
+
+  const placeholder =
+    step === "name" ? "First name or skip" : step === "email" ? "Email or skip" : "Phone (optional) or skip";
+
+  return (
+    <div className="flex flex-col h-dvh bg-background">
+      <header className="flex items-center justify-between px-4 py-3 border-b shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+            <span className="text-primary-foreground text-sm font-medium">/</span>
+          </div>
+          <span className="font-semibold">ForwardSlash.Chat</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
+            ← Back to site
+          </Link>
+        </div>
+      </header>
+
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+          <p className="text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-400/90">
+            Quick intro
+          </p>
+          {err && (
+            <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {err}
+            </div>
+          )}
+          {lines.map((line, i) => (
+            <div key={i} className={line.role === "user" ? "flex justify-end" : ""}>
+              <div
+                className={`inline-block max-w-[85%] px-4 py-3 rounded-2xl text-sm ${
+                  line.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted/80"
+                }`}
+              >
+                {line.role === "assistant" ? <ChatMessageContent content={line.content} /> : line.content}
+              </div>
+            </div>
+          ))}
+          {busy && (
+            <div className="flex justify-start">
+              <div className="inline-block px-4 py-3 rounded-2xl bg-muted/80 text-muted-foreground text-sm">
+                Saving...
+              </div>
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
+      </div>
+
+      <div className="p-4 border-t shrink-0">
+        <div className="max-w-2xl mx-auto">
+          <div className="border border-border rounded-lg p-3 bg-muted/30 dark:bg-muted/10 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value.slice(0, LIMITS.chatMessage))}
+              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && void submit()}
+              placeholder={placeholder}
+              maxLength={LIMITS.chatMessage}
+              disabled={busy}
+              className="w-full text-sm outline-none bg-transparent placeholder:text-muted-foreground focus:outline-none disabled:opacity-60"
+            />
+            <div className="flex justify-end mt-2">
+              <button
+                type="button"
+                onClick={() => void submit()}
+                disabled={!input.trim() || busy}
+                className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-700 shrink-0"
+              >
+                <ArrowUp className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DemoChatThread() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [pendingHardcoded, setPendingHardcoded] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
-  const { messages, append, setMessages, input, setInput, isLoading, error } = useChat({
+  const { messages, append, setMessages, input, setInput, isLoading, error, stop } = useChat({
     api: "/api/chat/demo",
     id: "forwardslash-product-demo",
     onError: () => {
@@ -243,6 +477,14 @@ export default function DemoChatPage() {
     [append, busy, setInput, setMessages]
   );
 
+  const startNewChat = useCallback(() => {
+    stop();
+    setPendingHardcoded(false);
+    setLocalError(null);
+    setMessages([]);
+    setInput("");
+  }, [stop, setMessages, setInput]);
+
   return (
     <div className="flex flex-col h-dvh bg-background">
       <header className="flex items-center justify-between px-4 py-3 border-b shrink-0">
@@ -264,11 +506,10 @@ export default function DemoChatPage() {
         <div className="max-w-2xl mx-auto px-4 py-8">
           {messages.length === 0 ? (
             <>
-              <p className="text-lg font-medium mb-1">Hi! I&apos;m the ForwardSlash demo assistant.</p>
+              <p className="text-lg font-medium mb-1">You&apos;re in the product demo.</p>
               <p className="text-muted-foreground mb-6">
-                Ask me about our product, pricing, how it works, or what&apos;s included. Popular topics get instant
-                replies; open-ended questions use live AI trained on ForwardSlash product information — the same
-                retrieval-and-answer pattern as deployed customer chatbots.
+                Popular topics get instant replies; open-ended questions use live AI trained on ForwardSlash product
+                information — the same pattern as deployed customer chatbots.
               </p>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mb-6">
@@ -402,21 +643,92 @@ export default function DemoChatPage() {
               >
                 <Link href="/checkout?plan=chatbot-2y&pages=25">Purchase</Link>
               </Button>
-              <button
-                type="button"
-                onClick={() => void send(input)}
-                disabled={!input.trim() || busy}
-                className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-700 shrink-0"
-              >
-                <ArrowUp className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={startNewChat}
+                  title="New chat — clear this conversation"
+                  aria-label="New chat"
+                  className="w-7 h-7 rounded-full border border-border bg-background text-foreground flex items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors"
+                >
+                  <Plus className="w-4 h-4" strokeWidth={2.5} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void send(input)}
+                  disabled={!input.trim() || busy}
+                  title="Send"
+                  aria-label="Send message"
+                  className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-700 shrink-0"
+                >
+                  <ArrowUp className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
           <p className="text-xs text-muted-foreground mt-2 text-center">
-            Demo chatbot · Keyword shortcuts + live AI (same engine as deployed bots)
+            Demo chatbot · Keyword shortcuts + live AI (same engine as deployed bots).{" "}
+            <Link
+              href="/chat/demo?forceLead=1"
+              className="text-emerald-700 dark:text-emerald-400 underline underline-offset-2 hover:text-emerald-800 dark:hover:text-emerald-300"
+            >
+              Show name &amp; email intro again
+            </Link>
           </p>
         </div>
       </div>
     </div>
+  );
+}
+
+function DemoChatPageContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const forceLead = searchParams.get("forceLead");
+  const [ready, setReady] = useState(false);
+  const [leadDone, setLeadDone] = useState(false);
+
+  useLayoutEffect(() => {
+    if (forceLead === "1") {
+      sessionStorage.removeItem(LEAD_STORAGE_DONE);
+      sessionStorage.removeItem("fs_demo_lead_v1");
+      setLeadDone(false);
+      const next = new URLSearchParams(window.location.search);
+      next.delete("forceLead");
+      const qs = next.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    } else {
+      setLeadDone(Boolean(sessionStorage.getItem(LEAD_STORAGE_DONE)));
+    }
+    setReady(true);
+  }, [forceLead, pathname, router]);
+
+  if (!ready) {
+    return (
+      <div className="flex h-dvh items-center justify-center bg-background text-muted-foreground text-sm">
+        Loading demo…
+      </div>
+    );
+  }
+
+  if (!leadDone) {
+    return <DemoLeadCapture onComplete={() => setLeadDone(true)} />;
+  }
+
+  return <DemoChatThread />;
+}
+
+export default function DemoChatPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-dvh items-center justify-center bg-background text-muted-foreground text-sm">
+          Loading demo…
+        </div>
+      }
+    >
+      <DemoChatPageContent />
+    </Suspense>
   );
 }

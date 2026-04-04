@@ -134,6 +134,16 @@ export const checkoutVisits = pgTable("checkout_visits", {
   visitedAt: timestamp("visited_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+// Demo chat (/chat/demo) — name, email, optional phone before free-form chat
+export const demoChatLeads = pgTable("demo_chat_leads", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  firstName: text("first_name"),
+  email: text("email"),
+  phone: text("phone"),
+  skipped: boolean("skipped").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Checkout leads - form data collected before payment
 export const checkoutLeads = pgTable("checkout_leads", {
   id: uuid("id").primaryKey().defaultRandom(),
