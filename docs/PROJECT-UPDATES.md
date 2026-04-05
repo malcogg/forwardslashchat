@@ -1,5 +1,23 @@
 # Project Updates Log
 
+## 2026-04-01
+
+### Documentation (acquisition & engineering handoff)
+
+- Added **[ACQUISITION-HANDBOOK.md](./ACQUISITION-HANDBOOK.md)** — due diligence checklist, doc map, subprocessors, risks.
+- Added **[DEVELOPER-GUIDE.md](./DEVELOPER-GUIDE.md)** — consolidated dev workflows, `/chat/demo` behavior, env summary.
+- Added **[ARCHITECTURE-AND-FLOWS.md](./ARCHITECTURE-AND-FLOWS.md)** — Mermaid diagrams (system context, happy path, demo funnel, routing).
+- Added **[MAINTENANCE-AND-DEPENDENCIES.md](./MAINTENANCE-AND-DEPENDENCIES.md)** — upgrade policy for Next, Clerk, Drizzle, Stripe, AI SDK, etc.
+- Rewrote **[docs/README.md](./README.md)** — index with new sections, migration list through `016-demo-chat-leads.sql`.
+- Updated **[TECH-SPEC.md](./TECH-SPEC.md)** — `demo_chat_leads`, `POST /api/chat/demo/lead`, demo chat UX (lead capture, hybrid LLM, `?forceLead=1`, new chat).
+- Updated root **[README.md](../README.md)** and **[DEVELOPER-HANDOFF.md](./DEVELOPER-HANDOFF.md)** to point at the new docs.
+
+### Product (already in codebase)
+
+- Demo page: lead capture → hybrid keyword + LLM chat; `demo_chat_leads` table + API; `+` new chat control.
+
+---
+
 ## 2026-02-10
 
 ### Added Documents

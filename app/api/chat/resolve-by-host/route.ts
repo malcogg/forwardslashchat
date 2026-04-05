@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { customers } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
+import { checkAndIncrementRateLimit, getClientIpFromRequest } from "@/lib/rate-limit";
 
 /**
  * GET /api/chat/resolve-by-host?host=chat.business.com
@@ -13,6 +14,13 @@ export async function GET(request: Request) {
   const host = searchParams.get("host")?.toLowerCase().trim();
   if (!host || !db) {
     return NextResponse.json({ customerId: null });
+  }
+
+  const perMinute = Math.min(120, Math.max(10, Number(process.env.RESOLVE_HOST_RATE_LIMIT_PER_MINUTE ?? 60)));
+  const ip = getClientIpFromRequest(request);
+  const rl = await checkAndIncrementRateLimit({ key: `resolve_host:${ip}`, limitPerMinute: perMinute });
+  if (!rl.ok) {
+    return NextResponse.json({ error: "Rate limited" }, { status: 429 });
   }
 
   // Ignore our main domain and localhost

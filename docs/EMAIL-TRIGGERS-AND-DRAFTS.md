@@ -13,6 +13,7 @@
 | Crawl completes | Your chatbot content is ready | ✅ Auto |
 | Crawl completes | Add this CNAME to go live | ✅ Auto |
 | Cron: checkout visit 4–24h ago, no paid order | Finish your AI chatbot order | ✅ Auto |
+| Stripe `checkout.session.completed` (paid order) | Payment received — ForwardSlash.Chat | ✅ Auto — same React body as manual order confirmation (`OrderConfirmationEmail`); Stripe still sends its own receipt. Disable with `SKIP_PAYMENT_RECEIVED_EMAIL=1`. |
 
 ---
 
@@ -100,4 +101,5 @@ Each step only sends if the previous step was sent. No duplicate emails.
 ## Notes
 
 - Order confirmation: Use PayPal flow; send manually via `/api/email` or copy/paste when you mark paid.
+- **Stripe card checkout:** Webhook sends branded **Payment received** (Resend) when `RESEND_API_KEY` is set; use `SKIP_PAYMENT_RECEIVED_EMAIL=1` to rely on Stripe’s receipt only. Crawl and go-live emails follow as before.
 - All: FROM_EMAIL = hello@forwardslash.chat. Reply-to = hello@forwardslash.chat.

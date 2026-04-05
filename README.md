@@ -97,11 +97,18 @@ Open `http://localhost:3000`.
 
 ## Docs
 
-- `AUDIT.md` — current audit findings
-- `ROADMAP.md` / `TODO.md` — what’s next
-- `DEPLOYMENT.md` — production checklist + cron + domain automation
-- `API_KEYS.md` — key management + reliability notes
-- `docs/VERCEL-DOMAIN-AUTOMATION-SETUP.md` — how to set up Vercel token + project id
+**Index (start here):** [`docs/README.md`](docs/README.md)
+
+| Doc | Purpose |
+|-----|---------|
+| [`docs/ACQUISITION-HANDBOOK.md`](docs/ACQUISITION-HANDBOOK.md) | Handoff for acquirers: product, diligence checklist, risks |
+| [`docs/DEVELOPER-GUIDE.md`](docs/DEVELOPER-GUIDE.md) | Day-to-day engineering: setup, code map, demo page behavior |
+| [`docs/ARCHITECTURE-AND-FLOWS.md`](docs/ARCHITECTURE-AND-FLOWS.md) | Flow diagrams (Mermaid) and routing |
+| [`docs/MAINTENANCE-AND-DEPENDENCIES.md`](docs/MAINTENANCE-AND-DEPENDENCIES.md) | Upgrading Next, React, Clerk, Stripe, etc. |
+| [`docs/TECH-SPEC.md`](docs/TECH-SPEC.md) | Stack, APIs, schema summary |
+| [`docs/DEVELOPER-HANDOFF.md`](docs/DEVELOPER-HANDOFF.md) | First-day env checklist |
+
+Also: `AUDIT.md`, `ROADMAP.md`, `TODO.md`, `DEPLOYMENT.md`, `API_KEYS.md`, `docs/VERCEL-DOMAIN-AUTOMATION-SETUP.md`
 
 ## v0.dev deployment note
 

@@ -6,6 +6,8 @@ import { eq } from "drizzle-orm";
 import { enqueueJob } from "@/lib/jobs";
 import { isChatbotPlan, type CheckoutPlanSlug } from "@/lib/checkout-pricing";
 import { addRescanCredits } from "@/lib/credit-balance";
+import { sendPaymentReceivedEmail } from "@/lib/send-payment-received-email";
+import { isValidEmail } from "@/lib/validation";
 
 /**
  * POST /api/webhooks/stripe
@@ -122,6 +124,18 @@ export async function POST(request: Request) {
       notifyForJob = u?.email ?? undefined;
     }
 
+    const [customerRow] = await db.select().from(customers).where(eq(customers.orderId, orderId));
+    if (notifyForJob && isValidEmail(notifyForJob) && orderRow) {
+      void sendPaymentReceivedEmail({
+        to: notifyForJob,
+        businessName: customerRow?.businessName ?? "there",
+        planSlug: orderRow.planSlug ?? null,
+        amountCents: orderRow.amountCents,
+        websiteUrl: customerRow?.websiteUrl ?? null,
+        domain: customerRow?.domain ?? null,
+      }).catch((e) => console.error("[stripe webhook] payment received email:", e));
+    }
+
     // AI chatbot plans only: hands-off crawl → train → DNS/go-live pipeline. Website-builder SKUs are a separate product.
     const planSlug = orderRow?.planSlug ?? "";
     const isChatbotCheckout =
@@ -131,14 +145,13 @@ export async function POST(request: Request) {
 
     if (isChatbotCheckout) {
       try {
-        const [customer] = await db.select().from(customers).where(eq(customers.orderId, orderId));
-        if (customer) {
+        if (customerRow) {
           await enqueueJob({
             type: "auto_crawl_customer",
             dedupeKey: `auto_crawl_${orderId}`,
             payload: {
               orderId,
-              customerId: customer.id,
+              customerId: customerRow.id,
               notifyEmail: notifyForJob ?? null,
             },
           });

@@ -18,8 +18,15 @@ export default clerkMiddleware(async (auth, req) => {
       ? `https://${process.env.VERCEL_URL}`
       : process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
     try {
+      const resolveHeaders = new Headers();
+      const xff =
+        req.headers.get("x-forwarded-for") ?? req.headers.get("x-vercel-forwarded-for");
+      if (xff) resolveHeaders.set("x-forwarded-for", xff);
+      const xRealIp = req.headers.get("x-real-ip");
+      if (xRealIp) resolveHeaders.set("x-real-ip", xRealIp);
       const res = await fetch(
-        `${baseUrl}/api/chat/resolve-by-host?host=${encodeURIComponent(host)}`
+        `${baseUrl}/api/chat/resolve-by-host?host=${encodeURIComponent(host)}`,
+        { headers: resolveHeaders }
       );
       const { customerId } = (await res.json()) as { customerId?: string };
       if (customerId) {

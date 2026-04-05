@@ -3,6 +3,7 @@ import {
   claimNextJob,
   markJobFailed,
   markJobSucceeded,
+  recoverStuckRunningJobs,
   JOB_TYPE_AUTO_CRAWL,
   JOB_TYPE_GO_LIVE,
 } from "@/lib/jobs";
@@ -28,6 +29,13 @@ export async function GET(req: NextRequest) {
   if (denied) return denied;
 
   const maxPerRun = Math.min(25, Math.max(1, Number(process.env.JOBS_MAX_PER_RUN ?? 5)));
+
+  let recoveredStuck = 0;
+  try {
+    recoveredStuck = await recoverStuckRunningJobs();
+  } catch (e) {
+    console.error("[cron/jobs] recoverStuckRunningJobs:", e);
+  }
 
   let processed = 0;
   let succeeded = 0;
@@ -81,6 +89,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     ok: true,
+    recoveredStuck,
     processed,
     succeeded,
     failed,

@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { jobs } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { logJobEvent } from "@/lib/job-logging";
 
 export type JobRow = typeof jobs.$inferSelect;
@@ -87,6 +87,39 @@ export async function enqueueOrKickJob(input: {
         last_error = NULL,
         updated_at = now()
   `);
+}
+
+/**
+ * Jobs left in `running` (e.g. serverless timeout or crash after claim) never complete.
+ * Call from the cron worker before claiming new work. Uses `JOBS_STUCK_AFTER_MINUTES` (default 90).
+ * Requeues or permanently fails via `markJobFailed` (same retry / alert path as normal failures).
+ */
+export async function recoverStuckRunningJobs(options?: { olderThanMinutes?: number }): Promise<number> {
+  if (!db) return 0;
+  const raw = Number(process.env.JOBS_STUCK_AFTER_MINUTES ?? 90);
+  const minutes = options?.olderThanMinutes ?? Math.max(5, Math.min(24 * 60, Number.isFinite(raw) ? raw : 90));
+  const threshold = new Date(Date.now() - minutes * 60 * 1000);
+
+  const staleRunning = or(
+    lt(jobs.lockedAt, threshold),
+    and(isNull(jobs.lockedAt), lt(jobs.updatedAt, threshold))
+  );
+
+  const stuck = await db
+    .select()
+    .from(jobs)
+    .where(and(eq(jobs.status, "running"), staleRunning));
+
+  const err = new Error(
+    `Job exceeded ${minutes} minute running timeout (worker lost or crashed). Requeued or failed per retry policy.`
+  );
+
+  let count = 0;
+  for (const job of stuck) {
+    await markJobFailed(job, err);
+    count++;
+  }
+  return count;
 }
 
 export async function claimNextJob(): Promise<JobRow | null> {
