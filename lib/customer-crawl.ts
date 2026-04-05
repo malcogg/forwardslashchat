@@ -1,77 +1,26 @@
 import { db } from "@/db";
 import { content, customers, orders, users } from "@/db/schema";
 import { eq, count } from "drizzle-orm";
-import { fetchWithRetry } from "@/lib/fetch-retry";
 import { resend, FROM_EMAIL } from "@/lib/resend";
 import { CrawlCompleteEmail } from "@/components/emails/crawl-complete";
 import { DnsInstructionsEmail } from "@/components/emails/dns-instructions";
 import { assertSafeOutboundHttpUrl } from "@/lib/url-safety";
 import { normalizeContentUrl, shouldKeepCrawledPage } from "@/lib/content-filter";
-
-async function runFirecrawlCrawl(apiKey: string, url: string, limit: number): Promise<{
-  success: boolean;
-  data?: { markdown?: string; metadata?: { sourceURL?: string; title?: string } }[];
-  error?: string;
-}> {
-  const start = await fetchWithRetry("https://api.firecrawl.dev/v2/crawl", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ url, limit }),
-    timeoutMs: 15_000,
-    maxAttempts: 3,
-    baseDelayMs: 500,
-    maxDelayMs: 7_000,
-    allowNonIdempotentRetry: true,
-    logTag: "firecrawl-start",
-  });
-
-  const startJson = (await start.json()) as { success?: boolean; id?: string; error?: string };
-  if (!startJson.success || !startJson.id) {
-    return { success: false, error: startJson.error ?? "Could not start crawl" };
-  }
-
-  const maxWait = 180;
-  const pollInterval = 3;
-  let elapsed = 0;
-
-  while (elapsed < maxWait) {
-    await new Promise((r) => setTimeout(r, pollInterval * 1000));
-    elapsed += pollInterval;
-
-    const statusRes = await fetchWithRetry(`https://api.firecrawl.dev/v2/crawl/${startJson.id}`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-      timeoutMs: 10_000,
-      maxAttempts: 3,
-      baseDelayMs: 400,
-      maxDelayMs: 3_000,
-      logTag: "firecrawl-status",
-    });
-
-    const status = (await statusRes.json()) as {
-      success?: boolean;
-      status?: string;
-      data?: { markdown?: string; metadata?: { sourceURL?: string; title?: string } }[];
-      error?: string;
-    };
-
-    if (!status.success) return { success: false, error: status.error ?? "Crawl error" };
-    if (status.status === "failed") return { success: false, error: status.error ?? "Crawl failed" };
-    if (status.status === "completed" && Array.isArray(status.data)) {
-      return { success: true, data: status.data };
-    }
-  }
-
-  return { success: false, error: "Crawl timed out" };
-}
+import { enqueueGoLiveForCustomer } from "@/lib/jobs";
+import { resolveEffectiveCrawlLimit } from "@/lib/crawl-limits";
+import { logCrawlFilterShortfall, logCrawlOutcome, runFirecrawlCrawl } from "@/lib/firecrawl-crawl";
+import {
+  crawlProgressNow,
+  createCrawlProgressPollerWriter,
+  setCustomerCrawlProgress,
+} from "@/lib/crawl-progress";
 
 export async function autoCrawlCustomer(input: {
   customerId: string;
   notifyEmail?: string | null;
   reason?: "payment" | "manual";
-  maxPages?: number;
+  /** Optional ceiling from job payload (admin); operator cap still applies via env. */
+  maxPages?: number | null;
 }): Promise<{ ok: boolean; pages: number; skipped?: boolean; error?: string }> {
   if (!db) return { ok: false, pages: 0, error: "Database not configured" };
 
@@ -91,7 +40,17 @@ export async function autoCrawlCustomer(input: {
     .from(content)
     .where(eq(content.customerId, customer.id));
   const existingCount = Number(existing?.cnt ?? 0);
-  if (existingCount > 0) return { ok: true, pages: existingCount, skipped: true };
+  if (existingCount > 0) {
+    await setCustomerCrawlProgress(customer.id, null);
+    if (customer.status !== "delivered") {
+      try {
+        await enqueueGoLiveForCustomer(customer.id);
+      } catch (e) {
+        console.error("[auto-crawl] enqueue go-live failed (skipped crawl):", e);
+      }
+    }
+    return { ok: true, pages: existingCount, skipped: true };
+  }
 
   const apiKey = process.env.FIRECRAWL_API_KEY;
   if (!apiKey) return { ok: false, pages: 0, error: "Crawl not configured" };
@@ -103,20 +62,63 @@ export async function autoCrawlCustomer(input: {
     return { ok: false, pages: 0, error: "Website URL is not allowed" };
   }
 
-  const hardCap = Math.min(500, Math.max(1, Number(input.maxPages ?? 200)));
-  const requested = Math.min(Math.max(customer.estimatedPages ?? 50, 1), 500);
-  const crawlLimit = Math.min(requested, hardCap);
+  const crawlLimit = resolveEffectiveCrawlLimit(customer.estimatedPages, input.maxPages ?? null);
 
-  // Mark as crawling (best-effort)
   await db
     .update(customers)
-    .set({ status: "crawling", updatedAt: new Date() })
+    .set({
+      status: "crawling",
+      crawlProgress: crawlProgressNow({
+        phase: "starting",
+        source: "auto_crawl_customer",
+        requestedLimit: crawlLimit,
+      }),
+      updatedAt: new Date(),
+    })
     .where(eq(customers.id, customer.id));
 
-  const result = await runFirecrawlCrawl(apiKey, url, crawlLimit);
+  const onPoll = createCrawlProgressPollerWriter(customer.id, "auto_crawl_customer", crawlLimit);
+  const result = await runFirecrawlCrawl(apiKey, url, crawlLimit, { onProgress: onPoll });
   if (!result.success || !result.data) {
+    logCrawlOutcome({
+      source: "auto_crawl_customer",
+      customerId: customer.id,
+      orderId: order.id,
+      websiteUrl: url,
+      requestedLimit: crawlLimit,
+      rawPageCount: 0,
+      storedPageCount: 0,
+      crawlJobId: result.crawlJobId,
+      error: result.error,
+    });
+    await setCustomerCrawlProgress(
+      customer.id,
+      crawlProgressNow({
+        phase: "failed",
+        source: "auto_crawl_customer",
+        requestedLimit: crawlLimit,
+        error: result.error ?? "Crawl failed",
+        firecrawlJobId: result.crawlJobId,
+      })
+    );
+    await db
+      .update(customers)
+      .set({ status: "content_collection", updatedAt: new Date() })
+      .where(eq(customers.id, customer.id));
     return { ok: false, pages: 0, error: result.error ?? "Crawl failed" };
   }
+
+  const rawPageCount = result.data.length;
+
+  await setCustomerCrawlProgress(
+    customer.id,
+    crawlProgressNow({
+      phase: "saving",
+      source: "auto_crawl_customer",
+      requestedLimit: crawlLimit,
+      firecrawlJobId: result.crawlJobId,
+    })
+  );
 
   // Replace content
   await db.delete(content).where(eq(content.customerId, customer.id));
@@ -138,15 +140,43 @@ export async function autoCrawlCustomer(input: {
     pagesSaved++;
   }
 
+  logCrawlOutcome({
+    source: "auto_crawl_customer",
+    customerId: customer.id,
+    orderId: order.id,
+    websiteUrl: url,
+    requestedLimit: crawlLimit,
+    rawPageCount,
+    storedPageCount: pagesSaved,
+    crawlJobId: result.crawlJobId,
+  });
+  logCrawlFilterShortfall({
+    source: "auto_crawl_customer",
+    customerId: customer.id,
+    orderId: order.id,
+    requestedLimit: crawlLimit,
+    rawPageCount,
+    storedPageCount: pagesSaved,
+  });
+
   const pagesCrawled = pagesSaved;
   const now = new Date();
   await db
     .update(customers)
-    .set({ status: "dns_setup", updatedAt: now, lastCrawledAt: now })
+    .set({
+      status: "dns_setup",
+      updatedAt: now,
+      lastCrawledAt: now,
+      crawlProgress: null,
+    })
     .where(eq(customers.id, customer.id));
 
-  // Notify user (best-effort). If order has a userId, use it; otherwise fall back to webhook email.
-  const toEmail = input.notifyEmail ?? null;
+  // Notify user (best-effort): Stripe session email, else linked app user.
+  let toEmail = input.notifyEmail ?? null;
+  if (!toEmail && order.userId) {
+    const [u] = await db.select().from(users).where(eq(users.id, order.userId));
+    toEmail = u?.email ?? null;
+  }
   if (resend && toEmail) {
     let firstName: string | undefined;
     if (order.userId) {
@@ -183,6 +213,12 @@ export async function autoCrawlCustomer(input: {
     } catch (e) {
       console.error("[auto-crawl] email failed:", e);
     }
+  }
+
+  try {
+    await enqueueGoLiveForCustomer(customer.id);
+  } catch (e) {
+    console.error("[auto-crawl] enqueue go-live failed:", e);
   }
 
   return { ok: true, pages: pagesCrawled };

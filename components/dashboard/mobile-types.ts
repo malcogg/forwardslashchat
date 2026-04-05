@@ -27,8 +27,9 @@ export function getSiteStatusLabel(order: OrderRow["order"], customer: OrderRow[
   const isWebsite = order.planSlug && ["starter", "new-build", "redesign"].includes(order.planSlug);
   if (isWebsite) {
     if (order.status === "delivered") return "Delivered";
-    if (order.status === "processing") return "Building";
-    return "Payment";
+    if (order.status === "processing") return "In progress";
+    if (order.status === "paid") return "In progress";
+    return "Awaiting payment";
   }
   if (customer.status === "delivered") return "Live";
   if (["testing", "dns_setup"].includes(customer.status ?? "")) return "Domain Setup";
@@ -39,8 +40,8 @@ export function getSiteStatusLabel(order: OrderRow["order"], customer: OrderRow[
 
 export function getSiteStatusDot(order: OrderRow["order"], customer: OrderRow["customer"] | undefined, contentCount: number): "live" | "domain" | "training" {
   const label = getSiteStatusLabel(order, customer, contentCount);
-  if (label === "Live") return "live";
-  if (label === "Domain Setup") return "domain";
+  if (label === "Live" || label === "Delivered") return "live";
+  if (label === "Domain Setup" || label === "In progress" || label === "Building") return "domain";
   return "training";
 }
 
@@ -64,15 +65,17 @@ export function getProgressSteps(order: OrderRow["order"], customer: OrderRow["c
   const isWebsite = order.planSlug && ["starter", "new-build", "redesign"].includes(order.planSlug);
   if (isWebsite) {
     return [
-      { key: "payment", label: "Payment", done: ["paid", "processing", "delivered"].includes(order.status ?? "") },
-      { key: "planning", label: "Planning", done: ["processing", "delivered"].includes(order.status ?? "") },
-      { key: "design", label: "Design", done: ["processing", "delivered"].includes(order.status ?? "") },
+      { key: "payment", label: "Paid", done: ["paid", "processing", "delivered"].includes(order.status ?? "") },
       { key: "delivered", label: "Delivered", done: order.status === "delivered" },
     ];
   }
   return [
     { key: "payment", label: "Payment", done: ["paid", "processing", "delivered"].includes(order.status ?? "") },
-    { key: "content", label: "AI Training", done: contentCount > 0 || ["dns_setup", "testing", "delivered"].includes(customer?.status ?? "") },
+    {
+      key: "content",
+      label: "AI Training",
+      done: contentCount > 0 || ["dns_setup", "testing", "delivered"].includes(customer?.status ?? ""),
+    },
     { key: "dns", label: "Domain Setup", done: ["testing", "delivered"].includes(customer?.status ?? "") },
     { key: "live", label: "Live", done: customer?.status === "delivered" },
   ];

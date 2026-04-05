@@ -1,6 +1,8 @@
 "use client";
 
 import { ArrowLeft, Check, Copy, ExternalLink } from "lucide-react";
+import { GoLiveButton } from "@/components/dashboard/GoLiveButton";
+import type { CrawlProgressSnapshot } from "@/lib/crawl-progress-types";
 import { getProgressSteps, getPlanLabel, getSiteStatusLabel } from "./mobile-types";
 
 const PUBLIC_CNAME_TARGET =
@@ -21,6 +23,7 @@ type SiteData = {
     domain?: string;
     subdomain?: string;
     status?: string;
+    crawlProgress?: CrawlProgressSnapshot | null;
   } | null;
   contentCount?: number;
 };
@@ -34,6 +37,8 @@ type MobileSiteDetailProps = {
   canRescan: boolean;
   copied: boolean;
   onCopyUrl: () => void;
+  authHeaders: () => Promise<HeadersInit>;
+  onGoLiveSuccess: () => void | Promise<void>;
 };
 
 export function MobileSiteDetail({
@@ -45,6 +50,8 @@ export function MobileSiteDetail({
   canRescan,
   copied,
   onCopyUrl,
+  authHeaders,
+  onGoLiveSuccess,
 }: MobileSiteDetailProps) {
   const { order, customer, contentCount = 0 } = siteData;
   const isWebsiteOrder = order.planSlug && ["starter", "new-build", "redesign"].includes(order.planSlug);
@@ -83,9 +90,9 @@ export function MobileSiteDetail({
       <div className="flex-1 overflow-y-auto p-4">
         <span
           className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full mb-4 ${
-            statusLabel === "Live"
+            statusLabel === "Live" || statusLabel === "Delivered"
               ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
-              : statusLabel === "Domain Setup"
+              : statusLabel === "Domain Setup" || statusLabel === "In progress"
                 ? "bg-amber-500/20 text-amber-700 dark:text-amber-400"
                 : "bg-muted text-muted-foreground"
           }`}
@@ -128,6 +135,22 @@ export function MobileSiteDetail({
             </div>
           ))}
         </div>
+
+        {!isWebsiteOrder && customer?.status === "dns_setup" && contentCount > 0 && customer.subdomain && customer.domain && (
+          <div className="mt-6 rounded-xl border border-border bg-card/60 p-4 space-y-3">
+            <h2 className="text-sm font-semibold text-foreground">Connect your domain</h2>
+            <p className="text-xs text-muted-foreground">
+              Add a CNAME: <span className="font-mono text-foreground">{customer.subdomain}</span> →{" "}
+              <span className="font-mono text-foreground">{cnameValue}</span>
+            </p>
+            <GoLiveButton
+              customerId={customer.id}
+              customerDomain={`${customer.subdomain}.${customer.domain}`}
+              onSuccess={onGoLiveSuccess}
+              authHeaders={authHeaders}
+            />
+          </div>
+        )}
 
         {/* Chatbot URL */}
         {!isWebsiteOrder && (
@@ -185,6 +208,31 @@ export function MobileSiteDetail({
             >
               {crawling ? "Scanning…" : canRescan ? "Rescan Site" : "Rescan (7-day cooldown)"}
             </button>
+            {(() => {
+              const cp = customer?.crawlProgress;
+              if (!cp) return null;
+              if (cp.phase === "failed") {
+                return (
+                  <p className="text-xs text-destructive leading-snug">
+                    Scan failed: {cp.error?.slice(0, 180) ?? "Error"}
+                  </p>
+                );
+              }
+              if (!["starting", "firecrawl", "saving"].includes(cp.phase)) return null;
+              return (
+                <p className="text-xs text-muted-foreground leading-snug tabular-nums">
+                  {cp.phase === "starting" && "Connecting to Firecrawl…"}
+                  {cp.phase === "firecrawl" && (
+                    <>
+                      Scan in progress
+                      {cp.firecrawlStatus ? ` · ${cp.firecrawlStatus}` : ""}
+                      {typeof cp.elapsedSeconds === "number" ? ` · ~${cp.elapsedSeconds}s` : ""}
+                    </>
+                  )}
+                  {cp.phase === "saving" && "Saving pages…"}
+                </p>
+              );
+            })()}
           </div>
         )}
 

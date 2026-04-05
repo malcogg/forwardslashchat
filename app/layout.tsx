@@ -46,13 +46,17 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
+/** Valid-format test key used only when env is unset (e.g. `next build` in CI). Real deploys should set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY. */
+const CLERK_PUBLISHABLE_KEY_BUILD_PLACEHOLDER =
+  "pk_test_Y2xlcmsucGxhY2Vob2xkZXIubG9jYWwk";
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Clerk publishableKey - must be set in Vercel env vars for deploy
-  const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
+  const clerkKey =
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim() || CLERK_PUBLISHABLE_KEY_BUILD_PLACEHOLDER;
   return (
     <ClerkProvider publishableKey={clerkKey}>
       <html lang="en" suppressHydrationWarning>

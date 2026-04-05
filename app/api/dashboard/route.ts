@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { orders, customers, content } from "@/db/schema";
-import { eq, desc, count } from "drizzle-orm";
+import { orders, customers, content, jobs } from "@/db/schema";
+import { eq, desc, count, inArray } from "drizzle-orm";
 import { getOrCreateUser } from "@/lib/auth";
+import { buildCrawlShortfallHint } from "@/lib/crawl-coverage-hint";
 
 export const dynamic = "force-dynamic";
 
@@ -70,10 +71,39 @@ export async function GET(request: Request) {
     contentCount = c?.count ?? 0;
   }
 
+  const automationJobs = customer
+    ? await db
+        .select({
+          type: jobs.type,
+          status: jobs.status,
+          lastError: jobs.lastError,
+          attempts: jobs.attempts,
+          maxAttempts: jobs.maxAttempts,
+          updatedAt: jobs.updatedAt,
+          dedupeKey: jobs.dedupeKey,
+        })
+        .from(jobs)
+        .where(
+          inArray(jobs.dedupeKey, [`auto_crawl_${order.id}`, `go_live_${customer.id}`])
+        )
+    : [];
+
+  const crawlShortfallHint =
+    customer && order
+      ? buildCrawlShortfallHint({
+          planSlug: order.planSlug,
+          estimatedPages: customer.estimatedPages,
+          contentCount,
+          customerStatus: customer.status,
+        })
+      : null;
+
   return NextResponse.json({
     order,
     customer: customer ?? null,
     contentCount,
+    automationJobs,
+    crawlShortfallHint,
   });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
