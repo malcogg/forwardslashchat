@@ -1136,6 +1136,15 @@ function DashboardContent() {
             sidebarCollapsed ? "w-14 p-2" : "w-56 p-3"
           }`}
         >
+          <button
+            type="button"
+            onClick={() => setSidebarCollapsed((c) => !c)}
+            className="mb-2 self-start -ml-0.5 p-1.5 rounded-md text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors shrink-0"
+            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {sidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
+          </button>
+
           {sidebarCollapsed ? (
             <button
               type="button"
@@ -1350,18 +1359,21 @@ function DashboardContent() {
                   </div>
                   <span className="text-sm text-foreground truncate">{displayName}</span>
                 </div>
+                {hasOrder && customer && order && checklistItems.length > 0 && (
+                  <DashboardGetStartedChecklist
+                    orderId={order.id}
+                    items={checklistItems}
+                    checkoutHref={isWebsiteOrder ? websiteCheckoutHref : chatbotCheckoutHref}
+                    unpaidQuoteDollars={unpaidQuoteDollars}
+                    isPaid={isPaid}
+                    liveChatUrl={isLive ? liveChatbotUrl : null}
+                    onContinueSetup={handleChecklistContinue}
+                    layout="sidebar"
+                  />
+                )}
               </div>
             </>
           )}
-
-          <button
-            type="button"
-            onClick={() => setSidebarCollapsed((c) => !c)}
-            className={`mt-2 flex items-center justify-center gap-2 py-2 rounded-lg text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors ${sidebarCollapsed ? "w-full" : "w-full"}`}
-            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {sidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
-          </button>
         </aside>
 
         <div className="flex flex-1 min-h-0 min-w-0 flex-col xl:flex-row">
@@ -1949,18 +1961,16 @@ function DashboardContent() {
                   </button>
                 </div>
               </div>
-              <div className="flex-1 flex justify-center items-stretch min-h-0 overflow-x-auto p-1 md:p-2 xl:p-0 transition-[width] duration-200">
+              <div className="flex-1 flex justify-center items-stretch min-h-0 min-w-0 overflow-x-auto overflow-y-hidden p-1 md:p-2 xl:p-0 transition-[width] duration-200">
                 <div
-                  className={`flex flex-col h-full min-h-[380px] xl:min-h-[520px] max-h-full bg-card border border-border/90 overflow-hidden shadow-[0_24px_64px_-16px_rgba(0,0,0,0.2)] dark:shadow-[0_28px_80px_-20px_rgba(0,0,0,0.55)] ring-1 ring-black/[0.04] dark:ring-white/[0.06] transition-all duration-200 shrink-0 ${
-                    previewView === "desktop" ? "rounded-2xl w-full max-w-4xl" : previewView === "tablet" ? "rounded-2xl" : "rounded-[2rem]"
+                  key={previewView}
+                  className={`flex flex-col h-full min-h-[380px] xl:min-h-[520px] max-h-full bg-card border border-border/90 overflow-hidden shadow-[0_24px_64px_-16px_rgba(0,0,0,0.2)] dark:shadow-[0_28px_80px_-20px_rgba(0,0,0,0.55)] ring-1 ring-black/[0.04] dark:ring-white/[0.06] transition-[width,max-width] duration-200 shrink-0 mx-auto w-full ${
+                    previewView === "desktop"
+                      ? "rounded-2xl max-w-4xl"
+                      : previewView === "tablet"
+                        ? "rounded-2xl max-w-[768px] w-[min(100%,768px)]"
+                        : "rounded-[2rem] max-w-[390px] w-[min(100%,390px)]"
                   }`}
-                  style={
-                    previewView === "tablet"
-                      ? { width: 768, minWidth: 768 }
-                      : previewView === "mobile"
-                        ? { width: 390, minWidth: 390 }
-                        : undefined
-                  }
                 >
                   <CustomerChat
                     customerId={customer.id}
@@ -2411,17 +2421,6 @@ function DashboardContent() {
         </div>
       )}
 
-      {hasOrder && customer && order && checklistItems.length > 0 && (
-        <DashboardGetStartedChecklist
-          orderId={order.id}
-          items={checklistItems}
-          checkoutHref={isWebsiteOrder ? websiteCheckoutHref : chatbotCheckoutHref}
-          unpaidQuoteDollars={unpaidQuoteDollars}
-          isPaid={isPaid}
-          liveChatUrl={isLive ? liveChatbotUrl : null}
-          onContinueSetup={handleChecklistContinue}
-        />
-      )}
     </main>
   );
 }

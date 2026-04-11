@@ -16,23 +16,28 @@ type DesktopStepperProps = {
   currentIndex: number;
 };
 
+/** Pastel emerald track matches success toast / announcement bar (bg-emerald-500/15). */
+const STEP_PROGRESS =
+  "bg-emerald-500/15 border border-emerald-500/25 dark:bg-emerald-500/[0.12] dark:border-emerald-500/35";
+
 /** Single-row horizontal stepper — minimal vertical space (md+ dashboard only). */
 export function DesktopStepper({ steps, currentIndex }: DesktopStepperProps) {
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 xl:px-8">
-      <div className="flex w-full items-stretch gap-0">
+      <div className="flex w-full items-stretch gap-1 sm:gap-1.5">
         {steps.map((step, i) => {
           const isDone = step.done;
           const isCurrent = i === currentIndex && !isDone;
           const isFuture = !isDone && !isCurrent;
           const Icon = step.icon;
+          const inProgressTrack = i <= currentIndex;
 
           return (
             <div
               key={step.key}
               className={cn(
-                "flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2",
-                i > 0 && "border-l border-border/50 pl-2 sm:pl-3 ml-1 sm:ml-2",
+                "flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2 rounded-md px-1 py-1 sm:px-1.5 sm:py-1.5 border transition-colors duration-200",
+                inProgressTrack ? STEP_PROGRESS : "border-transparent",
               )}
             >
               <div
