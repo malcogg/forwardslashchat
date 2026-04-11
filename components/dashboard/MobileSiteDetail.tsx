@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { ArrowLeft, Check, Copy, ExternalLink } from "lucide-react";
-import { GoLiveButton } from "@/components/dashboard/GoLiveButton";
 import type { CrawlProgressSnapshot } from "@/lib/crawl-progress-types";
 import {
   getMobilePaymentCtaLabels,
@@ -51,8 +50,8 @@ type MobileSiteDetailProps = {
   canRescan: boolean;
   copied: boolean;
   onCopyUrl: () => void;
-  authHeaders: () => Promise<HeadersInit>;
-  onGoLiveSuccess: () => void | Promise<void>;
+  /** Opens DNS setup bottom sheet / modal (parent owns shell). */
+  onOpenConnectDomain: () => void;
 };
 
 export function MobileSiteDetail({
@@ -69,8 +68,7 @@ export function MobileSiteDetail({
   canRescan,
   copied,
   onCopyUrl,
-  authHeaders,
-  onGoLiveSuccess,
+  onOpenConnectDomain,
 }: MobileSiteDetailProps) {
   const { order, customer, contentCount = 0 } = siteData;
   const isWebsiteOrder = order.planSlug && ["starter", "new-build", "redesign"].includes(order.planSlug);
@@ -233,7 +231,7 @@ export function MobileSiteDetail({
         return (
           <button
             type="button"
-            onClick={() => scrollTo(domainRef.current)}
+            onClick={() => onOpenConnectDomain()}
             className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
           >
             Next: Connect domain →
@@ -249,7 +247,7 @@ export function MobileSiteDetail({
         return (
           <button
             type="button"
-            onClick={() => scrollTo(domainRef.current)}
+            onClick={() => onOpenConnectDomain()}
             className="inline-flex items-center justify-center rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted/50"
           >
             DNS & verify
@@ -494,18 +492,18 @@ export function MobileSiteDetail({
               contentCount > 0 &&
               customer.subdomain &&
               customer.domain && (
-                <div className="rounded-xl border border-border bg-card/60 p-4 space-y-3">
+                <div className="rounded-xl border border-border bg-card/60 p-4 space-y-2">
                   <h2 className="text-sm font-semibold text-foreground">Connect your domain</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Add a CNAME: <span className="font-mono text-foreground">{customer.subdomain}</span> →{" "}
-                    <span className="font-mono text-foreground">{cnameValue}</span>
+                  <p className="text-xs text-muted-foreground leading-snug">
+                    Add one CNAME at your registrar, then verify in the guided setup.
                   </p>
-                  <GoLiveButton
-                    customerId={customer.id}
-                    customerDomain={`${customer.subdomain}.${customer.domain}`}
-                    onSuccess={onGoLiveSuccess}
-                    authHeaders={authHeaders}
-                  />
+                  <button
+                    type="button"
+                    onClick={() => onOpenConnectDomain()}
+                    className="w-full mt-2 py-3 px-4 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-colors"
+                  >
+                    Open DNS setup
+                  </button>
                 </div>
               )}
             <div>

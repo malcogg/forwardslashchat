@@ -4,8 +4,6 @@ import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { GoLiveButton } from "@/components/dashboard/GoLiveButton";
-
 const PUBLIC_CNAME_TARGET = process.env.NEXT_PUBLIC_CNAME_TARGET || "cname.vercel-dns.com";
 
 export type DesktopNextStepCardProps = {
@@ -30,9 +28,9 @@ export type DesktopNextStepCardProps = {
   unpaidQuoteDollars: number | null;
   copyCname: () => void;
   setActivePanel: (p: "training" | "design" | "domains" | "leads") => void;
-  handleGoLiveSuccess: () => void | Promise<void>;
-  authHeaders: () => Promise<HeadersInit>;
   orderDelivered?: boolean;
+  /** Opens centered DNS setup modal with verify + help. */
+  onOpenConnectDomain: () => void;
 };
 
 export function DesktopNextStepCard({
@@ -50,9 +48,8 @@ export function DesktopNextStepCard({
   unpaidQuoteDollars,
   copyCname,
   setActivePanel,
-  handleGoLiveSuccess,
-  authHeaders,
   orderDelivered,
+  onOpenConnectDomain,
 }: DesktopNextStepCardProps) {
   if (!hasOrder || !customer) return null;
 
@@ -136,7 +133,7 @@ export function DesktopNextStepCard({
         {isPaid && !isLive && contentCount > 0 && customerStatus === "dns_setup" && (
           <>
             <CardDescription className="text-xs leading-snug">
-              Add CNAME at your DNS host, then verify.
+              Add a CNAME at your DNS host, then verify in the guided setup.
             </CardDescription>
             <pre className="rounded-md border border-border bg-muted/60 px-2.5 py-2 text-[11px] font-mono text-foreground whitespace-pre-wrap leading-relaxed">
               {`Host: ${customer.subdomain}\nTarget: ${PUBLIC_CNAME_TARGET}`}
@@ -146,15 +143,12 @@ export function DesktopNextStepCard({
                 {copied ? "Copied" : "Copy DNS"}
               </Button>
               <Button type="button" variant="outline" size="sm" className="flex-1 min-w-[120px]" onClick={() => setActivePanel("domains")}>
-                Details
+                Domain tab
               </Button>
             </div>
-            <GoLiveButton
-              customerId={customer.id}
-              customerDomain={`${customer.subdomain}.${customer.domain}`}
-              onSuccess={handleGoLiveSuccess}
-              authHeaders={authHeaders}
-            />
+            <Button type="button" className="w-full font-semibold" onClick={onOpenConnectDomain}>
+              Open DNS setup
+            </Button>
           </>
         )}
 
@@ -174,8 +168,8 @@ export function DesktopNextStepCard({
           !["dns_setup", "testing", "delivered"].includes(customerStatus) && (
             <>
               <CardDescription className="text-xs leading-snug">Add your domain record when ready.</CardDescription>
-              <Button className="w-full font-semibold" onClick={() => setActivePanel("domains")}>
-                Open Domain
+              <Button className="w-full font-semibold" onClick={onOpenConnectDomain}>
+                Open DNS setup
               </Button>
             </>
           )}

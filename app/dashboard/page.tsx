@@ -47,12 +47,13 @@ import {
   DashboardNotificationBell,
   type DashboardNotificationItem,
 } from "@/components/dashboard/DashboardNotificationBell";
-import { GoLiveButton } from "@/components/dashboard/GoLiveButton";
+import { ConnectDomainDnsShell } from "@/components/dashboard/ConnectDomainDnsShell";
 import { DesktopStepper } from "@/components/dashboard/DesktopStepper";
 import { DesktopNextStepCard } from "@/components/dashboard/DesktopNextStepCard";
 import { DashboardGetStartedChecklist } from "@/components/dashboard/DashboardGetStartedChecklist";
 import type { ChecklistItem } from "@/components/dashboard/DashboardGetStartedChecklist";
 import { getUnpaidOrderQuoteDollars } from "@/lib/dashboard-unpaid-quote";
+import { orderHasDnsHelpPurchase } from "@/lib/order-dns-help";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -289,6 +290,7 @@ function DashboardContent() {
   const ONBOARDING_SEEN_KEY = "forwardslash_onboarding_seen";
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
+  const [connectDomainDnsOpen, setConnectDomainDnsOpen] = useState(false);
 
   // Wait for signed-in user; send Bearer token so API has session (fixes 401 when cookie not sent after redirect)
   useEffect(() => {
@@ -546,6 +548,7 @@ function DashboardContent() {
   }, [crawling, refreshDashboard]);
 
   const handleGoLiveSuccess = useCallback(async () => {
+    setConnectDomainDnsOpen(false);
     const json = (await refreshDashboard()) as {
       customer?: { subdomain?: string; domain?: string };
     } | null;
@@ -1451,9 +1454,8 @@ function DashboardContent() {
                 unpaidQuoteDollars={unpaidQuoteDollars}
                 copyCname={copyCname}
                 setActivePanel={setActivePanel}
-                handleGoLiveSuccess={handleGoLiveSuccess}
-                authHeaders={authHeaders}
                 orderDelivered={order?.status === "delivered"}
+                onOpenConnectDomain={() => setConnectDomainDnsOpen(true)}
               />
             </div>
           )}
@@ -1851,33 +1853,21 @@ function DashboardContent() {
                 </div>
               ) : customer && (contentCount ?? 0) > 0 ? (
                 <>
-                  <p className="text-sm text-muted-foreground mb-4">Add this CNAME record to your DNS:</p>
-                  <div className="relative">
-                    <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto border border-border pr-12">
-                      {`Type: CNAME\nHost: ${customer.subdomain}\nValue: ${PUBLIC_CNAME_TARGET}`}
-                    </pre>
-                    <button
-                      onClick={copyCname}
-                      className="absolute top-3 right-3 p-2 rounded-md border border-border bg-background hover:bg-accent text-muted-foreground hover:text-foreground"
-                      title="Copy to clipboard"
-                    >
-                      {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-4">
-                    <a href="https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-cname-record/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Cloudflare</a>
-                    {" · "}
-                    <a href="https://www.godaddy.com/help/add-a-cname-record-19236" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">GoDaddy</a>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Point <span className="font-mono text-foreground">{customer.subdomain}</span> →{" "}
+                    <span className="font-mono text-foreground">{PUBLIC_CNAME_TARGET}</span> with a CNAME. Open the guided
+                    setup to copy, verify DNS, and go live.
                   </p>
-                  {customer.status === "dns_setup" && (
-                    <GoLiveButton
-                      customerId={customer.id}
-                      customerDomain={`${customer.subdomain}.${customer.domain}`}
-                      onSuccess={handleGoLiveSuccess}
-                      authHeaders={authHeaders}
-                      className="mt-4"
-                    />
-                  )}
+                  <Button type="button" className="mt-4 w-full font-semibold" onClick={() => setConnectDomainDnsOpen(true)}>
+                    Open DNS setup
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={copyCname}
+                    className="mt-2 w-full text-xs text-emerald-700 dark:text-emerald-400 underline underline-offset-2 hover:text-emerald-900 dark:hover:text-emerald-300"
+                  >
+                    {copied ? "Copied CNAME instructions" : "Copy CNAME to clipboard"}
+                  </button>
                   {customer.status === "delivered" && (
                     <a
                       href={`https://${customer.subdomain}.${customer.domain}`}
@@ -2075,8 +2065,7 @@ function DashboardContent() {
             canRescan={canRescan}
             copied={copied}
             onCopyUrl={copyCname}
-            authHeaders={authHeaders}
-            onGoLiveSuccess={handleGoLiveSuccess}
+            onOpenConnectDomain={() => setConnectDomainDnsOpen(true)}
           />
         ) : mobileScreen === "site-detail" && orderId ? (
           <div className="flex flex-col flex-1 items-center justify-center p-6">
@@ -2146,6 +2135,26 @@ function DashboardContent() {
           </>
         )}
       </div>
+
+      {customer &&
+        !isWebsiteOrder &&
+        contentCount > 0 &&
+        customer.subdomain &&
+        customer.domain && (
+          <ConnectDomainDnsShell
+            open={connectDomainDnsOpen}
+            onOpenChange={setConnectDomainDnsOpen}
+            subdomain={customer.subdomain}
+            domain={customer.domain}
+            cnameTarget={PUBLIC_CNAME_TARGET}
+            showGoLive={customer.status === "dns_setup"}
+            hasPaidDnsHelp={orderHasDnsHelpPurchase(order)}
+            customerId={customer.id}
+            customerDomain={`${customer.subdomain}.${customer.domain}`}
+            authHeaders={authHeaders}
+            onGoLiveSuccess={handleGoLiveSuccess}
+          />
+        )}
 
       {/* Upsell modal */}
       {upsellModalOpen && (
