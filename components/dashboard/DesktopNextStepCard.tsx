@@ -31,6 +31,8 @@ export type DesktopNextStepCardProps = {
   orderDelivered?: boolean;
   /** Opens centered DNS setup modal with verify + help. */
   onOpenConnectDomain: () => void;
+  /** When user is already on Domain, avoid duplicating CNAME + actions in this sticky card. */
+  activePanel: "training" | "design" | "domains" | "leads";
 };
 
 export function DesktopNextStepCard({
@@ -50,6 +52,7 @@ export function DesktopNextStepCard({
   setActivePanel,
   orderDelivered,
   onOpenConnectDomain,
+  activePanel,
 }: DesktopNextStepCardProps) {
   if (!hasOrder || !customer) return null;
 
@@ -131,25 +134,32 @@ export function DesktopNextStepCard({
         )}
 
         {isPaid && !isLive && contentCount > 0 && customerStatus === "dns_setup" && (
-          <>
-            <CardDescription className="text-xs leading-snug">
-              Add a CNAME at your DNS host, then verify in the guided setup.
+          activePanel === "domains" ? (
+            <CardDescription className="text-xs leading-snug text-muted-foreground">
+              CNAME details and <strong className="text-foreground font-medium">Check DNS</strong> / guided setup are in the{" "}
+              <strong className="text-foreground font-medium">Domain</strong> section below.
             </CardDescription>
-            <pre className="rounded-md border border-border bg-muted/60 px-2.5 py-2 text-[11px] font-mono text-foreground whitespace-pre-wrap leading-relaxed">
-              {`Host: ${customer.subdomain}\nTarget: ${PUBLIC_CNAME_TARGET}`}
-            </pre>
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" size="sm" className="flex-1 min-w-[120px]" onClick={copyCname}>
-                {copied ? "Copied" : "Copy DNS"}
+          ) : (
+            <>
+              <CardDescription className="text-xs leading-snug">
+                Add a CNAME at your DNS host, then verify in the guided setup.
+              </CardDescription>
+              <pre className="rounded-md border border-border bg-muted/60 px-2.5 py-2 text-[11px] font-mono text-foreground whitespace-pre-wrap leading-relaxed">
+                {`Host: ${customer.subdomain}\nTarget: ${PUBLIC_CNAME_TARGET}`}
+              </pre>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" size="sm" className="flex-1 min-w-[120px]" onClick={copyCname}>
+                  {copied ? "Copied" : "Copy DNS"}
+                </Button>
+                <Button type="button" variant="outline" size="sm" className="flex-1 min-w-[120px]" onClick={() => setActivePanel("domains")}>
+                  Domain tab
+                </Button>
+              </div>
+              <Button type="button" className="w-full font-semibold" onClick={onOpenConnectDomain}>
+                Open DNS setup
               </Button>
-              <Button type="button" variant="outline" size="sm" className="flex-1 min-w-[120px]" onClick={() => setActivePanel("domains")}>
-                Domain tab
-              </Button>
-            </div>
-            <Button type="button" className="w-full font-semibold" onClick={onOpenConnectDomain}>
-              Open DNS setup
-            </Button>
-          </>
+            </>
+          )
         )}
 
         {isPaid && !isLive && contentCount > 0 && customerStatus === "testing" && (
@@ -165,7 +175,8 @@ export function DesktopNextStepCard({
         {isPaid &&
           !isLive &&
           contentCount > 0 &&
-          !["dns_setup", "testing", "delivered"].includes(customerStatus) && (
+          !["dns_setup", "testing", "delivered"].includes(customerStatus) &&
+          activePanel !== "domains" && (
             <>
               <CardDescription className="text-xs leading-snug">Add your domain record when ready.</CardDescription>
               <Button className="w-full font-semibold" onClick={onOpenConnectDomain}>

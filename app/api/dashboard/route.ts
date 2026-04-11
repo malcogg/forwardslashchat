@@ -97,6 +97,7 @@ export async function GET(request: Request) {
           lastError: jobs.lastError,
           attempts: jobs.attempts,
           maxAttempts: jobs.maxAttempts,
+          createdAt: jobs.createdAt,
           updatedAt: jobs.updatedAt,
           dedupeKey: jobs.dedupeKey,
         })

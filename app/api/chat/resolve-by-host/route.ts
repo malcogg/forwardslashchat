@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { customers } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
 import { checkAndIncrementRateLimit, getClientIpFromRequest } from "@/lib/rate-limit";
+import { resolveCustomerIdByHost } from "@/lib/resolve-customer-host";
 
 /**
  * GET /api/chat/resolve-by-host?host=chat.business.com
@@ -23,27 +22,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Rate limited" }, { status: 429 });
   }
 
-  // Ignore our main domain and localhost
-  const mainHosts = ["forwardslash.chat", "www.forwardslash.chat", "localhost", "127.0.0.1"];
-  if (mainHosts.includes(host) || host.endsWith(".vercel.app")) {
-    return NextResponse.json({ customerId: null });
-  }
-
-  // Parse host: chat.business.com → subdomain=chat, domain=business.com
-  const parts = host.split(".");
-  if (parts.length < 2) {
-    return NextResponse.json({ customerId: null });
-  }
-  const subdomain = parts[0];
-  const domain = parts.slice(1).join(".");
-
-  const [customer] = await db
-    .select({ id: customers.id })
-    .from(customers)
-    .where(and(eq(customers.domain, domain), eq(customers.subdomain, subdomain)))
-    .limit(1);
+  const customerId = await resolveCustomerIdByHost(host);
 
   return NextResponse.json({
-    customerId: customer?.id ?? null,
+    customerId,
   });
 }

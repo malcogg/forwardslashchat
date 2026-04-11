@@ -42,6 +42,8 @@ type MobileSiteDetailProps = {
   chatbotCheckoutHref: string;
   websiteCheckoutHref: string;
   unpaidQuoteDollars: number | null;
+  /** Optional strip under the sticky header (e.g. DNS wait timer). */
+  belowHeader?: ReactNode;
   /** Notifications control (e.g. bell); rendered in the sticky header */
   headerEnd?: ReactNode;
   onBack: () => void;
@@ -61,6 +63,7 @@ export function MobileSiteDetail({
   chatbotCheckoutHref,
   websiteCheckoutHref,
   unpaidQuoteDollars,
+  belowHeader,
   headerEnd,
   onBack,
   onRescan,
@@ -321,6 +324,8 @@ export function MobileSiteDetail({
         </h1>
         {headerEnd ? <div className="shrink-0 flex items-center">{headerEnd}</div> : null}
       </header>
+
+      {belowHeader}
 
       <div className="flex-1 overflow-y-auto p-4">
         <span

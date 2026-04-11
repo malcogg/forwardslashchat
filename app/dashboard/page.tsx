@@ -48,6 +48,7 @@ import {
   type DashboardNotificationItem,
 } from "@/components/dashboard/DashboardNotificationBell";
 import { ConnectDomainDnsShell } from "@/components/dashboard/ConnectDomainDnsShell";
+import { DnsPropagationBanner } from "@/components/dashboard/DnsPropagationBanner";
 import { DesktopStepper } from "@/components/dashboard/DesktopStepper";
 import { DesktopNextStepCard } from "@/components/dashboard/DesktopNextStepCard";
 import { DashboardGetStartedChecklist } from "@/components/dashboard/DashboardGetStartedChecklist";
@@ -211,7 +212,16 @@ function DashboardContent() {
   }, [orderId]);
 
   const [data, setData] = useState<{
-    order: { id: string; status: string; amountCents: number; bundleYears: number; dnsHelp: boolean; planSlug?: string; addOns?: string[] };
+    order: {
+      id: string;
+      status: string;
+      amountCents: number;
+      bundleYears: number;
+      dnsHelp: boolean;
+      planSlug?: string;
+      addOns?: string[];
+      createdAt?: string;
+    };
     customer: {
       id: string;
       businessName: string;
@@ -223,6 +233,7 @@ function DashboardContent() {
       status: string;
       primaryColor: string | null;
       crawlProgress?: CrawlProgressSnapshot | null;
+      updatedAt?: string;
     } | null;
     contentCount?: number;
     crawlShortfallHint?: string | null;
@@ -232,6 +243,7 @@ function DashboardContent() {
       lastError: string | null;
       attempts: number;
       maxAttempts: number;
+      createdAt: string;
       updatedAt: string;
       dedupeKey: string | null;
     }[];
@@ -555,7 +567,8 @@ function DashboardContent() {
     const c = json?.customer;
     if (c?.subdomain && c?.domain) {
       setSuccessToast({
-        message: "Your chatbot is live!",
+        message:
+          "Your chatbot is live! We sent the link to your email — open it below anytime.",
         cta: "Visit your chat",
         ctaHref: `https://${c.subdomain}.${c.domain}`,
       });
@@ -585,6 +598,36 @@ function DashboardContent() {
   const isLive = customerStatus === "delivered";
   const isTestingOrLive = ["testing", "delivered"].includes(customerStatus);
   const isWebsiteOrder = order?.planSlug && ["starter", "new-build", "redesign"].includes(order.planSlug);
+
+  const dnsBannerProps = useMemo(() => {
+    if (!customer || isWebsiteOrder || !isPaid || !hasOrder) return null;
+    if (contentCount === 0) return null;
+    if (customer.status === "delivered") return null;
+    if (!["dns_setup", "testing"].includes(customer.status)) return null;
+    if (!customer.subdomain?.trim() || !customer.domain?.trim()) return null;
+
+    const host = `${customer.subdomain}.${customer.domain}`;
+    const goLive = data?.automationJobs?.find((j) => j.dedupeKey === `go_live_${customer.id}`);
+    const toIso = (v: string | Date | undefined | null) => {
+      if (v == null) return null;
+      if (typeof v === "string") return v;
+      try {
+        return new Date(v).toISOString();
+      } catch {
+        return null;
+      }
+    };
+    const startedAtIso =
+      toIso(goLive?.createdAt) ??
+      toIso(customer.updatedAt) ??
+      toIso(order?.createdAt) ??
+      new Date().toISOString();
+
+    const jobActive =
+      !!goLive && (goLive.status === "queued" || goLive.status === "running");
+    const phase = customer.status === "testing" ? ("ssl" as const) : ("dns" as const);
+    return { host, startedAtIso, phase, jobActive };
+  }, [customer, isWebsiteOrder, isPaid, hasOrder, contentCount, data?.automationJobs, order?.createdAt]);
 
   const estimatedPageTotal = Math.max(
     1,
@@ -767,7 +810,8 @@ function DashboardContent() {
 
     if (customerStatus === "delivered" && r.customerStatus && r.customerStatus !== "delivered") {
       setSuccessToast({
-        message: "Your chatbot is live!",
+        message:
+          "Your chatbot is live! We emailed you the link — you can also open your chat below.",
         cta: "Visit chat",
         ctaHref: `https://${customer.subdomain}.${customer.domain}`,
       });
@@ -1431,6 +1475,14 @@ function DashboardContent() {
               </button>
             </div>
           )}
+          {dnsBannerProps ? (
+            <DnsPropagationBanner
+              host={dnsBannerProps.host}
+              startedAtIso={dnsBannerProps.startedAtIso}
+              phase={dnsBannerProps.phase}
+              jobActive={dnsBannerProps.jobActive}
+            />
+          ) : null}
           <div className={`flex-1 overflow-y-auto max-md:pb-24 ${activePanel === "domains" ? "p-4" : "p-3 md:p-4 xl:p-5"} space-y-4`}>
           {hasOrder && customer && (
             <div
@@ -1456,6 +1508,7 @@ function DashboardContent() {
                 setActivePanel={setActivePanel}
                 orderDelivered={order?.status === "delivered"}
                 onOpenConnectDomain={() => setConnectDomainDnsOpen(true)}
+                activePanel={activePanel}
               />
             </div>
           )}
@@ -1854,10 +1907,11 @@ function DashboardContent() {
               ) : customer && (contentCount ?? 0) > 0 ? (
                 <>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Point <span className="font-mono text-foreground">{customer.subdomain}</span> →{" "}
-                    <span className="font-mono text-foreground">{PUBLIC_CNAME_TARGET}</span> with a CNAME. Open the guided
-                    setup to copy, verify DNS, and go live.
+                    Add this CNAME at your DNS host, then use guided setup to verify and attach your chat subdomain.
                   </p>
+                  <pre className="mt-3 rounded-md border border-border bg-muted/60 px-2.5 py-2 text-[11px] font-mono text-foreground whitespace-pre-wrap leading-relaxed max-w-xl">
+                    {`Host: ${customer.subdomain}\nTarget: ${PUBLIC_CNAME_TARGET}`}
+                  </pre>
                   <Button type="button" className="mt-4 w-full font-semibold" onClick={() => setConnectDomainDnsOpen(true)}>
                     Open DNS setup
                   </Button>
@@ -2048,6 +2102,16 @@ function DashboardContent() {
             chatbotCheckoutHref={chatbotCheckoutHref}
             websiteCheckoutHref={websiteCheckoutHref}
             unpaidQuoteDollars={unpaidQuoteDollars}
+            belowHeader={
+              dnsBannerProps ? (
+                <DnsPropagationBanner
+                  host={dnsBannerProps.host}
+                  startedAtIso={dnsBannerProps.startedAtIso}
+                  phase={dnsBannerProps.phase}
+                  jobActive={dnsBannerProps.jobActive}
+                />
+              ) : null
+            }
             headerEnd={
               <DashboardNotificationBell
                 notifications={notifications}
