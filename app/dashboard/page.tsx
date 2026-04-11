@@ -17,7 +17,6 @@ import {
   Copy,
   ExternalLink,
   Trash2,
-  Bell,
   Lock,
   PanelLeftClose,
   PanelLeftOpen,
@@ -44,6 +43,10 @@ import { MobileDashboardHome } from "@/components/dashboard/MobileDashboardHome"
 import { MobileAddSite } from "@/components/dashboard/MobileAddSite";
 import { MobileAccount } from "@/components/dashboard/MobileAccount";
 import { MobileSiteDetail } from "@/components/dashboard/MobileSiteDetail";
+import {
+  DashboardNotificationBell,
+  type DashboardNotificationItem,
+} from "@/components/dashboard/DashboardNotificationBell";
 import { GoLiveButton } from "@/components/dashboard/GoLiveButton";
 import { DesktopStepper } from "@/components/dashboard/DesktopStepper";
 import { DesktopNextStepCard } from "@/components/dashboard/DesktopNextStepCard";
@@ -261,11 +264,10 @@ function DashboardContent() {
   }[]>([]);
   const [cartModalOpen, setCartModalOpen] = useState(false);
   const [cartSelectedIds, setCartSelectedIds] = useState<Set<string>>(new Set());
-  type NotificationItem = { id: string; title: string; body: string; read: boolean };
   const [notificationReadIds, setNotificationReadIds] = useState<Set<string>>(() => new Set());
 
   const [notificationOpen, setNotificationOpen] = useState(false);
-  const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
+  const [selectedNotification, setSelectedNotification] = useState<DashboardNotificationItem | null>(null);
   const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -466,7 +468,7 @@ function DashboardContent() {
 
   const handleCrawl = async () => {
     if (!data?.customer?.id) return;
-    if (data.order?.status !== "paid") {
+    if (!["paid", "processing", "delivered"].includes(data.order?.status ?? "")) {
       router.push(
         `/checkout?plan=chatbot-2y&pages=25&url=${encodeURIComponent(data.customer?.websiteUrl ?? "")}&orderId=${encodeURIComponent(data.order?.id ?? "")}`
       );
@@ -571,8 +573,11 @@ function DashboardContent() {
   const customer = data?.customer;
   const hasOrder = !!order;
   const contentCount = data?.contentCount ?? 0;
-  const hasPaidOrder = myOrders.some((o) => o.order.status === "paid");
-  const isPaid = order?.status === "paid";
+  const hasPaidOrder = myOrders.some((o) =>
+    ["paid", "processing", "delivered"].includes(o.order.status ?? "")
+  );
+  /** Checkout complete (matches /api + desktop stepper — not only strict `paid`). */
+  const isPaid = ["paid", "processing", "delivered"].includes(order?.status ?? "");
   const customerStatus = customer?.status ?? "";
   const isLive = customerStatus === "delivered";
   const isTestingOrLive = ["testing", "delivered"].includes(customerStatus);
@@ -979,8 +984,7 @@ function DashboardContent() {
     redesign: "Website Redesign",
   };
 
-  const paymentReceived = ["paid", "processing", "delivered"].includes(order?.status ?? "");
-  const paymentStepLabel = paymentReceived ? "Payment received" : "Complete payment";
+  const paymentStepLabel = isPaid ? "Payment received" : "Complete payment";
 
   /** Chatbot orders: full automated pipeline. Website-builder SKUs: separate product (human-led milestones on the order). */
   const STATUS_STEPS = isWebsiteOrder
@@ -988,7 +992,7 @@ function DashboardContent() {
         {
           key: "payment",
           label: paymentStepLabel,
-          done: paymentReceived,
+          done: isPaid,
         },
         {
           key: "delivered",
@@ -997,7 +1001,7 @@ function DashboardContent() {
         },
       ]
     : [
-        { key: "payment", label: paymentStepLabel, done: paymentReceived },
+        { key: "payment", label: paymentStepLabel, done: isPaid },
         {
           key: "content",
           label: "Content & training",
@@ -1072,45 +1076,12 @@ function DashboardContent() {
             <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">PRO</span>
           )}
           <ThemeToggle />
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setNotificationOpen((o) => !o)}
-              className="relative p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              aria-label="Notifications"
-            >
-              <Bell className="w-5 h-5" />
-              {notifications.some((n) => !n.read) && (
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-500" />
-              )}
-            </button>
-            {notificationOpen && (
-              <>
-                <div className="fixed inset-0 z-40" aria-hidden onClick={() => setNotificationOpen(false)} />
-                <div className="absolute right-0 top-full mt-2 w-80 max-h-[320px] overflow-y-auto rounded-xl border border-border bg-background shadow-xl z-50 py-1">
-                <p className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Notifications</p>
-                {notifications.length === 0 ? (
-                  <p className="px-3 py-4 text-sm text-muted-foreground">No notifications yet.</p>
-                ) : (
-                  notifications.map((n) => (
-                    <button
-                      key={n.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedNotification(n);
-                        setNotificationOpen(false);
-                      }}
-                      className={`w-full text-left px-3 py-2.5 text-sm hover:bg-muted/50 flex flex-col gap-0.5 ${!n.read ? "bg-muted/30" : ""}`}
-                    >
-                      <span className="font-medium text-foreground">{n.title}</span>
-                      <span className="text-xs text-muted-foreground line-clamp-1">{n.body}</span>
-                    </button>
-                  ))
-                )}
-                </div>
-              </>
-            )}
-          </div>
+          <DashboardNotificationBell
+            notifications={notifications}
+            open={notificationOpen}
+            setOpen={setNotificationOpen}
+            onSelect={(n) => setSelectedNotification(n)}
+          />
           <div className="relative inline-block">
             <UserButton afterSignOutUrl="/" />
             {myOrders.some((o) => o.order.status === "paid") && (
@@ -1351,7 +1322,9 @@ function DashboardContent() {
               </button>
               <div className="pt-3 border-t border-border mt-2">
                 {(() => {
-                  const hasPaidOrder = myOrders.some((o) => o.order.status === "paid");
+                  const hasPaidOrder = myOrders.some((o) =>
+                    ["paid", "processing", "delivered"].includes(o.order.status ?? "")
+                  );
                   const totalPages = myOrders.reduce((s, o) => s + (o.estimatedPages ?? 25), 0);
                   const totalCrawled = myOrders.reduce((s, o) => s + (o.contentCount ?? 0), 0);
                   const selectedPages = myOrders
@@ -2081,6 +2054,18 @@ function DashboardContent() {
               contentCount: data.contentCount ?? 0,
             }}
             estimatedPages={myOrders.find((o) => o.order.id === orderId)?.estimatedPages ?? 25}
+            isPaid={isPaid}
+            chatbotCheckoutHref={chatbotCheckoutHref}
+            websiteCheckoutHref={websiteCheckoutHref}
+            unpaidQuoteDollars={unpaidQuoteDollars}
+            headerEnd={
+              <DashboardNotificationBell
+                notifications={notifications}
+                open={notificationOpen}
+                setOpen={setNotificationOpen}
+                onSelect={(n) => setSelectedNotification(n)}
+              />
+            }
             onBack={() => {
               setMobileScreen("home");
               router.replace("/dashboard");
@@ -2108,8 +2093,14 @@ function DashboardContent() {
           <>
             <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-background shrink-0">
               <span className="text-sm font-medium text-foreground">ForwardSlash.Chat</span>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <ThemeToggle />
+                <DashboardNotificationBell
+                  notifications={notifications}
+                  open={notificationOpen}
+                  setOpen={setNotificationOpen}
+                  onSelect={(n) => setSelectedNotification(n)}
+                />
                 <UserButton afterSignOutUrl="/" />
               </div>
             </header>
@@ -2123,6 +2114,7 @@ function DashboardContent() {
                     setMobileScreen("site-detail");
                   }}
                   onGoToAddSite={() => setMobileScreen("add")}
+                  onOpenBundles={openCartModal}
                 />
               )}
               {mobileScreen === "add" && (
@@ -2141,7 +2133,12 @@ function DashboardContent() {
                   initials={initials}
                   totalSites={myOrders.length}
                   liveSites={myOrders.filter((o) => o.customer?.status === "delivered" || (o.order.planSlug && ["starter", "new-build", "redesign"].includes(o.order.planSlug) && o.order.status === "delivered")).length}
-                  investedCents={myOrders.reduce((sum, o) => sum + (o.order.amountCents ?? 0), 0)}
+                  totalPaidCents={myOrders.reduce((sum, o) => sum + (o.order.amountCents ?? 0), 0)}
+                  onOpenBundles={openCartModal}
+                  onReplayOnboarding={() => {
+                    setOnboardingStep(0);
+                    setShowOnboardingModal(true);
+                  }}
                 />
               )}
             </div>
@@ -2243,7 +2240,12 @@ function DashboardContent() {
               </p>
             </div>
             <div className="max-h-64 overflow-y-auto p-4 space-y-2">
-              {myOrders.map(({ order, customer, contentCount, estimatedPages }) => {
+              {myOrders.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6 px-2 leading-relaxed">
+                  Add a site from the Home tab first. Then you can bundle multiple sites into one checkout.
+                </p>
+              ) : (
+              myOrders.map(({ order, customer, contentCount, estimatedPages }) => {
                 const checked = cartSelectedIds.has(order.id);
                 const displayUrl = customer?.websiteUrl?.replace(/^https?:\/\//, "").replace(/\/$/, "") ?? "Site";
                 return (
@@ -2277,7 +2279,8 @@ function DashboardContent() {
                     </div>
                   </label>
                 );
-              })}
+              })
+              )}
             </div>
             {(() => {
               const selected = myOrders.filter((o) => cartSelectedIds.has(o.order.id));
@@ -2371,7 +2374,9 @@ function DashboardContent() {
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Step 1</p>
                 <h3 className="font-serif text-xl font-semibold text-foreground mt-1">Add your site</h3>
                 <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
-                  Use &quot;Scan site&quot; in the sidebar to add your website. We&apos;ll add it here so you can train your chatbot on your content.
+                  On your phone, open the <strong className="text-foreground font-medium">Add</strong> tab and scan your
+                  URL. On desktop, use <strong className="text-foreground font-medium">Scan site</strong> in the sidebar.
+                  We&apos;ll add it here so you can train your chatbot on your content.
                 </p>
                 <button
                   type="button"
@@ -2403,7 +2408,9 @@ function DashboardContent() {
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Step 3</p>
                 <h3 className="font-serif text-xl font-semibold text-foreground mt-1">We train your AI</h3>
                 <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
-                  After payment, we start building your chatbot automatically. You can also click &quot;Build my chatbot&quot; any time to kick off a crawl.
+                  After payment, we start building your chatbot automatically. You can also use{" "}
+                  <strong className="text-foreground font-medium">Build my chatbot</strong> (desktop) or the training
+                  actions in your site view to kick off a crawl.
                 </p>
                 <button
                   type="button"
