@@ -4,6 +4,10 @@ import { eq } from "drizzle-orm";
 import { getOrCreateUser } from "@/lib/auth";
 import { db } from "@/db";
 import { userOnboarding } from "@/db/schema";
+import {
+  isOnboardingCompleteForApp,
+  REQUIRED_ONBOARDING_VERSION,
+} from "@/lib/onboarding-version";
 
 const completeBodySchema = z.object({
   path: z.enum(["has_website", "no_website"]),
@@ -43,12 +47,13 @@ export async function GET(request: Request) {
     .select({
       completedAt: userOnboarding.completedAt,
       path: userOnboarding.path,
+      extra: userOnboarding.extra,
     })
     .from(userOnboarding)
     .where(eq(userOnboarding.userId, user.userId));
 
   return NextResponse.json({
-    completed: row?.completedAt != null,
+    completed: isOnboardingCompleteForApp(row, row?.extra),
     path: row?.path ?? null,
   });
 }
@@ -84,6 +89,18 @@ export async function POST(request: Request) {
 
   const now = new Date();
 
+  const [existingRow] = await db
+    .select({ extra: userOnboarding.extra })
+    .from(userOnboarding)
+    .where(eq(userOnboarding.userId, user.userId));
+
+  const mergedExtra: Record<string, unknown> = {
+    ...(existingRow?.extra && typeof existingRow.extra === "object" && !Array.isArray(existingRow.extra)
+      ? (existingRow.extra as Record<string, unknown>)
+      : {}),
+    onboardingVersion: REQUIRED_ONBOARDING_VERSION,
+  };
+
   await db
     .insert(userOnboarding)
     .values({
@@ -98,7 +115,7 @@ export async function POST(request: Request) {
       noSiteProjectNote: skipAll ? null : (data.noSiteProjectNote?.trim() || null),
       noSiteTimeline: null,
       skippedStepIds: skipped,
-      extra: {},
+      extra: mergedExtra,
       completedAt: now,
       updatedAt: now,
     })
@@ -114,6 +131,7 @@ export async function POST(request: Request) {
         websiteUrlSnapshot: skipAll ? null : websiteUrlSnapshot,
         noSiteProjectNote: skipAll ? null : (data.noSiteProjectNote?.trim() || null),
         skippedStepIds: skipped,
+        extra: mergedExtra,
         completedAt: now,
         updatedAt: now,
       },
