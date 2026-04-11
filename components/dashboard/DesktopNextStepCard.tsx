@@ -59,10 +59,10 @@ export function DesktopNextStepCard({
   if (isWebsiteOrder) {
     const payHref = websiteCheckoutHref;
     return (
-      <Card className="rounded-lg border-border/70 shadow-sm">
-        <CardHeader className="p-4 pb-2 space-y-1">
+      <Card className="rounded-lg border-border/80 shadow-sm ring-1 ring-emerald-500/10 bg-card">
+        <CardHeader className="p-3 pb-2 space-y-1">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Next</p>
-          <CardTitle className="text-base">Website project</CardTitle>
+          <CardTitle className="text-lg font-semibold tracking-tight">Website project</CardTitle>
           <CardDescription className="text-xs leading-snug">
             {!isPaid
               ? "Complete payment to confirm your website package. We’ll email you to schedule kickoff."
@@ -72,8 +72,8 @@ export function DesktopNextStepCard({
           </CardDescription>
         </CardHeader>
         {!isPaid && (
-          <CardContent className="p-4 pt-2">
-            <Button asChild className="w-full font-semibold">
+          <CardContent className="p-3 pt-1">
+            <Button asChild className="w-full h-11 text-sm font-semibold shadow-md">
               <Link href={payHref}>
                 {unpaidQuoteDollars != null
                   ? `Complete payment — $${unpaidQuoteDollars.toLocaleString()}`
@@ -87,18 +87,18 @@ export function DesktopNextStepCard({
   }
 
   return (
-    <Card className="rounded-lg border-border/70 shadow-sm">
-      <CardHeader className="p-4 pb-2 space-y-1">
+    <Card className="rounded-lg border-border/80 shadow-sm ring-1 ring-emerald-500/10 bg-card">
+      <CardHeader className="p-3 pb-2 space-y-1">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Next step</p>
-        <CardTitle className="text-base">Finish setup</CardTitle>
+        <CardTitle className="text-lg font-semibold tracking-tight">Finish setup</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3 p-4 pt-2">
+      <CardContent className="space-y-3 p-3 pt-1">
         {!isPaid && (
           <>
-            <CardDescription className="text-xs leading-snug">
+            <CardDescription className="text-xs leading-snug text-muted-foreground">
               One checkout unlocks crawl, training, and custom domain.
             </CardDescription>
-            <Button asChild className="w-full font-semibold">
+            <Button asChild className="w-full h-11 text-sm font-semibold shadow-md">
               <Link href={chatbotCheckoutHref}>
                 {unpaidQuoteDollars != null
                   ? `Complete payment — $${unpaidQuoteDollars.toLocaleString()}`

@@ -21,6 +21,7 @@ import {
   Lock,
   PanelLeftClose,
   PanelLeftOpen,
+  PanelRightClose,
   CreditCard,
   Layers,
   Globe2,
@@ -50,6 +51,7 @@ import type { ChecklistItem } from "@/components/dashboard/DashboardGetStartedCh
 import { getUnpaidOrderQuoteDollars } from "@/lib/dashboard-unpaid-quote";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 const PUBLIC_CNAME_TARGET =
   process.env.NEXT_PUBLIC_CNAME_TARGET || "cname.vercel-dns.com";
@@ -178,6 +180,8 @@ function DashboardContent() {
   const [scanNewSiteModalOpen, setScanNewSiteModalOpen] = useState(false);
   const [upsellModalOpen, setUpsellModalOpen] = useState(false);
   const [previewView, setPreviewView] = useState<"desktop" | "tablet" | "mobile">("desktop");
+  /** xl only: hide right preview column so main work area uses full width */
+  const [livePreviewHidden, setLivePreviewHidden] = useState(false);
   const scanDropdownRef = useRef<HTMLDivElement>(null);
 
   const setMobilePanel = (panel: MobileSheetPanel) => {
@@ -1116,7 +1120,7 @@ function DashboardContent() {
 
       {hasOrder && (
         <div className="shrink-0 border-b border-border/80 bg-muted/15">
-          <div className="py-1.5 md:py-2 space-y-1">
+          <div className="py-1 md:py-1.5 space-y-0.5">
             <DesktopStepper steps={DESKTOP_STEPPER_STEPS} currentIndex={stepperCurrentIndex} />
             {isWebsiteOrder && isPaid && order?.status !== "delivered" && (
               <div className="w-full px-4 sm:px-6 xl:px-8">
@@ -1133,7 +1137,7 @@ function DashboardContent() {
         {/* Sidebar - collapsible on desktop, hidden on mobile */}
         <aside
           className={`hidden md:flex border-r border-sidebar-border bg-sidebar flex-col shrink-0 transition-[width] duration-200 ${
-            sidebarCollapsed ? "w-14 p-2" : "w-56 p-3"
+            sidebarCollapsed ? "w-14 p-2" : "w-[13.5rem] p-2.5"
           }`}
         >
           <button
@@ -1158,7 +1162,7 @@ function DashboardContent() {
             <div className="mb-2" ref={scanDropdownRef}>
               <button
                 onClick={() => setScanDropdownOpen((o) => !o)}
-                className="w-full flex items-center justify-between gap-2 px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted/50 rounded hover:text-foreground"
+                className="w-full flex items-center justify-between gap-1.5 px-1.5 py-1 text-[13px] leading-tight text-muted-foreground hover:bg-muted/50 rounded-md hover:text-foreground"
               >
                 <span className="flex items-center gap-2 min-w-0 flex-1">
                   <span className="w-5 shrink-0 text-center text-[11px] font-semibold text-muted-foreground tabular-nums">
@@ -1240,7 +1244,7 @@ function DashboardContent() {
             <button
               type="button"
               onClick={() => setActivePanel("training")}
-              className={`w-full flex items-center gap-2 px-2.5 py-2 text-sm rounded-lg text-left transition-colors ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "training" ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"}`}
+              className={`w-full flex items-center gap-1.5 px-2 py-1.5 text-[13px] rounded-md text-left transition-colors ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "training" ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"}`}
               title={sidebarCollapsed ? "2. Training" : undefined}
             >
               {!sidebarCollapsed && (
@@ -1256,7 +1260,7 @@ function DashboardContent() {
             <button
               type="button"
               onClick={() => setActivePanel("design")}
-              className={`w-full flex items-center gap-2 px-2.5 py-2 text-sm rounded-lg text-left transition-colors ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "design" ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"}`}
+              className={`w-full flex items-center gap-1.5 px-2 py-1.5 text-[13px] rounded-md text-left transition-colors ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "design" ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"}`}
               title={sidebarCollapsed ? "3. Design" : undefined}
             >
               {!sidebarCollapsed && (
@@ -1278,7 +1282,7 @@ function DashboardContent() {
                     ? "Complete Training first"
                     : "Domain"
               }
-              className={`w-full flex items-center gap-2 px-2.5 py-2 text-sm rounded-lg text-left transition-colors ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "domains" ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"}`}
+              className={`w-full flex items-center gap-1.5 px-2 py-1.5 text-[13px] rounded-md text-left transition-colors ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "domains" ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"}`}
             >
               {!sidebarCollapsed && (
                 <span className="w-5 shrink-0 text-center text-[11px] font-semibold text-muted-foreground tabular-nums">
@@ -1302,13 +1306,13 @@ function DashboardContent() {
             <>
               <button
                 onClick={() => setUpsellModalOpen(true)}
-                className="w-full mt-4 p-3 rounded-lg bg-white dark:bg-zinc-800 border border-border text-left hover:shadow-md transition-shadow"
+                className="w-full mt-3 p-2.5 rounded-lg bg-white dark:bg-zinc-800 border border-border text-left hover:shadow-sm transition-shadow"
               >
                 <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Also from us</p>
                 <p className="text-xs font-semibold text-foreground mt-0.5">Web design & marketing</p>
                 <p className="text-[10px] text-muted-foreground mt-1">Full overhauls for local businesses →</p>
               </button>
-              <div className="pt-4 border-t border-border mt-3">
+              <div className="pt-3 border-t border-border mt-2">
                 {(() => {
                   const hasPaidOrder = myOrders.some((o) => o.order.status === "paid");
                   const totalPages = myOrders.reduce((s, o) => s + (o.estimatedPages ?? 25), 0);
@@ -1365,10 +1369,21 @@ function DashboardContent() {
         </aside>
 
         <div className="flex flex-1 min-h-0 min-w-0 flex-col xl:flex-row">
-        {/* Work area ~58% at xl — compact cards + panels; preview ~42% */}
+        {/* Work area: flex-1 at xl; preview column fixed max width when visible */}
         <div
-          className={`flex flex-col min-h-0 min-w-0 overflow-hidden border-b xl:border-b-0 xl:border-r border-border/80 bg-background/50 xl:w-[58%] xl:max-w-3xl xl:shrink-0 flex-1 xl:flex-none ${mobileView === "preview" ? "max-md:hidden" : ""}`}
+          className={`flex flex-col min-h-0 min-w-0 overflow-hidden border-b xl:border-b-0 xl:border-r border-border/80 bg-background/50 flex-1 xl:min-w-0 ${livePreviewHidden ? "xl:border-r-0" : ""} ${mobileView === "preview" ? "max-md:hidden" : ""}`}
         >
+          {livePreviewHidden && (
+            <div className="hidden xl:flex shrink-0 items-center justify-end border-b border-border/60 bg-muted/20 px-4 py-1">
+              <button
+                type="button"
+                onClick={() => setLivePreviewHidden(false)}
+                className="text-xs font-medium text-primary hover:underline"
+              >
+                Show live preview
+              </button>
+            </div>
+          )}
           {successToast && (
             <div className="flex items-center justify-between gap-3 p-3 bg-emerald-500/15 border-b border-emerald-500/30 shrink-0">
               <p className="text-sm font-medium text-foreground flex items-center gap-2">
@@ -1403,34 +1418,53 @@ function DashboardContent() {
               </button>
             </div>
           )}
-          <div className={`flex-1 overflow-y-auto max-md:pb-24 ${activePanel === "domains" ? "p-5" : "p-4 md:p-5 xl:p-6"} space-y-5`}>
+          <div className={`flex-1 overflow-y-auto max-md:pb-24 ${activePanel === "domains" ? "p-4" : "p-3 md:p-4 xl:p-5"} space-y-4`}>
           {hasOrder && customer && (
-            <DesktopNextStepCard
-              isWebsiteOrder={!!isWebsiteOrder}
-              hasOrder={hasOrder}
-              customer={customer}
-              isPaid={isPaid}
-              isLive={isLive}
-              contentCount={contentCount}
-              customerStatus={customerStatus}
-              crawling={crawling}
-              copied={copied}
-              chatbotCheckoutHref={chatbotCheckoutHref}
-              websiteCheckoutHref={websiteCheckoutHref}
+            <div
+              className={cn(
+                "sticky top-0 z-20 -mt-1 pt-1 pb-3 mb-0.5 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/88 border-b border-border/50 shadow-[0_6px_16px_-8px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_20px_-10px_rgba(0,0,0,0.45)]",
+                activePanel === "domains" ? "-mx-4 px-4" : "-mx-3 md:-mx-4 xl:-mx-5 px-3 md:px-4 xl:px-5",
+              )}
+            >
+              <DesktopNextStepCard
+                isWebsiteOrder={!!isWebsiteOrder}
+                hasOrder={hasOrder}
+                customer={customer}
+                isPaid={isPaid}
+                isLive={isLive}
+                contentCount={contentCount}
+                customerStatus={customerStatus}
+                crawling={crawling}
+                copied={copied}
+                chatbotCheckoutHref={chatbotCheckoutHref}
+                websiteCheckoutHref={websiteCheckoutHref}
+                unpaidQuoteDollars={unpaidQuoteDollars}
+                copyCname={copyCname}
+                setActivePanel={setActivePanel}
+                handleGoLiveSuccess={handleGoLiveSuccess}
+                authHeaders={authHeaders}
+                orderDelivered={order?.status === "delivered"}
+              />
+            </div>
+          )}
+          {hasOrder && customer && order && checklistItems.length > 0 && (
+            <DashboardGetStartedChecklist
+              orderId={order.id}
+              items={checklistItems}
+              checkoutHref={isWebsiteOrder ? websiteCheckoutHref : chatbotCheckoutHref}
               unpaidQuoteDollars={unpaidQuoteDollars}
-              copyCname={copyCname}
-              setActivePanel={setActivePanel}
-              handleGoLiveSuccess={handleGoLiveSuccess}
-              authHeaders={authHeaders}
-              orderDelivered={order?.status === "delivered"}
+              isPaid={isPaid}
+              liveChatUrl={isLive ? liveChatbotUrl : null}
+              onContinueSetup={handleChecklistContinue}
+              layout="main"
             />
           )}
           {activePanel === "training" && (
             <>
-              <div className="flex flex-wrap items-start justify-between gap-3 mb-1">
+              <div className="flex flex-wrap items-start justify-between gap-2 mb-0.5">
                 <div>
-                  <h2 className="text-base font-semibold text-foreground tracking-tight">Training</h2>
-                  <p className="text-xs text-muted-foreground mt-1 leading-snug max-w-md">
+                  <h2 className="text-sm font-semibold text-foreground tracking-tight">Training</h2>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug max-w-md">
                     {hasOrder && !isPaid && !isWebsiteOrder
                       ? "Pay in Next step — then run your first crawl here."
                       : "Crawl your site and train the assistant on your pages."}
@@ -1879,11 +1913,11 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* Live preview — right column, framed widget */}
+        {/* Live preview — narrower at xl; hideable */}
         <div
-          className={`flex-1 min-h-0 min-w-0 flex flex-col p-4 md:p-5 xl:p-6 bg-gradient-to-br from-muted/10 via-background to-muted/20 max-md:pb-24 ${
+          className={`flex-1 min-h-0 min-w-0 flex flex-col p-3 md:p-4 xl:max-w-[min(26rem,32vw)] xl:flex-none xl:w-[min(26rem,32vw)] xl:border-l xl:border-border/60 bg-gradient-to-br from-muted/10 via-background to-muted/20 max-md:pb-24 ${
             mobileView === "preview" ? "max-md:flex" : "max-md:hidden"
-          }`}
+          } ${livePreviewHidden ? "xl:hidden" : ""}`}
         >
           {isWebsiteOrder ? (
             <div className="flex-1 flex flex-col items-center justify-center p-8">
@@ -1918,14 +1952,24 @@ function DashboardContent() {
           ) : customer ? (
             <div className="flex-1 flex flex-col min-h-0 min-w-0">
               {/* Device view toggle + preview frame */}
-              <div className="flex items-start justify-between gap-3 mb-3 shrink-0">
-                <div>
-                  <h2 className="text-base font-semibold text-foreground tracking-tight">Live preview</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5 max-w-sm leading-snug">
+              <div className="flex items-start justify-between gap-2 mb-2 shrink-0">
+                <div className="min-w-0 pr-1">
+                  <h2 className="text-sm font-semibold text-foreground tracking-tight">Live preview</h2>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
                     Branded widget + sample thread — send a message to try it.
                   </p>
                 </div>
-                <div className="flex items-center gap-0.5 p-1 rounded-xl bg-muted/50 border border-border/80 shadow-sm shrink-0">
+                <div className="flex items-center gap-0.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setLivePreviewHidden(true)}
+                  className="hidden xl:inline-flex items-center gap-1 rounded-md p-1.5 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  aria-label="Hide live preview"
+                  title="Hide preview"
+                >
+                  <PanelRightClose className="h-4 w-4" />
+                </button>
+                <div className="flex items-center gap-0.5 p-1 rounded-lg bg-muted/50 border border-border/80 shadow-sm">
                   <button
                     onClick={() => setPreviewView("desktop")}
                     className={`p-1.5 rounded-md transition-colors ${previewView === "desktop" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
@@ -1948,16 +1992,17 @@ function DashboardContent() {
                     <Smartphone className="w-4 h-4" />
                   </button>
                 </div>
+                </div>
               </div>
-              <div className="flex-1 flex justify-center items-stretch min-h-0 min-w-0 overflow-x-auto overflow-y-hidden p-1 md:p-2 xl:p-0 transition-[width] duration-200">
+              <div className="flex-1 flex justify-center items-stretch min-h-0 min-w-0 overflow-x-auto overflow-y-hidden p-1 md:p-1.5 xl:p-0 transition-[width] duration-200">
                 <div
                   key={previewView}
-                  className={`flex flex-col h-full min-h-[380px] xl:min-h-[520px] max-h-full bg-card border border-border/90 overflow-hidden shadow-[0_24px_64px_-16px_rgba(0,0,0,0.2)] dark:shadow-[0_28px_80px_-20px_rgba(0,0,0,0.55)] ring-1 ring-black/[0.04] dark:ring-white/[0.06] transition-[width,max-width] duration-200 shrink-0 mx-auto w-full ${
+                  className={`flex flex-col h-full min-h-[300px] md:min-h-[340px] xl:min-h-[420px] max-h-full bg-card border border-border/90 overflow-hidden shadow-md ring-1 ring-black/[0.04] dark:ring-white/[0.06] transition-[width,max-width] duration-200 shrink-0 mx-auto w-full ${
                     previewView === "desktop"
-                      ? "rounded-2xl max-w-4xl"
+                      ? "rounded-xl max-w-full"
                       : previewView === "tablet"
-                        ? "rounded-2xl max-w-[768px] w-[min(100%,768px)]"
-                        : "rounded-[2rem] max-w-[390px] w-[min(100%,390px)]"
+                        ? "rounded-xl max-w-[768px] w-[min(100%,768px)]"
+                        : "rounded-[1.5rem] max-w-[390px] w-[min(100%,390px)]"
                   }`}
                 >
                   <CustomerChat
@@ -2409,18 +2454,6 @@ function DashboardContent() {
         </div>
       )}
 
-      {hasOrder && customer && order && checklistItems.length > 0 && (
-        <DashboardGetStartedChecklist
-          orderId={order.id}
-          items={checklistItems}
-          checkoutHref={isWebsiteOrder ? websiteCheckoutHref : chatbotCheckoutHref}
-          unpaidQuoteDollars={unpaidQuoteDollars}
-          isPaid={isPaid}
-          liveChatUrl={isLive ? liveChatbotUrl : null}
-          onContinueSetup={handleChecklistContinue}
-          layout="floating"
-        />
-      )}
     </main>
   );
 }
