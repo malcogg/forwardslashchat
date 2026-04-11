@@ -29,7 +29,7 @@ export type DesktopNextStepCardProps = {
   /** Quoted checkout total when unpaid (matches /checkout when possible) */
   unpaidQuoteDollars: number | null;
   copyCname: () => void;
-  setActivePanel: (p: "training" | "design" | "domains") => void;
+  setActivePanel: (p: "training" | "design" | "domains" | "leads") => void;
   handleGoLiveSuccess: () => void | Promise<void>;
   authHeaders: () => Promise<HeadersInit>;
   orderDelivered?: boolean;

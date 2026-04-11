@@ -30,6 +30,7 @@ import {
   GraduationCap,
   Palette,
   Link2,
+  UserPlus,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CustomerChat } from "@/components/CustomerChat";
@@ -168,7 +169,7 @@ function DashboardContent() {
   }, [orderId, router, canCallApi]);
   const initials = getInitials(displayName);
 
-  const [activePanel, setActivePanel] = useState<"training" | "design" | "domains">("training");
+  const [activePanel, setActivePanel] = useState<"training" | "design" | "domains" | "leads">("training");
   const [accentDraft, setAccentDraft] = useState("#000000");
   const [brandingSaveState, setBrandingSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
@@ -581,6 +582,12 @@ function DashboardContent() {
     1,
     myOrders.find((o) => o.order.id === order?.id)?.estimatedPages ?? 25
   );
+
+  useEffect(() => {
+    if (activePanel === "leads" && (!isPaid || !!isWebsiteOrder || !customer)) {
+      setActivePanel("training");
+    }
+  }, [activePanel, isPaid, isWebsiteOrder, customer]);
 
   const chatbotCheckoutHref = useMemo(
     () =>
@@ -1136,7 +1143,7 @@ function DashboardContent() {
       <div className="flex flex-1 min-h-0 min-w-0">
         {/* Sidebar - collapsible on desktop, hidden on mobile */}
         <aside
-          className={`hidden md:flex border-r border-sidebar-border bg-sidebar flex-col shrink-0 transition-[width] duration-200 ${
+          className={`hidden md:flex border-r border-sidebar-border bg-sidebar flex-col min-h-0 shrink-0 transition-[width] duration-200 ${
             sidebarCollapsed ? "w-14 p-2" : "w-[13.5rem] p-2.5"
           }`}
         >
@@ -1240,7 +1247,7 @@ function DashboardContent() {
             </div>
           )}
 
-          <nav className={`space-y-1 flex-1 ${sidebarCollapsed ? "flex flex-col items-center" : ""}`}>
+          <nav className={`space-y-1 shrink-0 ${sidebarCollapsed ? "flex flex-col items-center" : ""}`}>
             <button
               type="button"
               onClick={() => setActivePanel("training")}
@@ -1300,13 +1307,44 @@ function DashboardContent() {
               </span>
               {!sidebarCollapsed && <span className="truncate">Domain</span>}
             </button>
+            {isPaid && customer && !isWebsiteOrder && (
+              <button
+                type="button"
+                onClick={() => setActivePanel("leads")}
+                className={`w-full flex items-center gap-1.5 px-2 py-1.5 text-[13px] rounded-md text-left transition-colors ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "leads" ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"}`}
+                title={sidebarCollapsed ? "Leads" : undefined}
+              >
+                {!sidebarCollapsed && <span className="w-5 shrink-0" aria-hidden />}
+                <span className="w-5 shrink-0 flex justify-center">
+                  <UserPlus className="w-4 h-4 opacity-70" />
+                </span>
+                {!sidebarCollapsed && <span className="truncate">Leads</span>}
+              </button>
+            )}
           </nav>
 
           {!sidebarCollapsed && (
-            <>
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-2 -mx-0.5 px-0.5">
+              {hasOrder && customer && order && checklistItems.length > 0 && (
+                <DashboardGetStartedChecklist
+                  orderId={order.id}
+                  items={checklistItems}
+                  checkoutHref={isWebsiteOrder ? websiteCheckoutHref : chatbotCheckoutHref}
+                  unpaidQuoteDollars={unpaidQuoteDollars}
+                  isPaid={isPaid}
+                  liveChatUrl={isLive ? liveChatbotUrl : null}
+                  onContinueSetup={handleChecklistContinue}
+                  layout="sidebar"
+                />
+              )}
+            </div>
+          )}
+
+          {!sidebarCollapsed && (
+            <div className="mt-auto shrink-0 flex flex-col pt-1">
               <button
                 onClick={() => setUpsellModalOpen(true)}
-                className="w-full mt-3 p-2.5 rounded-lg bg-white dark:bg-zinc-800 border border-border text-left hover:shadow-sm transition-shadow"
+                className="w-full mt-2 p-2.5 rounded-lg bg-white dark:bg-zinc-800 border border-border text-left hover:shadow-sm transition-shadow"
               >
                 <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Also from us</p>
                 <p className="text-xs font-semibold text-foreground mt-0.5">Web design & marketing</p>
@@ -1364,7 +1402,7 @@ function DashboardContent() {
                   <span className="text-sm text-foreground truncate">{displayName}</span>
                 </div>
               </div>
-            </>
+            </div>
           )}
         </aside>
 
@@ -1446,18 +1484,6 @@ function DashboardContent() {
                 orderDelivered={order?.status === "delivered"}
               />
             </div>
-          )}
-          {hasOrder && customer && order && checklistItems.length > 0 && (
-            <DashboardGetStartedChecklist
-              orderId={order.id}
-              items={checklistItems}
-              checkoutHref={isWebsiteOrder ? websiteCheckoutHref : chatbotCheckoutHref}
-              unpaidQuoteDollars={unpaidQuoteDollars}
-              isPaid={isPaid}
-              liveChatUrl={isLive ? liveChatbotUrl : null}
-              onContinueSetup={handleChecklistContinue}
-              layout="main"
-            />
           )}
           {activePanel === "training" && (
             <>
@@ -1618,43 +1644,6 @@ function DashboardContent() {
                       )}
                     </div>
                   )}
-                  {isPaid && customer && !isWebsiteOrder && data?.visitorLeads && (
-                    <div className="rounded-xl border border-border bg-card/60 p-4 shadow-sm">
-                      <p className="text-sm font-medium text-foreground">Visitor chat leads</p>
-                      <p className="text-xs text-muted-foreground mt-0.5 mb-3">
-                        Last 90 days · visitors who shared contact on your chat widget
-                      </p>
-                      {data.visitorLeads.total90d === 0 ? (
-                        <p className="text-xs text-muted-foreground">
-                          No leads yet. They appear when someone completes the optional intro on your public chat.
-                        </p>
-                      ) : (
-                        <>
-                          <p className="text-2xl font-semibold text-foreground tabular-nums mb-2">
-                            {data.visitorLeads.total90d}
-                          </p>
-                          <ul className="space-y-2 max-h-48 overflow-y-auto text-xs border-t border-border pt-2">
-                            {data.visitorLeads.recent.map((row) => (
-                              <li key={row.id} className="flex flex-col gap-0.5 border-b border-border/60 pb-2 last:border-0">
-                                <span className="font-medium text-foreground">
-                                  {row.firstName ?? "—"}
-                                  {row.email ? (
-                                    <span className="font-normal text-muted-foreground"> · {row.email}</span>
-                                  ) : null}
-                                </span>
-                                {row.phone && (
-                                  <span className="text-muted-foreground">{row.phone}</span>
-                                )}
-                                <span className="text-muted-foreground">
-                                  {new Date(row.createdAt).toLocaleString()}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        </>
-                      )}
-                    </div>
-                  )}
                   {customer &&
                     !isWebsiteOrder &&
                     hasOrder &&
@@ -1734,6 +1723,45 @@ function DashboardContent() {
                     )}
                 </div>
               )}
+            </>
+          )}
+
+          {activePanel === "leads" && isPaid && customer && !isWebsiteOrder && data?.visitorLeads && (
+            <>
+              <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
+                <div>
+                  <h2 className="text-sm font-semibold text-foreground tracking-tight">Visitor chat leads</h2>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug max-w-lg">
+                    Last 90 days · visitors who shared contact on your chat widget
+                  </p>
+                </div>
+              </div>
+              <div className="rounded-xl border border-border bg-card/60 p-4 md:p-5 shadow-sm max-w-2xl">
+                {data.visitorLeads.total90d === 0 ? (
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    No leads yet. They appear when someone completes the optional intro on your public chat.
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-3xl font-semibold text-foreground tabular-nums mb-3">{data.visitorLeads.total90d}</p>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Recent</p>
+                    <ul className="space-y-3 max-h-[min(50vh,24rem)] overflow-y-auto text-sm border-t border-border pt-3">
+                      {data.visitorLeads.recent.map((row) => (
+                        <li key={row.id} className="flex flex-col gap-0.5 border-b border-border/60 pb-3 last:border-0 last:pb-0">
+                          <span className="font-medium text-foreground">
+                            {row.firstName ?? "—"}
+                            {row.email ? (
+                              <span className="font-normal text-muted-foreground"> · {row.email}</span>
+                            ) : null}
+                          </span>
+                          {row.phone && <span className="text-muted-foreground text-xs">{row.phone}</span>}
+                          <span className="text-xs text-muted-foreground">{new Date(row.createdAt).toLocaleString()}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </div>
             </>
           )}
 
