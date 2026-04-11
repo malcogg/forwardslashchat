@@ -1119,7 +1119,7 @@ function DashboardContent() {
           <div className="py-1.5 md:py-2 space-y-1">
             <DesktopStepper steps={DESKTOP_STEPPER_STEPS} currentIndex={stepperCurrentIndex} />
             {isWebsiteOrder && isPaid && order?.status !== "delivered" && (
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 xl:px-8">
+              <div className="w-full px-4 sm:px-6 xl:px-8">
                 <p className="text-[11px] text-muted-foreground leading-snug">
                   Website-builder order — we&apos;ll coordinate by email (not the automated chatbot pipeline).
                 </p>
@@ -1359,18 +1359,6 @@ function DashboardContent() {
                   </div>
                   <span className="text-sm text-foreground truncate">{displayName}</span>
                 </div>
-                {hasOrder && customer && order && checklistItems.length > 0 && (
-                  <DashboardGetStartedChecklist
-                    orderId={order.id}
-                    items={checklistItems}
-                    checkoutHref={isWebsiteOrder ? websiteCheckoutHref : chatbotCheckoutHref}
-                    unpaidQuoteDollars={unpaidQuoteDollars}
-                    isPaid={isPaid}
-                    liveChatUrl={isLive ? liveChatbotUrl : null}
-                    onContinueSetup={handleChecklistContinue}
-                    layout="sidebar"
-                  />
-                )}
               </div>
             </>
           )}
@@ -2421,6 +2409,18 @@ function DashboardContent() {
         </div>
       )}
 
+      {hasOrder && customer && order && checklistItems.length > 0 && (
+        <DashboardGetStartedChecklist
+          orderId={order.id}
+          items={checklistItems}
+          checkoutHref={isWebsiteOrder ? websiteCheckoutHref : chatbotCheckoutHref}
+          unpaidQuoteDollars={unpaidQuoteDollars}
+          isPaid={isPaid}
+          liveChatUrl={isLive ? liveChatbotUrl : null}
+          onContinueSetup={handleChecklistContinue}
+          layout="floating"
+        />
+      )}
     </main>
   );
 }
