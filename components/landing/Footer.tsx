@@ -30,10 +30,10 @@ export function Footer() {
             © {new Date().getFullYear()} ForwardSlash.Chat. All rights reserved.
           </p>
           <div className="flex gap-6">
-            <Link href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Terms
             </Link>
-            <Link href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Privacy
             </Link>
           </div>

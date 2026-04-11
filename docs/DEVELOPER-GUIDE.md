@@ -52,6 +52,7 @@ npm run lint
 | `DEMO_CHAT_MAX_TOKENS` | Caps demo LLM output (see `app/api/chat/demo/route.ts`). |
 | `DEMO_CHAT_RATE_LIMIT_PER_MINUTE` | IP rate limit for `/api/chat/demo`. |
 | `DEMO_LEAD_RATE_LIMIT_PER_MINUTE` | IP rate limit for `POST /api/chat/demo/lead`. |
+| `CUSTOMER_CHAT_LEAD_RATE_LIMIT_PER_MINUTE` | IP rate limit for `POST /api/chat/customer-lead` (paid widget leads). Default `20`. |
 | `RESOLVE_HOST_RATE_LIMIT_PER_MINUTE` | Default `60`. IP rate limit for `GET /api/chat/resolve-by-host` (middleware forwards visitor IP). |
 
 Full tables: [DEVELOPER-HANDOFF.md](./DEVELOPER-HANDOFF.md), [TECH-SPEC.md](./TECH-SPEC.md).
@@ -69,7 +70,7 @@ Full tables: [DEVELOPER-HANDOFF.md](./DEVELOPER-HANDOFF.md), [TECH-SPEC.md](./TE
 | **After payment** | `app/api/webhooks/stripe/route.ts`, `lib/send-payment-received-email.ts` |
 | **Job queue / cron** | `lib/jobs.ts`, `app/api/cron/jobs/route.ts` |
 | **Customer crawl** | `app/api/customers/[id]/crawl/route.ts` |
-| **Production customer chat** | `app/api/chat/route.ts`, `lib/chat-context.ts`, `app/chat/c/[customerId]/` |
+| **Production customer chat** | `app/api/chat/route.ts`, `lib/chat-context.ts`, `lib/chat-slash-commands.ts`, `lib/customer-chat-access.ts`, `components/CustomerChat.tsx`, `components/CustomerChatLeadGate.tsx`, `app/api/chat/customer-lead/route.ts`, `app/chat/c/[customerId]/` |
 | **Public demo chat** | `app/chat/demo/page.tsx`, `app/api/chat/demo/route.ts`, `data/demo-content.json` |
 | **Demo lead capture API** | `app/api/chat/demo/lead/route.ts`, table `demo_chat_leads` |
 | **Host-based chat routing** | `middleware.ts` (rewrites `chat.customer.com` → `/chat/c/[id]`) |

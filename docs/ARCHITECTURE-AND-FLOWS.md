@@ -125,6 +125,10 @@ Not vector search today: **stuff** recent crawled pages into the system prompt u
 
 - Either `skipped = true` (funnel declined), or `skipped = false` with `first_name` + `email` (phone optional).
 
+**Customer-chat lead** (`customer_chat_leads`):
+
+- Same shape, scoped to **`customer_id`** (paid widget). Session flag `fs_cust_lead_v1_{customerId}` avoids repeating the gate. See [CUSTOMER-CHAT-VISITOR-FEATURES.md](./CUSTOMER-CHAT-VISITOR-FEATURES.md).
+
 ---
 
 ## 7. Where flows are implemented in code
@@ -134,7 +138,7 @@ Not vector search today: **stuff** recent crawled pages into the system prompt u
 | Checkout | `app/checkout/`, `app/api/checkout/stripe/route.ts` |
 | Webhook | `app/api/webhooks/stripe/route.ts` |
 | Crawl | `app/api/customers/[id]/crawl/route.ts` |
-| Customer chat | `app/api/chat/route.ts`, `components/CustomerChat.tsx` |
+| Customer chat | `app/api/chat/route.ts`, `components/CustomerChat.tsx`, `components/CustomerChatLeadGate.tsx`, `app/api/chat/customer-lead/route.ts` |
 | Demo | `app/chat/demo/page.tsx`, `app/api/chat/demo/route.ts`, `app/api/chat/demo/lead/route.ts` |
 | Go-live / DNS | `app/api/customers/[id]/go-live/route.ts`, docs under `docs/VERCEL-*.md` |
 

@@ -3,7 +3,7 @@
 - **Owner**: `FS` (full-stack), `BE`, `FE`, `Ops`
 - **Improve existing** = ship on current architecture; **Automation + new** = expand pipeline / infra
 - **Product split:** **AI chatbot** plans (`starter-bot`, `chatbot-1y`, `chatbot-2y`) = hands-off automation (Stripe webhook → `auto_crawl` → jobs → DNS/go-live). **Website-builder** SKUs (`starter`, `new-build`, `redesign`) = separate service; no auto-crawl enqueue from webhook.
-- **Detail:** `docs/PLATFORM-GAPS-ROADMAP.md` (vs full chatbot SaaS), `docs/EMAIL-TRIGGERS-AND-DRAFTS.md` (email map), `docs/CHAT-CONTEXT.md` (stuffing / caps).
+- **Detail:** `docs/PRODUCTION-READINESS-CHECKLIST.md` (**post-launch priorities & bands A/B/C**), `docs/PLATFORM-GAPS-ROADMAP.md`, `docs/EMAIL-TRIGGERS-AND-DRAFTS.md`, `docs/CHAT-CONTEXT.md`.
 
 ---
 
@@ -79,31 +79,51 @@
 
 ---
 
-## 7 — Moving forward: platform parity (“full” chatbot SaaS)
+## 7 — Owner experience & platform depth (aligned with product strategy)
 
-> See `docs/PLATFORM-GAPS-ROADMAP.md`. Not all items need to ship; prioritize vs positioning (hands-off delivery vs operator suite).
+> **Single narrative:** `docs/PRODUCTION-READINESS-CHECKLIST.md` §5 (bands A–C + coming soon). This section is the engineering checklist; do not treat it as “maybe never.”
 
-- [ ] **Persisted chat logs** — tenant-scoped threads/messages; retention; export; privacy policy hooks
-- [ ] **Owner analytics** — conversations, satisfaction, popular questions; likely needs events + storage
-- [ ] **Knowledge beyond crawl** — PDF upload, manual FAQs, structured facts (optional layer on top of RAG)
-- [ ] **Human handoff** — escalate to email, ticket, or CRM when bot can’t complete
-- [ ] **Visitor identity** — optional email capture in widget; returning-visitor hints; CRM fields
-- [ ] **Prompt A/B or versioning** — test system prompts with measured outcomes
-- [ ] **Multi-channel** — SMS, WhatsApp, etc. (same brain, new surfaces)
+### Band A — after launch, high buyer expectation
+
+- [ ] **Persisted chat logs** — tenant-scoped threads/messages; retention; export/delete; privacy/DPA hooks (`docs/legal/`)
+- [ ] **Owner “messages” dashboard** — inbox-style UI on top of logs (search, filters, conversation view); not admin-only raw tables
+- [ ] **Owner analytics v1** — events (session, message, optional thumbs); aggregates + simple charts; start with conversations/week
+
+### Founder vision (parallel / pull-forward — see `docs/PRODUCTION-READINESS-CHECKLIST.md` §2.5)
+
+> **Shipped (April 2026):** server-side slash expansion + UI chips; optional visitor lead gate + `customer_chat_leads` + dashboard **`visitorLeads`**. See **`docs/CUSTOMER-CHAT-VISITOR-FEATURES.md`**.
+
+- [x] **Slash commands on customer chat** — `/about`, `/pricing`, `/blog`, etc.: server expansion in `POST /api/chat` + chips in `CustomerChat.tsx` (`lib/chat-slash-commands.ts`)
+- [x] **Visitor lead capture on `CustomerChat`** — `CustomerChatLeadGate`, `POST /api/chat/customer-lead`, table `customer_chat_leads`, dashboard card (export to CSV = future)
+
+### Band B — monetize (upsell)
+
+- [ ] **Knowledge beyond crawl** — PDF/upload, manual FAQ/snippets, structured facts; ingestion; merge into chat context (pairs with **P2 RAG**, §6); **paid add-on** positioning
+
+### Band C — plan and ship in steps
+
+- [ ] **Human handoff** — v1: escalate → collect email/message → notify owner (email/Slack) + transcript link; later: ticket CRM integrations
+- [ ] **Visitor identity** — optional email in widget; session stitching; CRM export; consent + retention in privacy policy
+
+### Coming soon (market honestly; build when ready)
+
+- [ ] **Prompt A/B or versioning** — versioned prompts, buckets, outcome logging
+- [ ] **Multi-channel** — WhatsApp/SMS adapters; same chat core
 
 ---
 
 ## 8 — Moving forward: security, ops & polish
 
-- [x] **Public API audit** — `docs/SECURITY-AND-API-AUDIT.md` refreshed (April 2026); per-IP rate limit + IP forward from `middleware.ts` for `GET /api/chat/resolve-by-host`; documented auth matrix and residual items (`/api/scan` IP limit, unclaimed-order token — optional later)
+- [x] **Public API audit** — `docs/SECURITY-AND-API-AUDIT.md` refreshed (April 2026); per-IP rate limit on `POST /api/scan/roast`; per-IP + middleware forward for `GET /api/chat/resolve-by-host`; documented auth matrix; residual: unclaimed-order signed token (optional later)
 - [ ] **Secrets & DD hygiene** — env inventory, rotation, gitleaks (acquirer checklist in `docs/ACQUISITION-HANDBOOK.md`)
+- [ ] **Owner dashboard modernization** — visual/IA refresh (nav, density, messages area when Band A ships); **use design references** (Figma/screenshots) as implementation target — see `docs/PRODUCTION-READINESS-CHECKLIST.md` §6
 - [ ] **Mobile dashboard polish** — stepper/onboarding modal vs checklist widget (product decision)
-- [ ] **Production readiness** — cross-check `docs/PRODUCTION-READINESS-CHECKLIST.md` before major launches
+- [x] **Production readiness doc** — `docs/PRODUCTION-READINESS-CHECKLIST.md` rewritten (April 2026); run its §3 checks before each major launch
 
 ---
 
-## 9 — Parking lot (nice-to-have / internal)
+## 9 — Differentiation & growth (not optional long-term)
 
-- [ ] **Rich chat UI cards** — see `docs/CHATBOT-RICH-UI-AND-CARDS-PLAN.md` if still desired
+- [ ] **Rich chat UI cards** — **priority** for differentiated visitor UX; see `docs/CHATBOT-RICH-UI-AND-CARDS-PLAN.md` and `docs/PRODUCTION-READINESS-CHECKLIST.md` §4 (typically after §3 ops + alongside Band A / P2 RAG per §6 order)
 - [ ] **Landing experiments** — `docs/landing-page-plan.md` follow-ups, A/B copy
 - [ ] **Internal workflow** — keep `docs/INTERNAL-WORKFLOW.md` aligned with automation as behavior changes

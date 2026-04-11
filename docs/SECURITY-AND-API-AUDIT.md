@@ -10,9 +10,10 @@
 | Route pattern | Protected? | Notes |
 |---------------|------------|-------|
 | `/dashboard(.*)` | ✅ Yes | `auth.protect()` — requires Clerk session |
-| `/fs-ops(.*)` | ✅ Yes | `auth.protect()` |
-| `/api/*` | ❌ No | **API routes are NOT protected by middleware.** Each route must enforce its own auth. |
-| `/`, `/chat/demo`, `/checkout`, `/services`, `/thank-you`, `/sign-in`, `/sign-up` | Public | Intended |
+| `/fs-ops(.*)` | ✅ Yes | `auth.protect()` — admin UI at `/fs-ops/{ADMIN_PATH_TOKEN}`; token must match env |
+| `/admin` | 404 | Legacy path removed; use secret admin URL above |
+| `/api/*` | ❌ No | **API routes are NOT protected by middleware.** Each route must enforce its own auth (or signature / secret for webhooks & cron). |
+| `/`, `/chat/demo`, `/checkout`, `/services`, `/thank-you`, `/terms`, `/privacy`, `/sign-in`, `/sign-up` | Public | Intended |
 
 **Important:** Middleware performs **host → customer rewrite** for custom chat domains by calling `GET /api/chat/resolve-by-host` (see `middleware.ts`). Visitor IP is forwarded (`x-forwarded-for` / `x-vercel-forwarded-for`) so per-IP rate limits apply correctly.
 
@@ -49,9 +50,10 @@
 
 | Endpoint | Notes |
 |----------|--------|
-| `/api/scan` | Firecrawl cost; consider stricter rate limits / URL checks |
-| `/api/scan/roast` | Validated URL |
+| `/api/scan` | **Auth required** (Clerk); Firecrawl cost — abuse limited to signed-in users |
+| `/api/scan/roast` | Public (pre-signup modal); **per-IP rate limit** `SCAN_ROAST_RATE_LIMIT_PER_MINUTE` (default 30); validated URL |
 | `/api/chat` | **Rate limit per `customerId`** (`CHAT_RATE_LIMIT_PER_MINUTE`); paid order required for chat |
+| `/api/chat/customer-lead` | **Paid customer only**; **per-IP** rate limit `CUSTOMER_CHAT_LEAD_RATE_LIMIT_PER_MINUTE` (default 20) |
 | `/api/chat/demo` | Demo-specific rate limits (see env in `DEVELOPER-GUIDE.md`) |
 | `/api/chat/customer/[customerId]` | **Minimal fields** (businessName, primaryColor) for widget UI |
 | `/api/chat/resolve-by-host` | **Rate limit per IP** (`RESOLVE_HOST_RATE_LIMIT_PER_MINUTE`, default 60); returns `customerId` for host — abuse mitigation |
@@ -75,7 +77,8 @@
 |------|----------|
 | Checkout | `sanitizeBusinessName`, `sanitizeDomain`, `sanitizeWebsiteUrl`, `isValidPlanSlug`, server pricing |
 | Leads / demo | `lib/validation.ts` |
-| Chat | `sanitizeChatMessage` |
+| Customer-chat leads | Same sanitizers as demo; `customerId` + paid check |
+| Chat | `sanitizeChatMessage`; slash expansion uses fixed server prompts |
 
 **Residual gaps (low priority):** stricter UUID validation on some `customerId` query params; additional `/api/scan` rate limits by IP.
 
@@ -100,7 +103,8 @@
 | ✅ | `/api/chat` — per-customer rate limit |
 | ✅ | `/api/checkout/stripe` — server-side amount |
 | ✅ | `/api/chat/resolve-by-host` — per-IP rate limit + middleware IP forward |
-| ⏳ | `/api/scan` — optional per-IP rate limit (Firecrawl cost) |
+| ✅ | `/api/scan/roast` — per-IP rate limit (see env `SCAN_ROAST_RATE_LIMIT_PER_MINUTE`) |
+| ⏳ | `/api/scan` — optional extra per-user limits (already requires auth) |
 | ⏳ | Unclaimed-order claim — optional signed token from checkout success (future) |
 
 ---

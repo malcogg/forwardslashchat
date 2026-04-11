@@ -1,8 +1,22 @@
 # Platform gaps vs full chatbot platforms
 
-ForwardSlash.Chat today optimizes for **hands-off delivery**: Stripe → crawl → DNS → go-live, with **context stuffing** into the model (see `docs/CHAT-CONTEXT.md`) rather than a full retrieval stack.
+ForwardSlash.Chat ships **hands-off delivery**: Stripe → crawl → DNS → go-live → hosted chat, with **context stuffing** into the model today (see `docs/CHAT-CONTEXT.md`). **P2 RAG** (TODO §6) will improve retrieval at scale.
 
-This doc tracks **parity gaps** vs typical “full” chatbot SaaS (Intercom-style bots, Chatbase, etc.). Items are **not** commitments—prioritize with product.
+This doc lists gaps vs typical “full” chatbot SaaS (Intercom-style, Chatbase, etc.). **Priority is decided product strategy**, not “everything is optional.”
+
+**Authoritative prioritization:** `docs/PRODUCTION-READINESS-CHECKLIST.md` §5 (bands A / B / C + coming soon) and **`TODO.md` §7** (same items as checkboxes).
+
+---
+
+## Strategic bands (summary)
+
+| Band | Theme | Examples |
+|------|--------|----------|
+| **A** | Owners expect this soon after buying | Persisted **chat logs**, **messages** UI, **analytics v1** |
+| **A² / parallel** | **Founder vision** (**shipped** Apr 2026) | Slash shortcuts + **`customer_chat_leads`** + dashboard summary — see **`CUSTOMER-CHAT-VISITOR-FEATURES.md`** |
+| **B** | Upsell | **Extra knowledge** (PDF, FAQs, facts) — charge separately |
+| **C** | High value, phased | **Human handoff**, **visitor identity** + privacy |
+| **Coming soon** | Roadmap, honest marketing | **Prompt A/B**, **multi-channel** (WhatsApp/SMS) |
 
 ---
 
@@ -10,35 +24,35 @@ This doc tracks **parity gaps** vs typical “full” chatbot SaaS (Intercom-sty
 
 | Gap | Notes |
 |-----|--------|
-| **Persisted chat logs** | Today: ephemeral or session-only per deployment choice. Full platforms store history for compliance, replay, and training. Needs: schema, retention, GDPR/export story. |
-| **RAG / vector retrieval** | Today: capped text stuffing from crawled pages. Full platforms: chunking, embeddings, top-k retrieval (see TODO **B — P2 RAG**). |
-| **Knowledge beyond crawl** | Upload PDFs, manual FAQs, structured entities—optional layer on top of crawl. |
+| **Persisted chat logs** | Required for trust, support, and owner visibility. Needs schema, retention, export/delete, policy updates. |
+| **RAG / vector retrieval** | Today: capped stuffing. Target: chunking + embeddings + top-k (TODO §6 **P2 RAG**). |
+| **Knowledge beyond crawl** | PDFs, manual FAQs, structured facts — **Band B**, best with RAG; **monetize**. |
 
 ## Owner / operator
 
 | Gap | Notes |
 |-----|--------|
-| **Analytics dashboard** | Conversations, drop-off, popular intents, resolution—usually requires persisted logs + event pipeline. |
-| **Human handoff** | Route to inbox, Zendesk, Slack when the bot fails or user asks. |
-| **A/B or prompt versioning** | Test system prompts and measure outcomes. |
+| **Messages + analytics** | **Band A**: inbox-style UI + events (volume, optional thumbs); richer BI later. |
+| **Human handoff** | **Band C**: email/Slack + transcript first; CRM APIs later. |
+| **Prompt A/B** | **Coming soon**: versions, buckets, outcome logging. |
 
 ## Visitor / growth
 
 | Gap | Notes |
 |-----|--------|
-| **Known visitor identity** | Email capture in-widget, merge with CRM; optional cookies for “returning visitor.” |
-| **Multi-channel** | Same brain on web widget, WhatsApp, SMS—separate surface area. |
+| **Visitor identity** | **Band C**: optional email in widget, session stitching, CRM export, consent. |
+| **Multi-channel** | **Coming soon**: same brain, new ingress (Meta/Twilio, etc.). |
 
 ## Already strong here
 
-- Automated **crawl → DNS → go-live** pipeline and dashboard milestones.
-- **DNS self-check**: full go-live job plus read-only `GET .../go-live?dnsProbe=1` for CNAME verification without attaching.
-- **Email** inventory in `docs/EMAIL-TRIGGERS-AND-DRAFTS.md` (includes Stripe **Payment received** Resend + optional `SKIP_PAYMENT_RECEIVED_EMAIL`).
+- **Crawl → DNS → go-live** automation and dashboard milestones.
+- **DNS self-check**: full go-live job + `GET .../go-live?dnsProbe=1` for read-only CNAME probe.
+- **Email** map: `docs/EMAIL-TRIGGERS-AND-DRAFTS.md` (Stripe payment email, milestones, reminders).
 
 ---
 
 ## Related docs
 
-- `TODO.md` — section **7 — Moving forward: platform parity** mirrors this list as checkboxes.
-- `docs/CHAT-CONTEXT.md` — current stuffing semantics.
-- `docs/EMAIL-TRIGGERS-AND-DRAFTS.md` — transactional email map.
+- `docs/PRODUCTION-READINESS-CHECKLIST.md` §4–§6 — P2 RAG, rich cards, post-launch order
+- `TODO.md` §6–§9 — RAG, owner experience, ops, differentiation
+- `docs/CHAT-CONTEXT.md` — current stuffing semantics

@@ -144,6 +144,19 @@ export const demoChatLeads = pgTable("demo_chat_leads", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+// Paid customer chat — optional visitor contact capture (skippable), per customerId
+export const customerChatLeads = pgTable("customer_chat_leads", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  customerId: uuid("customer_id")
+    .references(() => customers.id, { onDelete: "cascade" })
+    .notNull(),
+  firstName: text("first_name"),
+  email: text("email"),
+  phone: text("phone"),
+  skipped: boolean("skipped").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Checkout leads - form data collected before payment
 export const checkoutLeads = pgTable("checkout_leads", {
   id: uuid("id").primaryKey().defaultRandom(),

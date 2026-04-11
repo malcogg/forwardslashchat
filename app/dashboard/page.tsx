@@ -223,6 +223,16 @@ function DashboardContent() {
       updatedAt: string;
       dedupeKey: string | null;
     }[];
+    visitorLeads?: {
+      total90d: number;
+      recent: {
+        id: string;
+        firstName: string | null;
+        email: string | null;
+        phone: string | null;
+        createdAt: string;
+      }[];
+    } | null;
   } | null>(null);
   const [myOrders, setMyOrders] = useState<{
     order: { id: string; status?: string; planSlug?: string; amountCents?: number };
@@ -1418,6 +1428,43 @@ function DashboardContent() {
                         <p className="text-xs text-amber-800 dark:text-amber-200/90 bg-amber-500/10 border border-amber-500/20 rounded-md px-2.5 py-2 mt-3 leading-snug">
                           {data.crawlShortfallHint}
                         </p>
+                      )}
+                    </div>
+                  )}
+                  {isPaid && customer && !isWebsiteOrder && data?.visitorLeads && (
+                    <div className="rounded-xl border border-border bg-card/60 p-4 shadow-sm">
+                      <p className="text-sm font-medium text-foreground">Visitor chat leads</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 mb-3">
+                        Last 90 days · visitors who shared contact on your chat widget
+                      </p>
+                      {data.visitorLeads.total90d === 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          No leads yet. They appear when someone completes the optional intro on your public chat.
+                        </p>
+                      ) : (
+                        <>
+                          <p className="text-2xl font-semibold text-foreground tabular-nums mb-2">
+                            {data.visitorLeads.total90d}
+                          </p>
+                          <ul className="space-y-2 max-h-48 overflow-y-auto text-xs border-t border-border pt-2">
+                            {data.visitorLeads.recent.map((row) => (
+                              <li key={row.id} className="flex flex-col gap-0.5 border-b border-border/60 pb-2 last:border-0">
+                                <span className="font-medium text-foreground">
+                                  {row.firstName ?? "—"}
+                                  {row.email ? (
+                                    <span className="font-normal text-muted-foreground"> · {row.email}</span>
+                                  ) : null}
+                                </span>
+                                {row.phone && (
+                                  <span className="text-muted-foreground">{row.phone}</span>
+                                )}
+                                <span className="text-muted-foreground">
+                                  {new Date(row.createdAt).toLocaleString()}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </>
                       )}
                     </div>
                   )}

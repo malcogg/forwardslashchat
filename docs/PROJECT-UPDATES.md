@@ -1,5 +1,37 @@
 # Project Updates Log
 
+## 2026-04-11
+
+### Customer chat: slash commands + visitor leads (production)
+
+- **`lib/chat-slash-commands.ts`** — `/about`, `/pricing`, `/blog`, `/contact`, `/products`, `/help` expanded server-side in **`POST /api/chat`**; UI chips in **`CustomerChat`**.
+- **`lib/customer-chat-access.ts`** — shared **paid-customer** guard for chat + customer-lead API.
+- **`customer_chat_leads`** table + **`docs/migrations/017-customer-chat-leads.sql`**; **`POST /api/chat/customer-lead`** with IP rate limit (`CUSTOMER_CHAT_LEAD_RATE_LIMIT_PER_MINUTE`).
+- **`CustomerChatLeadGate`** — optional skippable name/email/phone before chat; **`GET /api/dashboard`** adds **`visitorLeads`** + dashboard **Visitor chat leads** card (chatbot orders).
+- **Docs:** [CUSTOMER-CHAT-VISITOR-FEATURES.md](./CUSTOMER-CHAT-VISITOR-FEATURES.md); updates to TECH-SPEC, SECURITY audit, CHAT-CONTEXT, ARCHITECTURE, DEVELOPER-GUIDE, USER-GUIDE, PRODUCTION-READINESS §2.5, PLATFORM-GAPS, README migrations index, **TODO** §7 founder items marked shipped.
+- **Removed** unused root **`pricing-mockup.html`**.
+
+---
+
+## 2026-04-10
+
+### Founder vision gaps (explicit)
+
+- **`docs/PRODUCTION-READINESS-CHECKLIST.md` §2.5** — table: slash commands + **customer-chat** leads vs demo-only today; default **ship order** (§3 → A → RAG/cards → B/C); **pull-forward** note + `TODO.md` §7 **Founder vision (parallel)** checkboxes.
+- **`docs/PLATFORM-GAPS-ROADMAP.md`** — band **A² / parallel** row for founder vision.
+
+### Strategy & doc alignment (owner experience = planned, not “maybe”)
+
+- **`TODO.md` §7** — Replaced flat “parity” list with **bands A/B/C + coming soon**, matching `docs/PRODUCTION-READINESS-CHECKLIST.md` §5 (logs, messages UI, analytics v1; monetized knowledge; handoff + visitor identity; roadmap items).
+- **`TODO.md` §8** — Added **owner dashboard modernization** (design-reference-driven); fixed security audit line for `/api/scan/roast` rate limit.
+- **`TODO.md` §9** — Reframed **rich chat UI cards** as long-term differentiation (not “parking lot only”).
+- **`docs/PLATFORM-GAPS-ROADMAP.md`** — Rewritten around the same bands; removed “nothing is a commitment” framing.
+- **`docs/APP-OVERVIEW.md`** — Removed stale PayPal-primary / obsolete email table / old phases; points to PRODUCTION-READINESS + TODO for live roadmap.
+- **`ROADMAP.md`** — Top note: historical phases vs current backlog in PRODUCTION-READINESS / TODO.
+- **`docs/README.md`** — APP-OVERVIEW blurb + PLATFORM-GAPS index row.
+
+---
+
 ## 2026-04-01
 
 ### Documentation (acquisition & engineering handoff)

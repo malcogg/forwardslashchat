@@ -64,16 +64,17 @@ npm run dev
 
 1. **[DEVELOPER-HANDOFF.md](./DEVELOPER-HANDOFF.md)** (this file) – env and first run  
 2. **[DEVELOPER-GUIDE.md](./DEVELOPER-GUIDE.md)** – deeper: demo page, code map, release hints  
-3. **[APP-OVERVIEW.md](./APP-OVERVIEW.md)** – product, stack, services  
-4. **[ARCHITECTURE-AND-FLOWS.md](./ARCHITECTURE-AND-FLOWS.md)** – diagrams and routing  
-5. **[APP-FLOW-AND-AUDIT.md](./APP-FLOW-AND-AUDIT.md)** – full flow, triggers, notifications, audit  
-6. **[pricing-and-bundles.md](./pricing-and-bundles.md)** – pricing tiers, add-ons, messaging  
-7. **[TECH-SPEC.md](./TECH-SPEC.md)** – structure, schema, API list  
-8. **[BACKEND-SETUP.md](./BACKEND-SETUP.md)** – DB, Clerk, API routes  
-9. **[PAYMENT-SETUP.md](./PAYMENT-SETUP.md)** – Stripe  
-10. **[EMAIL-TRIGGERS-AND-DRAFTS.md](./EMAIL-TRIGGERS-AND-DRAFTS.md)** – when emails fire and copy  
-11. **[SECURITY-AND-API-AUDIT.md](./SECURITY-AND-API-AUDIT.md)** – auth and security notes  
-12. **[dev-instructions.md](./dev-instructions.md)** – what to do when a new order comes in  
+3. **[PRODUCTION-READINESS-CHECKLIST.md](./PRODUCTION-READINESS-CHECKLIST.md)** – launch vs post-launch priorities (owner logs, messages UI, RAG, rich cards) — with **`TODO.md` §6–§9**  
+4. **[APP-OVERVIEW.md](./APP-OVERVIEW.md)** – product, stack (snapshot; roadmap = checklist + TODO)  
+5. **[ARCHITECTURE-AND-FLOWS.md](./ARCHITECTURE-AND-FLOWS.md)** – diagrams and routing  
+6. **[APP-FLOW-AND-AUDIT.md](./APP-FLOW-AND-AUDIT.md)** – full flow, triggers, notifications, audit  
+7. **[pricing-and-bundles.md](./pricing-and-bundles.md)** – pricing tiers, add-ons, messaging  
+8. **[TECH-SPEC.md](./TECH-SPEC.md)** – structure, schema, API list  
+9. **[BACKEND-SETUP.md](./BACKEND-SETUP.md)** – DB, Clerk, API routes  
+10. **[PAYMENT-SETUP.md](./PAYMENT-SETUP.md)** – Stripe  
+11. **[EMAIL-TRIGGERS-AND-DRAFTS.md](./EMAIL-TRIGGERS-AND-DRAFTS.md)** – when emails fire and copy  
+12. **[SECURITY-AND-API-AUDIT.md](./SECURITY-AND-API-AUDIT.md)** – auth and security notes  
+13. **[dev-instructions.md](./dev-instructions.md)** – what to do when a new order comes in  
 
 **Acquisition / handoff:** [ACQUISITION-HANDBOOK.md](./ACQUISITION-HANDBOOK.md) · **Upgrades:** [MAINTENANCE-AND-DEPENDENCIES.md](./MAINTENANCE-AND-DEPENDENCIES.md)
 

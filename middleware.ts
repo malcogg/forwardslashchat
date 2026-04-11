@@ -2,7 +2,19 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
 const isProtectedRoute = createRouteMatcher(["/dashboard(.*)", "/fs-ops(.*)"]);
-const isPublicRoute = createRouteMatcher(["/", "/chat/demo", "/checkout", "/services", "/thank-you", "/sign-in(.*)", "/sign-up(.*)", "/api/webhooks(.*)", "/api/cron(.*)"]);
+const isPublicRoute = createRouteMatcher([
+  "/",
+  "/chat/demo",
+  "/checkout",
+  "/services",
+  "/thank-you",
+  "/terms",
+  "/privacy",
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/api/webhooks(.*)",
+  "/api/cron(.*)",
+]);
 
 const MAIN_HOSTS = ["forwardslash.chat", "www.forwardslash.chat", "localhost", "127.0.0.1"];
 

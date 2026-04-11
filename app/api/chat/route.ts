@@ -2,7 +2,7 @@ import { streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { content, customers, orders } from "@/db/schema";
+import { content } from "@/db/schema";
 import { asc, eq } from "drizzle-orm";
 import { sanitizeChatMessage } from "@/lib/validation";
 import { checkAndIncrementRateLimit } from "@/lib/rate-limit";
@@ -12,6 +12,8 @@ import {
   resolveChatHistoryMessageLimit,
   resolveChatMaxOutputTokens,
 } from "@/lib/chat-context";
+import { expandSlashCommand } from "@/lib/chat-slash-commands";
+import { getPaidCustomerForChat } from "@/lib/customer-chat-access";
 
 /**
  * POST /api/chat
@@ -39,13 +41,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No message to answer" }, { status: 400 });
     }
 
-    if (!db) {
+    const access = await getPaidCustomerForChat(customerId);
+    if (!access.ok) {
+      if (access.reason === "not_found") {
+        return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+      }
+      if (access.reason === "payment_required") {
+        return NextResponse.json({ error: "Payment required" }, { status: 402 });
+      }
       return NextResponse.json({ error: "Database not configured" }, { status: 503 });
     }
+    const { customer } = access;
 
-    const [customer] = await db.select().from(customers).where(eq(customers.id, customerId));
-    if (!customer) {
-      return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+    if (!db) {
+      return NextResponse.json({ error: "Database not configured" }, { status: 503 });
     }
 
     // Rate limit per customer to prevent abuse / runaway spend.
@@ -53,16 +62,6 @@ export async function POST(request: Request) {
     const rl = await checkAndIncrementRateLimit({ key: `customer:${customerId}`, limitPerMinute: perMinute });
     if (!rl.ok) {
       return NextResponse.json({ error: "Rate limited. Please slow down." }, { status: 429 });
-    }
-
-    // Public endpoint: only allow real usage for paid customers.
-    const [order] = await db.select().from(orders).where(eq(orders.id, customer.orderId));
-    const paid = order?.status === "paid" || order?.status === "delivered" || order?.status === "processing";
-    if (!paid) {
-      return NextResponse.json(
-        { error: "Payment required" },
-        { status: 402 }
-      );
     }
 
     const rows = await db
@@ -84,16 +83,21 @@ ${context || "(No content yet - the chatbot is still being built.)"}`;
       return NextResponse.json({ error: "LLM not configured" }, { status: 503 });
     }
 
-    // Guardrails: cap history length and message sizes
-    const safeMessages = messages
-      .slice(-12)
-      .map((m) => {
-      const content = typeof m.content === "string" ? sanitizeChatMessage(m.content) : "";
-      return {
-        role: m.role as "user" | "assistant" | "system",
-        content,
-      };
-    })
+    // Guardrails: cap history length and message sizes; expand slash commands for the last user turn only.
+    const histLimit = resolveChatHistoryMessageLimit();
+    const sliced = messages.slice(-histLimit);
+    const lastIdx = sliced.length - 1;
+    const safeMessages = sliced
+      .map((m, i) => {
+        let text = typeof m.content === "string" ? sanitizeChatMessage(m.content) : "";
+        if (i === lastIdx && m.role === "user" && text) {
+          text = expandSlashCommand(text) ?? text;
+        }
+        return {
+          role: m.role as "user" | "assistant" | "system",
+          content: text,
+        };
+      })
       .filter((m) => m.content);
 
     const result = streamText({

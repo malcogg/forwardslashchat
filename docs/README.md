@@ -18,7 +18,7 @@ This folder is the single place for product, technical, and operational docs. Us
 
 | Doc | Purpose |
 |-----|---------|
-| [APP-OVERVIEW.md](./APP-OVERVIEW.md) | Product summary, stack, services, roadmap |
+| [APP-OVERVIEW.md](./APP-OVERVIEW.md) | Product summary, stack (see **PRODUCTION-READINESS** + **TODO** for live roadmap) |
 | [APP-FLOW-AND-AUDIT.md](./APP-FLOW-AND-AUDIT.md) | End-to-end flow, triggers, notifications, audit checklist |
 
 ---
@@ -31,6 +31,7 @@ This folder is the single place for product, technical, and operational docs. Us
 | [BACKEND-SETUP.md](./BACKEND-SETUP.md) | Database, env vars, API routes, flow |
 | [SETUP-DATABASE-MIGRATIONS.md](./SETUP-DATABASE-MIGRATIONS.md) | How to run and add migrations |
 | [CHAT-CONTEXT.md](./CHAT-CONTEXT.md) | How customer chat context is built (stuffing limits, future RAG) |
+| [CUSTOMER-CHAT-VISITOR-FEATURES.md](./CUSTOMER-CHAT-VISITOR-FEATURES.md) | Slash commands + visitor leads on `/chat/c/[customerId]` |
 | [SECURITY-AND-API-AUDIT.md](./SECURITY-AND-API-AUDIT.md) | Security review and endpoint auth |
 
 ---
@@ -39,6 +40,7 @@ This folder is the single place for product, technical, and operational docs. Us
 
 | Doc | Purpose |
 |-----|---------|
+| [PLATFORM-GAPS-ROADMAP.md](./PLATFORM-GAPS-ROADMAP.md) | Gaps vs “full” chatbot SaaS; **bands A/B/C** (same story as `PRODUCTION-READINESS-CHECKLIST.md` §5) |
 | [pricing-and-bundles.md](./pricing-and-bundles.md) | **Single source of truth** for pricing tiers, add-ons, renewal |
 | [MVP-PRD.md](./MVP-PRD.md) | MVP goals, scope, requirements |
 | [INVESTOR-PITCH.md](./INVESTOR-PITCH.md) | Investor-facing overview |
@@ -60,6 +62,10 @@ This folder is the single place for product, technical, and operational docs. Us
 
 | Doc | Purpose |
 |-----|---------|
+| [PRODUCTION-READINESS-CHECKLIST.md](./PRODUCTION-READINESS-CHECKLIST.md) | Launch scope, hands-off ops, P2 RAG / parity / rich UI priorities |
+| [USER-GUIDE.md](./USER-GUIDE.md) | Short customer-facing how-to (shareable) |
+| [legal/TERMS-OF-SERVICE.md](./legal/TERMS-OF-SERVICE.md) | Terms draft (`/terms`); **have counsel review** |
+| [legal/PRIVACY-POLICY.md](./legal/PRIVACY-POLICY.md) | Privacy draft (`/privacy`); **have counsel review** |
 | [DEV-WORKFLOW-MANUAL-FULFILLMENT.md](./DEV-WORKFLOW-MANUAL-FULFILLMENT.md) | Manual fulfillment: crawl → config → deploy |
 | [dev-instructions.md](./dev-instructions.md) | Checklist when a new order arrives |
 | [INTERNAL-WORKFLOW.md](./INTERNAL-WORKFLOW.md) | Internal workflow and tools |
@@ -127,6 +133,7 @@ Run in order in Neon (or your Postgres) when applying hand-written SQL. See [SET
 | `009`–`014` | Plans, credits, jobs, Stripe columns, crawl progress |
 | `015-user-onboarding.sql` | User onboarding questionnaire |
 | `016-demo-chat-leads.sql` | **`demo_chat_leads`** for `/chat/demo` lead capture |
+| `017-customer-chat-leads.sql` | **`customer_chat_leads`** for paid **`CustomerChat`** widget |
 
 ---
 

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { orders, customers, content, jobs } from "@/db/schema";
-import { eq, desc, count, inArray } from "drizzle-orm";
+import { orders, customers, content, jobs, customerChatLeads } from "@/db/schema";
+import { eq, desc, count, inArray, and, gte } from "drizzle-orm";
 import { getOrCreateUser } from "@/lib/auth";
 import { buildCrawlShortfallHint } from "@/lib/crawl-coverage-hint";
 
@@ -98,12 +98,55 @@ export async function GET(request: Request) {
         })
       : null;
 
+  let visitorLeads: {
+    total90d: number;
+    recent: { id: string; firstName: string | null; email: string | null; phone: string | null; createdAt: Date }[];
+  } | null = null;
+
+  if (customer) {
+    const since = new Date();
+    since.setDate(since.getDate() - 90);
+    const [totalRow] = await db
+      .select({ count: count() })
+      .from(customerChatLeads)
+      .where(
+        and(
+          eq(customerChatLeads.customerId, customer.id),
+          eq(customerChatLeads.skipped, false),
+          gte(customerChatLeads.createdAt, since)
+        )
+      );
+    const recent = await db
+      .select({
+        id: customerChatLeads.id,
+        firstName: customerChatLeads.firstName,
+        email: customerChatLeads.email,
+        phone: customerChatLeads.phone,
+        createdAt: customerChatLeads.createdAt,
+      })
+      .from(customerChatLeads)
+      .where(
+        and(
+          eq(customerChatLeads.customerId, customer.id),
+          eq(customerChatLeads.skipped, false),
+          gte(customerChatLeads.createdAt, since)
+        )
+      )
+      .orderBy(desc(customerChatLeads.createdAt))
+      .limit(20);
+    visitorLeads = {
+      total90d: Number(totalRow?.count ?? 0),
+      recent,
+    };
+  }
+
   return NextResponse.json({
     order,
     customer: customer ?? null,
     contentCount,
     automationJobs,
     crawlShortfallHint,
+    visitorLeads,
   });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

@@ -2,6 +2,8 @@
 
 This document describes how **production customer chat** (`POST /api/chat`) builds what the model sees today. It is **not** semantic retrieval: there are no embeddings or chunk ranking yet (see **P2 RAG** in `TODO.md`).
 
+**Slash messages:** If the **last user message** is a known **`/command`** (e.g. `/pricing`), the server **replaces** it with a longer instruction before the messages are sent to the model (see `lib/chat-slash-commands.ts` and [CUSTOMER-CHAT-VISITOR-FEATURES.md](./CUSTOMER-CHAT-VISITOR-FEATURES.md)). Context stuffing below is unchanged.
+
 ## Retrieval strategy
 
 1. Load all rows from `content` for the `customerId`.
