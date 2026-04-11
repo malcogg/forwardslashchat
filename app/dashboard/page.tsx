@@ -1343,12 +1343,11 @@ function DashboardContent() {
           {!sidebarCollapsed && (
             <div className="mt-auto shrink-0 flex flex-col pt-1">
               <button
+                type="button"
                 onClick={() => setUpsellModalOpen(true)}
-                className="w-full mt-2 p-2.5 rounded-lg bg-white dark:bg-zinc-800 border border-border text-left hover:shadow-sm transition-shadow"
+                className="w-full mt-2 text-left text-[11px] font-medium text-primary hover:underline py-1.5 px-0.5 rounded-md hover:bg-muted/30 transition-colors"
               >
-                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Also from us</p>
-                <p className="text-xs font-semibold text-foreground mt-0.5">Web design & marketing</p>
-                <p className="text-[10px] text-muted-foreground mt-1">Full overhauls for local businesses →</p>
+                Full overhauls for local businesses →
               </button>
               <div className="pt-3 border-t border-border mt-2">
                 {(() => {

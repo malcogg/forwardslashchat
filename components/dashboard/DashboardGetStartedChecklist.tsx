@@ -89,7 +89,7 @@ export function DashboardGetStartedChecklist({
       className={cn(
         "overflow-y-auto overscroll-contain rounded-xl border border-border bg-card text-card-foreground",
         compact &&
-          "relative z-0 mt-3 w-full max-h-[min(48vh,360px)] shadow-sm ring-1 ring-black/5 dark:ring-white/10",
+          "relative z-0 mt-1 w-full min-h-0 shadow-sm ring-1 ring-black/5 dark:ring-white/10 overflow-visible",
         mainCol &&
           "relative z-0 mt-2 w-full max-h-[min(46vh,400px)] shadow-sm ring-1 ring-emerald-500/15 dark:ring-emerald-500/20",
         layout === "floating" &&
