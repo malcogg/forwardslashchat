@@ -45,6 +45,9 @@ import { MobileSiteDetail } from "@/components/dashboard/MobileSiteDetail";
 import { GoLiveButton } from "@/components/dashboard/GoLiveButton";
 import { DesktopStepper } from "@/components/dashboard/DesktopStepper";
 import { DesktopNextStepCard } from "@/components/dashboard/DesktopNextStepCard";
+import { DashboardGetStartedChecklist } from "@/components/dashboard/DashboardGetStartedChecklist";
+import type { ChecklistItem } from "@/components/dashboard/DashboardGetStartedChecklist";
+import { getUnpaidOrderQuoteDollars } from "@/lib/dashboard-unpaid-quote";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -570,6 +573,139 @@ function DashboardContent() {
   const isTestingOrLive = ["testing", "delivered"].includes(customerStatus);
   const isWebsiteOrder = order?.planSlug && ["starter", "new-build", "redesign"].includes(order.planSlug);
 
+  const estimatedPageTotal = Math.max(
+    1,
+    myOrders.find((o) => o.order.id === order?.id)?.estimatedPages ?? 25
+  );
+
+  const chatbotCheckoutHref = useMemo(
+    () =>
+      customer && order
+        ? `/checkout?plan=chatbot-2y&pages=${estimatedPageTotal}&url=${encodeURIComponent(customer.websiteUrl ?? "")}&orderId=${encodeURIComponent(order.id)}`
+        : "/checkout?plan=chatbot-2y&pages=25",
+    [customer, order, estimatedPageTotal]
+  );
+
+  const websiteCheckoutHref = useMemo(
+    () =>
+      order && customer && order.planSlug && ["starter", "new-build", "redesign"].includes(order.planSlug)
+        ? `/checkout?plan=${order.planSlug}&url=${encodeURIComponent(customer.websiteUrl ?? "")}&orderId=${encodeURIComponent(order.id)}`
+        : "/checkout?plan=starter&pages=25",
+    [order, customer]
+  );
+
+  const unpaidQuoteDollars = useMemo(() => {
+    if (!order || !customer || isPaid) return null;
+    return getUnpaidOrderQuoteDollars({
+      isWebsiteOrder: !!isWebsiteOrder,
+      planSlug: order.planSlug,
+      addOns: order.addOns ?? [],
+      bundleYears: order.bundleYears,
+      estimatedPages: estimatedPageTotal,
+    });
+  }, [order, customer, isPaid, isWebsiteOrder, estimatedPageTotal]);
+
+  const checklistItems: ChecklistItem[] = useMemo(() => {
+    if (!order || !customer || !hasOrder) return [];
+    if (isWebsiteOrder) {
+      return [
+        {
+          id: "web-pay",
+          title: "Complete payment",
+          description: "Confirm your website package — we’ll email you to schedule kickoff.",
+          done: isPaid,
+        },
+        {
+          id: "web-delivery",
+          title: "Delivery & handoff",
+          description: "We build and deliver your site — this path is separate from the AI chatbot pipeline.",
+          done: order.status === "delivered",
+        },
+      ];
+    }
+    const hasUrl = !!customer.websiteUrl?.trim();
+    const trainingIndexed = contentCount > 0;
+    const designReady = ["dns_setup", "testing", "delivered"].includes(customerStatus);
+    return [
+      {
+        id: "scan",
+        title: "1. Scan site",
+        description: "Your website is linked so we can price your plan and crawl your pages.",
+        done: hasUrl,
+      },
+      {
+        id: "train",
+        title: "2. Training",
+        description: "Complete payment, then run Build my chatbot so we index your content.",
+        done: trainingIndexed,
+      },
+      {
+        id: "design",
+        title: "3. Design",
+        description: "Match colors and the widget to your brand in the Design tab.",
+        done: designReady,
+      },
+      {
+        id: "domain",
+        title: "4. Domain",
+        description: "Add the CNAME we send you — go live on chat.yourdomain.com.",
+        done: isLive,
+      },
+    ];
+  }, [
+    order,
+    customer,
+    hasOrder,
+    isWebsiteOrder,
+    isPaid,
+    contentCount,
+    customerStatus,
+    isLive,
+  ]);
+
+  const liveChatbotUrl = useMemo(() => {
+    if (!customer?.subdomain || !customer?.domain) return null;
+    return `https://${customer.subdomain}.${customer.domain}`;
+  }, [customer?.subdomain, customer?.domain]);
+
+  const handleChecklistContinue = useCallback(() => {
+    if (!customer && !hasOrder) {
+      setScanNewSiteModalOpen(true);
+      return;
+    }
+    if (!customer?.websiteUrl?.trim()) {
+      setScanNewSiteModalOpen(true);
+      return;
+    }
+    if (!isPaid) {
+      router.push(isWebsiteOrder ? websiteCheckoutHref : chatbotCheckoutHref);
+      return;
+    }
+    if (isWebsiteOrder) {
+      setActivePanel("training");
+      return;
+    }
+    if (contentCount === 0) {
+      setActivePanel("training");
+      return;
+    }
+    if (!isLive) {
+      setActivePanel("domains");
+      return;
+    }
+    setActivePanel("design");
+  }, [
+    customer,
+    hasOrder,
+    isPaid,
+    isWebsiteOrder,
+    contentCount,
+    isLive,
+    router,
+    websiteCheckoutHref,
+    chatbotCheckoutHref,
+  ]);
+
   useEffect(() => {
     if (loading || error || !order?.id || !customer || isWebsiteOrder) return;
 
@@ -876,21 +1012,6 @@ function DashboardContent() {
         { ...STATUS_STEPS[3], icon: Sparkles },
       ];
 
-  const estimatedPageTotal = Math.max(
-    1,
-    myOrders.find((o) => o.order.id === order?.id)?.estimatedPages ?? 25
-  );
-
-  const chatbotCheckoutHref =
-    customer && order
-      ? `/checkout?plan=chatbot-2y&pages=${estimatedPageTotal}&url=${encodeURIComponent(customer.websiteUrl ?? "")}&orderId=${encodeURIComponent(order.id)}`
-      : "/checkout?plan=chatbot-2y&pages=25";
-
-  const websiteCheckoutHref =
-    order && customer && order.planSlug && ["starter", "new-build", "redesign"].includes(order.planSlug)
-      ? `/checkout?plan=${order.planSlug}&url=${encodeURIComponent(customer.websiteUrl ?? "")}&orderId=${encodeURIComponent(order.id)}`
-      : "/checkout?plan=starter&pages=25";
-
   const handleSaveBranding = async () => {
     const c = data?.customer;
     if (!c) return;
@@ -1027,7 +1148,7 @@ function DashboardContent() {
               type="button"
               onClick={() => setScanNewSiteModalOpen(true)}
               className="w-full flex items-center justify-center p-2 rounded-lg text-muted-foreground hover:bg-muted/50 hover:text-foreground mb-2"
-              title="Scan new site"
+              title="1. Scan site"
             >
               <Globe className="w-5 h-5" />
             </button>
@@ -1037,8 +1158,14 @@ function DashboardContent() {
                 onClick={() => setScanDropdownOpen((o) => !o)}
                 className="w-full flex items-center justify-between gap-2 px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted/50 rounded hover:text-foreground"
               >
-                <span className="flex items-center gap-2">
-                  <span>▸</span> Scan site
+                <span className="flex items-center gap-2 min-w-0">
+                  <span className="w-5 shrink-0 text-center text-[11px] font-semibold text-muted-foreground tabular-nums">
+                    1
+                  </span>
+                  <span className="flex items-center gap-1.5 truncate">
+                    <span className="text-xs shrink-0">▸</span>
+                    <span className="truncate">Scan site</span>
+                  </span>
                 </span>
                 <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${scanDropdownOpen ? "rotate-180" : ""}`} />
               </button>
@@ -1111,30 +1238,51 @@ function DashboardContent() {
             <button
               type="button"
               onClick={() => setActivePanel("training")}
-              className={`w-full flex items-center gap-3 px-2.5 py-2 text-sm rounded-lg text-left transition-colors ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "training" ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"}`}
-              title="Training"
+              className={`w-full flex items-center gap-2 px-2.5 py-2 text-sm rounded-lg text-left transition-colors ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "training" ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"}`}
+              title={sidebarCollapsed ? "2. Training" : undefined}
             >
+              {!sidebarCollapsed && (
+                <span className="w-5 shrink-0 text-center text-[11px] font-semibold text-muted-foreground tabular-nums">
+                  2
+                </span>
+              )}
               <span className="w-5 shrink-0 flex justify-center">
                 {contentCount > 0 ? <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : <GraduationCap className="w-4 h-4 opacity-70" />}
               </span>
-              {!sidebarCollapsed && "Training"}
+              {!sidebarCollapsed && <span className="truncate">Training</span>}
             </button>
             <button
               type="button"
               onClick={() => setActivePanel("design")}
-              className={`w-full flex items-center gap-3 px-2.5 py-2 text-sm rounded-lg text-left transition-colors ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "design" ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"}`}
-              title="Design"
+              className={`w-full flex items-center gap-2 px-2.5 py-2 text-sm rounded-lg text-left transition-colors ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "design" ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"}`}
+              title={sidebarCollapsed ? "3. Design" : undefined}
             >
+              {!sidebarCollapsed && (
+                <span className="w-5 shrink-0 text-center text-[11px] font-semibold text-muted-foreground tabular-nums">
+                  3
+                </span>
+              )}
               <span className="w-5 shrink-0 flex justify-center">
                 {customer && contentCount > 0 ? <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : <Palette className="w-4 h-4 opacity-70" />}
               </span>
-              {!sidebarCollapsed && "Design"}
+              {!sidebarCollapsed && <span className="truncate">Design</span>}
             </button>
             <button
               onClick={() => setActivePanel("domains")}
-              title={!sidebarCollapsed && !isWebsiteOrder && (contentCount ?? 0) === 0 ? "Complete Training first" : "Domain"}
-              className={`w-full flex items-center gap-3 px-2.5 py-2 text-sm rounded-lg text-left transition-colors ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "domains" ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"}`}
+              title={
+                sidebarCollapsed
+                  ? "4. Domain"
+                  : !sidebarCollapsed && !isWebsiteOrder && (contentCount ?? 0) === 0
+                    ? "Complete Training first"
+                    : "Domain"
+              }
+              className={`w-full flex items-center gap-2 px-2.5 py-2 text-sm rounded-lg text-left transition-colors ${sidebarCollapsed ? "justify-center" : ""} ${activePanel === "domains" ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"}`}
             >
+              {!sidebarCollapsed && (
+                <span className="w-5 shrink-0 text-center text-[11px] font-semibold text-muted-foreground tabular-nums">
+                  4
+                </span>
+              )}
               <span className="w-5 shrink-0 flex justify-center">
                 {["testing", "delivered"].includes(customer?.status ?? "") ? (
                   <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -1144,7 +1292,7 @@ function DashboardContent() {
                   <Link2 className="w-4 h-4 opacity-70" />
                 )}
               </span>
-              {!sidebarCollapsed && "Domain"}
+              {!sidebarCollapsed && <span className="truncate">Domain</span>}
             </button>
           </nav>
 
@@ -1276,6 +1424,7 @@ function DashboardContent() {
               copied={copied}
               chatbotCheckoutHref={chatbotCheckoutHref}
               websiteCheckoutHref={websiteCheckoutHref}
+              unpaidQuoteDollars={unpaidQuoteDollars}
               copyCname={copyCname}
               setActivePanel={setActivePanel}
               handleGoLiveSuccess={handleGoLiveSuccess}
@@ -2269,6 +2418,17 @@ function DashboardContent() {
         </div>
       )}
 
+      {hasOrder && customer && order && checklistItems.length > 0 && (
+        <DashboardGetStartedChecklist
+          orderId={order.id}
+          items={checklistItems}
+          checkoutHref={isWebsiteOrder ? websiteCheckoutHref : chatbotCheckoutHref}
+          unpaidQuoteDollars={unpaidQuoteDollars}
+          isPaid={isPaid}
+          liveChatUrl={isLive ? liveChatbotUrl : null}
+          onContinueSetup={handleChecklistContinue}
+        />
+      )}
     </main>
   );
 }

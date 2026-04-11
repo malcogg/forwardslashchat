@@ -26,6 +26,8 @@ export type DesktopNextStepCardProps = {
   chatbotCheckoutHref: string;
   /** Website SKU — same pattern as dashboard */
   websiteCheckoutHref: string;
+  /** Quoted checkout total when unpaid (matches /checkout when possible) */
+  unpaidQuoteDollars: number | null;
   copyCname: () => void;
   setActivePanel: (p: "training" | "design" | "domains") => void;
   handleGoLiveSuccess: () => void | Promise<void>;
@@ -45,6 +47,7 @@ export function DesktopNextStepCard({
   copied,
   chatbotCheckoutHref,
   websiteCheckoutHref,
+  unpaidQuoteDollars,
   copyCname,
   setActivePanel,
   handleGoLiveSuccess,
@@ -71,7 +74,11 @@ export function DesktopNextStepCard({
         {!isPaid && (
           <CardContent className="p-4 pt-2">
             <Button asChild className="w-full font-semibold">
-              <Link href={payHref}>Complete payment</Link>
+              <Link href={payHref}>
+                {unpaidQuoteDollars != null
+                  ? `Complete payment — $${unpaidQuoteDollars.toLocaleString()}`
+                  : "Complete payment"}
+              </Link>
             </Button>
           </CardContent>
         )}
@@ -92,7 +99,11 @@ export function DesktopNextStepCard({
               One checkout unlocks crawl, training, and custom domain.
             </CardDescription>
             <Button asChild className="w-full font-semibold">
-              <Link href={chatbotCheckoutHref}>Complete payment</Link>
+              <Link href={chatbotCheckoutHref}>
+                {unpaidQuoteDollars != null
+                  ? `Complete payment — $${unpaidQuoteDollars.toLocaleString()}`
+                  : "Complete payment"}
+              </Link>
             </Button>
           </>
         )}
