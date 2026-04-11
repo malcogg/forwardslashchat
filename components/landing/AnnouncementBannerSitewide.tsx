@@ -6,6 +6,8 @@ import { AnnouncementBanner } from "./AnnouncementBanner";
 export const BANNER_EXCLUDED_PATHS = ["/dashboard", "/checkout"];
 
 export function isBannerExcluded(pathname: string): boolean {
+  // Paid / embeddable customer chat — no marketing promo strip
+  if (pathname.startsWith("/chat/c")) return true;
   return BANNER_EXCLUDED_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 

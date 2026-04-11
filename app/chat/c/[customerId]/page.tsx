@@ -5,6 +5,7 @@ import { CustomerChat } from "@/components/CustomerChat";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Zap } from "lucide-react";
+import { CustomerChatAiDisclaimer } from "@/components/chat/CustomerChatAiDisclaimer";
 
 export default function CustomerChatPage() {
   const params = useParams();
@@ -28,20 +29,28 @@ export default function CustomerChatPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-500">Loading...</p>
-      </main>
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <main className="flex-1 flex items-center justify-center">
+          <p className="text-gray-500">Loading...</p>
+        </main>
+        <CustomerChatAiDisclaimer />
+      </div>
     );
   }
 
   if (error || !customer) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-gray-50 p-8">
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">{error ?? "Chatbot not found"}</p>
-          <Link href="/" className="text-emerald-600 hover:underline">Back to ForwardSlash.Chat</Link>
-        </div>
-      </main>
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <main className="flex-1 flex items-center justify-center p-8">
+          <div className="text-center">
+            <p className="text-gray-600 mb-4">{error ?? "Chatbot not found"}</p>
+            <Link href="/" className="text-emerald-600 hover:underline">
+              Back to ForwardSlash.Chat
+            </Link>
+          </div>
+        </main>
+        <CustomerChatAiDisclaimer />
+      </div>
     );
   }
 
@@ -59,18 +68,19 @@ export default function CustomerChatPage() {
           primaryColor={customer.primaryColor ?? "#6B4E3D"}
           compact={false}
         />
-        {/* Shirt-tag style: full bleed, tucked in corner, black bg, white text */}
+        {/* Shirt-tag style: full bleed, tucked in corner, black bg, white text — sits above disclaimer */}
         <a
           href="https://forwardslash.chat"
           target="_blank"
           rel="noopener noreferrer"
-          className="absolute bottom-0 right-0 flex items-center gap-1.5 bg-black text-white px-3 py-1.5 text-xs font-medium -rotate-3 origin-bottom-right hover:bg-gray-900 hover:text-white shadow-sm"
+          className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-black text-white px-3 py-1.5 text-xs font-medium -rotate-3 origin-bottom-right hover:bg-gray-900 hover:text-white shadow-sm"
           style={{ borderTopLeftRadius: 4 }}
         >
           <Zap className="w-3.5 h-3.5 shrink-0" strokeWidth={2.5} />
           <span>ForwardSlash</span>
         </a>
       </div>
+      <CustomerChatAiDisclaimer />
     </div>
   );
 }

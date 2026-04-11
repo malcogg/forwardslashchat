@@ -32,15 +32,20 @@ export default clerkMiddleware(async (auth, req) => {
     !MAIN_HOSTS.includes(host) &&
     !host.endsWith(".vercel.app")
   ) {
-    try {
-      const customerId = await resolveCustomerIdByHost(host);
-      if (customerId) {
-        const url = req.nextUrl.clone();
-        url.pathname = `/chat/c/${customerId}`;
-        return NextResponse.rewrite(url);
+    // Never rewrite API routes: fetches from /chat/c/* use relative /api/... on this host.
+    // Rewriting them to /chat/c/[id] returns HTML and breaks JSON (e.g. "Chatbot not found").
+    const pathname = req.nextUrl.pathname;
+    if (!pathname.startsWith("/api") && !pathname.startsWith("/trpc")) {
+      try {
+        const customerId = await resolveCustomerIdByHost(host);
+        if (customerId) {
+          const url = req.nextUrl.clone();
+          url.pathname = `/chat/c/${customerId}`;
+          return NextResponse.rewrite(url);
+        }
+      } catch {
+        // Fall through to normal routing
       }
-    } catch {
-      // Fall through to normal routing
     }
   }
 
