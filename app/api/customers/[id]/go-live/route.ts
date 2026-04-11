@@ -4,6 +4,7 @@ import { customers, orders } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getOrCreateUser } from "@/lib/auth";
 import { enqueueOrKickJob, getJobByDedupeKey } from "@/lib/jobs";
+import { verifyCustomerCname } from "@/lib/go-live";
 
 /**
  * POST /api/customers/[id]/go-live
@@ -96,9 +97,15 @@ export async function GET(
   }
 
   const job = await getJobByDedupeKey(`go_live_${customerId}`);
+  const customDomain = `${customer.subdomain}.${customer.domain}`;
+
+  const url = new URL(request.url);
+  const dnsProbe = url.searchParams.get("dnsProbe") === "1";
+  const dnsCheck = dnsProbe ? await verifyCustomerCname(customDomain) : undefined;
+
   return NextResponse.json({
     customerStatus: customer.status,
-    domain: `${customer.subdomain}.${customer.domain}`,
+    domain: customDomain,
     job: job
       ? {
           status: job.status,
@@ -108,5 +115,6 @@ export async function GET(
           updatedAt: job.updatedAt,
         }
       : null,
+    ...(dnsCheck != null ? { dnsCheck } : {}),
   });
 }

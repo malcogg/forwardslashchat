@@ -5,11 +5,16 @@ import { CustomerChat } from "@/components/CustomerChat";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Zap } from "lucide-react";
+import { CustomerChatAiDisclaimer } from "@/components/chat/CustomerChatAiDisclaimer";
 
 export default function CustomerChatPage() {
   const params = useParams();
   const customerId = params.customerId as string;
-  const [customer, setCustomer] = useState<{ businessName: string; primaryColor: string | null } | null>(null);
+  const [customer, setCustomer] = useState<{
+    businessName: string;
+    logoUrl: string | null;
+    websiteUrl: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,51 +31,89 @@ export default function CustomerChatPage() {
       .finally(() => setLoading(false));
   }, [customerId]);
 
+  useEffect(() => {
+    if (!customer?.businessName) return;
+    const prevTitle = document.title;
+    document.title = `${customer.businessName} · Chat`;
+    return () => {
+      document.title = prevTitle;
+    };
+  }, [customer?.businessName]);
+
+  useEffect(() => {
+    const logo = customer?.logoUrl?.trim();
+    if (!logo) return;
+    const faviconEl = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    const prevHref = faviconEl?.href;
+    if (faviconEl) faviconEl.href = logo;
+    return () => {
+      if (faviconEl && prevHref) faviconEl.href = prevHref;
+    };
+  }, [customer?.logoUrl]);
+
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-500">Loading...</p>
-      </main>
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <main className="flex-1 flex items-center justify-center">
+          <p className="text-gray-500">Loading...</p>
+        </main>
+        <CustomerChatAiDisclaimer websiteUrl={null} />
+      </div>
     );
   }
 
   if (error || !customer) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-gray-50 p-8">
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">{error ?? "Chatbot not found"}</p>
-          <Link href="/" className="text-emerald-600 hover:underline">Back to ForwardSlash.Chat</Link>
-        </div>
-      </main>
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <main className="flex-1 flex items-center justify-center p-8">
+          <div className="text-center">
+            <p className="text-gray-600 mb-4">{error ?? "Chatbot not found"}</p>
+            <Link href="/" className="text-emerald-600 hover:underline">
+              Back to ForwardSlash.Chat
+            </Link>
+          </div>
+        </main>
+        <CustomerChatAiDisclaimer websiteUrl={null} />
+      </div>
     );
   }
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
-      <header className="flex items-center justify-end px-4 py-2 border-b border-gray-200 bg-white shrink-0">
-        <Link href="/" className="text-sm text-gray-500 hover:text-gray-700">
-          ForwardSlash.Chat
-        </Link>
-      </header>
-      <div className="flex-1 min-h-0 overflow-hidden relative">
-        <CustomerChat
-          customerId={customerId}
-          businessName={customer.businessName}
-          primaryColor={customer.primaryColor ?? "#6B4E3D"}
-          compact={false}
-        />
-        {/* Shirt-tag style: full bleed, tucked in corner, black bg, white text */}
+      <header className="flex items-center justify-between gap-3 px-4 py-2 border-b border-gray-200 bg-white shrink-0">
         <a
           href="https://forwardslash.chat"
           target="_blank"
           rel="noopener noreferrer"
-          className="absolute bottom-0 right-0 flex items-center gap-1.5 bg-black text-white px-3 py-1.5 text-xs font-medium -rotate-3 origin-bottom-right hover:bg-gray-900 hover:text-white shadow-sm"
+          className="text-left text-xs sm:text-sm text-gray-500 hover:text-gray-800 shrink-0 min-w-0"
+        >
+          <span className="block truncate">
+            Powered by{" "}
+            <span className="font-medium text-gray-800 underline-offset-2 hover:underline">
+              ForwardSlash.chat
+            </span>
+          </span>
+        </a>
+        <a
+          href="https://forwardslash.chat"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 bg-black text-white px-3 py-1.5 text-xs font-medium -rotate-3 origin-center hover:bg-gray-900 hover:text-white shadow-sm shrink-0"
           style={{ borderTopLeftRadius: 4 }}
         >
           <Zap className="w-3.5 h-3.5 shrink-0" strokeWidth={2.5} />
           <span>ForwardSlash</span>
         </a>
+      </header>
+      <div className="flex-1 min-h-0 overflow-hidden relative">
+        <CustomerChat
+          customerId={customerId}
+          businessName={customer.businessName}
+          logoUrl={customer.logoUrl}
+          compact={false}
+        />
       </div>
+      <CustomerChatAiDisclaimer websiteUrl={customer.websiteUrl} />
     </div>
   );
 }

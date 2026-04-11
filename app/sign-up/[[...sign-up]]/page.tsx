@@ -10,7 +10,7 @@ export default function SignUpPage() {
             card: "shadow-lg",
           },
         }}
-        fallbackRedirectUrl="/dashboard"
+        fallbackRedirectUrl="/onboarding"
         signInUrl="/sign-in"
       />
     </div>

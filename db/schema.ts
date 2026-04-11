@@ -7,6 +7,7 @@ import {
   boolean,
   jsonb,
 } from "drizzle-orm/pg-core";
+import type { CrawlProgressSnapshot } from "@/lib/crawl-progress-types";
 
 // Per-user credit allocation (your Firecrawl account is shared; each user gets a slice)
 // 1 page = 1 credit. One crawl ≈ 50 credits. Adjust via FIRECRAWL_CREDITS_* env vars.
@@ -25,6 +26,27 @@ export const users = pgTable("users", {
   name: text("name"),
   firecrawlPlan: text("firecrawl_plan").default("free"), // free | hobby | standard | growth
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+/** Pre-dashboard questionnaire (Path A: has website / Path B: no website). One row per user. */
+export const userOnboarding = pgTable("user_onboarding", {
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .primaryKey(),
+  path: text("path").notNull(),
+  referralSource: text("referral_source"),
+  hasExistingAiChat: boolean("has_existing_ai_chat"),
+  industry: text("industry"),
+  dnsHelpPreference: text("dns_help_preference"),
+  assistantPrimaryUse: text("assistant_primary_use"),
+  websiteUrlSnapshot: text("website_url_snapshot"),
+  noSiteProjectNote: text("no_site_project_note"),
+  noSiteTimeline: text("no_site_timeline"),
+  skippedStepIds: jsonb("skipped_step_ids").$type<string[]>().notNull().default([]),
+  extra: jsonb("extra").$type<Record<string, unknown>>().notNull().default({}),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Track reminder emails sent (payment_reminder_1, payment_reminder_2, payment_reminder_3)
@@ -100,6 +122,8 @@ export const customers = pgTable("customers", {
   prepaidUntil: timestamp("prepaid_until", { withTimezone: true }),
   lastCrawledAt: timestamp("last_crawled_at", { withTimezone: true }), // for 7-day rescan cooldown
   status: text("status").notNull().default("pending"), // pending | content_collection | crawling | indexing | dns_setup | testing | delivered
+  /** In-flight crawl UI + Firecrawl correlation; cleared when crawl completes successfully. */
+  crawlProgress: jsonb("crawl_progress").$type<CrawlProgressSnapshot | null>(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -108,6 +132,29 @@ export const customers = pgTable("customers", {
 export const checkoutVisits = pgTable("checkout_visits", {
   userId: uuid("user_id").references(() => users.id).notNull().primaryKey(),
   visitedAt: timestamp("visited_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Demo chat (/chat/demo) — name, email, optional phone before free-form chat
+export const demoChatLeads = pgTable("demo_chat_leads", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  firstName: text("first_name"),
+  email: text("email"),
+  phone: text("phone"),
+  skipped: boolean("skipped").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Paid customer chat — optional visitor contact capture (skippable), per customerId
+export const customerChatLeads = pgTable("customer_chat_leads", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  customerId: uuid("customer_id")
+    .references(() => customers.id, { onDelete: "cascade" })
+    .notNull(),
+  firstName: text("first_name"),
+  email: text("email"),
+  phone: text("phone"),
+  skipped: boolean("skipped").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Checkout leads - form data collected before payment
@@ -133,6 +180,18 @@ export const content = pgTable("content", {
   title: text("title"),
   content: text("content").notNull(),
   description: text("description"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+/** Vector embeddings for RAG (`019-content-chunks-rag.sql`). Inserts/ANN search use raw SQL for `vector` literals. */
+export const contentChunks = pgTable("content_chunks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  customerId: uuid("customer_id").references(() => customers.id, { onDelete: "cascade" }).notNull(),
+  contentId: uuid("content_id").references(() => content.id, { onDelete: "cascade" }).notNull(),
+  chunkIndex: integer("chunk_index").notNull(),
+  url: text("url").notNull(),
+  title: text("title"),
+  body: text("body").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

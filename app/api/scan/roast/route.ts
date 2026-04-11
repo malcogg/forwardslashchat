@@ -3,6 +3,7 @@ import { estimateSiteAgeTech } from "@/lib/roast";
 import { getPageCountFromSitemap } from "@/lib/sitemap";
 import { sanitizeWebsiteUrl, isValidUrl } from "@/lib/validation";
 import { assertSafeOutboundHttpUrl } from "@/lib/url-safety";
+import { checkAndIncrementRateLimit, getClientIpFromRequest } from "@/lib/rate-limit";
 
 const FETCH_TIMEOUT_MS = 12_000;
 const DELAY_BETWEEN_HOMEPAGE_AND_SITEMAP_MS = 200; // Polite — avoid back-to-back hits on small sites
@@ -16,6 +17,22 @@ const USER_AGENT =
  */
 export async function POST(request: Request) {
   try {
+    const ip = getClientIpFromRequest(request);
+    const perMinute = Math.min(
+      60,
+      Math.max(5, Number(process.env.SCAN_ROAST_RATE_LIMIT_PER_MINUTE ?? 30))
+    );
+    const { ok } = await checkAndIncrementRateLimit({
+      key: `scan_roast:${ip}`,
+      limitPerMinute: perMinute,
+    });
+    if (!ok) {
+      return NextResponse.json(
+        { error: "Too many scans. Please wait a minute and try again." },
+        { status: 429, headers: { "Retry-After": "60" } }
+      );
+    }
+
     const body = await request.json().catch(() => ({}));
     const rawUrl = (body as { url?: string }).url;
     if (!rawUrl || typeof rawUrl !== "string") {

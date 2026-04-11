@@ -18,10 +18,16 @@ export function ChatbotDeliveredEmail({
       <p>Your chatbot for <strong>{businessName}</strong> is live. Share it with your customers.</p>
       <p>
         <a href={chatUrl} style={{ color: "#059669", fontWeight: 600 }}>
-          Test your chatbot →
+          Open your chatbot →
         </a>
       </p>
-      <p style={{ color: "#6b7280", fontSize: "14px" }}>Questions? Reply to this email.</p>
+      <p style={{ color: "#374151", fontSize: "14px", wordBreak: "break-all" }}>
+        Your link:{" "}
+        <a href={chatUrl} style={{ color: "#059669" }}>
+          {chatUrl}
+        </a>
+      </p>
+      <p style={{ color: "#6b7280", fontSize: "14px" }}>Bookmark this URL for your team. Questions? Reply to this email.</p>
       <p>— The ForwardSlash.Chat team</p>
     </div>
   );

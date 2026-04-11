@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { DashboardMockup } from "@/components/landing/DashboardMockup";
 import { LIMITS, sanitizeWebsiteUrl, isValidUrl } from "@/lib/validation";
@@ -76,31 +77,37 @@ export function HeroSection({ onScanClick }: HeroSectionProps) {
     <section id="scan" className="w-full bg-background">
       <div className="max-w-7xl mx-auto px-6 pt-16 pb-8">
         <div className="text-center max-w-3xl mx-auto">
-          <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl leading-tight text-balance text-foreground">
+          <p className="inline-flex items-center justify-center rounded-full border border-emerald-500/25 bg-emerald-500/10 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-800 dark:text-emerald-300/90 mb-6">
+            Pay once · Hosting included
+          </p>
+          <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl leading-[1.1] text-balance text-foreground">
             AI chatbot for your website.
             <br />
-            Pay once. No monthly fees.
+            <span className="italic font-normal text-foreground/95">Pay once. No monthly fees.</span>
           </h1>
-          <p className="mt-6 text-muted-foreground text-lg max-w-xl mx-auto">
-            We scan your site, train a custom AI on your content, and deploy it at chat.yourdomain.com. One upfront payment. Hosting included.
+          <p className="mt-6 text-muted-foreground text-lg max-w-xl mx-auto leading-relaxed">
+            Train an intelligent assistant on your site content and serve it at{" "}
+            <span className="text-foreground/90 font-medium">chat.yourdomain.com</span>. One upfront payment — no
+            subscriptions.
           </p>
 
-          <div className="mt-8 max-w-xl mx-auto">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1 relative">
+          <div className="mt-8 max-w-2xl mx-auto space-y-4">
+            {/* Single bordered control: URL + primary action (Stitch-style) */}
+            <div className="rounded-2xl border border-border/80 bg-card/60 p-1.5 shadow-sm backdrop-blur-sm flex flex-col sm:flex-row sm:items-stretch gap-1">
+              <div className="flex-1 min-w-0 relative flex items-center">
                 <input
                   ref={inputRef}
                   type="url"
-                  placeholder="Enter your website URL"
+                  placeholder="your-website.com"
                   list="scan-history"
                   maxLength={LIMITS.websiteUrl}
                   autoComplete="url"
-                  className="w-full px-5 py-3 rounded-full border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full min-h-[48px] px-4 sm:px-5 py-3 rounded-xl border-0 bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
                   onKeyDown={(e) => e.key === "Enter" && handleScan()}
                   onChange={(e) => setUrlHint(getNormalizedHint(e.target.value))}
                 />
                 {urlHint && (
-                  <p className="absolute left-5 top-full mt-1 text-xs text-muted-foreground">
+                  <p className="absolute left-4 top-full mt-1 text-xs text-muted-foreground text-left">
                     We&apos;ll scan: {urlHint}
                   </p>
                 )}
@@ -114,12 +121,20 @@ export function HeroSection({ onScanClick }: HeroSectionProps) {
                 variant="cta"
                 size="lg"
                 onClick={handleScan}
-                className="shrink-0"
+                className="shrink-0 rounded-xl px-6 sm:px-8 h-12 sm:h-auto whitespace-nowrap"
               >
-                Scan your site
+                Scan your site →
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground mt-3">One-time payment • Your domain • Delivered in 3–10 days</p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
+              <Button variant="outline" size="sm" asChild className="border-border bg-background/80 hover:bg-muted/60">
+                <Link href="/services">No website yet? Website + AI →</Link>
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              One-time payment • Your domain • Typical delivery 3–10 days
+            </p>
           </div>
         </div>
 

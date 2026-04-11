@@ -1,6 +1,6 @@
 # ForwardSlash.Chat — Security & API Audit
 
-> **Last updated:** February 2026  
+> **Last updated:** April 2026  
 > Use this doc to audit endpoints, enforce auth, and track security fixes.
 
 ---
@@ -10,11 +10,12 @@
 | Route pattern | Protected? | Notes |
 |---------------|------------|-------|
 | `/dashboard(.*)` | ✅ Yes | `auth.protect()` — requires Clerk session |
-| `/admin(.*)` | ✅ Yes | `auth.protect()` |
-| `/api/*` | ❌ No | **API routes are NOT protected by middleware.** Each route must enforce its own auth. |
-| `/`, `/chat/demo`, `/checkout`, `/sign-in`, `/sign-up` | Public | Intended |
+| `/fs-ops(.*)` | ✅ Yes | `auth.protect()` — admin UI at `/fs-ops/{ADMIN_PATH_TOKEN}`; token must match env |
+| `/admin` | 404 | Legacy path removed; use secret admin URL above |
+| `/api/*` | ❌ No | **API routes are NOT protected by middleware.** Each route must enforce its own auth (or signature / secret for webhooks & cron). |
+| `/`, `/chat/demo`, `/checkout`, `/services`, `/thank-you`, `/terms`, `/privacy`, `/sign-in`, `/sign-up` | Public | Intended |
 
-**Important:** Middleware only protects page routes (`/dashboard`, `/admin`). All `/api/*` endpoints rely on route-level auth.
+**Important:** Middleware performs **host → customer rewrite** for custom chat domains by calling `GET /api/chat/resolve-by-host` (see `middleware.ts`). Visitor IP is forwarded (`x-forwarded-for` / `x-vercel-forwarded-for`) so per-IP rate limits apply correctly.
 
 ---
 
@@ -22,122 +23,94 @@
 
 ### Auth required (Clerk `getOrCreateUser`)
 
-| Endpoint | Method | Auth | Ownership | Validation | Status |
-|----------|--------|------|-----------|------------|--------|
-| `/api/dashboard` | GET | ✅ | Order claim/ownership | orderId param | ✅ Secure |
-| `/api/orders/me` | GET | ✅ | User's orders only | — | ✅ Secure |
-| `/api/orders/[id]` | GET | ✅ | `order.userId === user.userId` | — | ✅ Secure |
-| `/api/orders/[id]` | DELETE | ✅ | `order.userId === user.userId` | — | ✅ Secure |
-| `/api/scan-request` | POST | ✅ | — | url, estimatedPages | ✅ Secure |
-| `/api/credits` | GET | ✅ | User's credits | — | ✅ Secure |
-| `/api/customers/[id]` | PATCH | ✅ | Order → customer ownership | status enum | ✅ Secure |
-| `/api/customers/[id]/crawl` | POST | ✅ | Order ownership, payment check | — | ✅ Secure |
-| `/api/admin/orders` | GET | ✅ Admin | ADMIN_EMAILS | — | ✅ Secure |
-| `/api/admin/orders` | POST | ✅ Admin | ADMIN_EMAILS | websiteUrl, businessName, domain | ✅ Secure |
+| Endpoint | Method | Auth | Ownership / notes |
+|----------|--------|------|-------------------|
+| `/api/dashboard` | GET | ✅ | Order claim if `userId` null (UUID in URL); 404 if owned by another user |
+| `/api/orders/me` | GET | ✅ | User’s orders only |
+| `/api/orders/[id]` | GET, DELETE | ✅ | `order.userId === user.userId` |
+| `/api/orders` | POST | ✅ | **Admin only** (`ADMIN_EMAILS`) — legacy/manual order create |
+| `/api/credits`, `/api/credits/checkout` | GET/POST | ✅ | User-scoped |
+| `/api/customers/[id]` | PATCH | ✅ | Customer → order ownership |
+| `/api/customers/[id]/crawl` | POST | ✅ | Order ownership + payment |
+| `/api/customers/[id]/go-live` | GET, POST | ✅ | Order ownership |
+| `/api/customers/by-order/[orderId]` | GET | ✅ | Order ownership |
+| `/api/scan-request` | POST | ✅ | Authenticated |
+| `/api/admin/*` | GET/POST | ✅ | `ADMIN_EMAILS` |
 
-### Public (no auth)
+### Webhooks & cron (secrets / signatures)
 
-| Endpoint | Method | Validation | Risk | Status |
-|----------|--------|------------|------|--------|
-| `/api/scan` | POST | url (basic) | Firecrawl credit abuse, SSRF | ⚠️ Consider rate limit, URL allowlist |
-| `/api/scan/roast` | POST | url via `isValidUrl`, `sanitizeWebsiteUrl` | SSRF mitigated by validation | ✅ OK |
-| `/api/chat/customer/[customerId]` | GET | customerId (UUID) | Info disclosure: businessName, primaryColor (low) | ✅ OK by design |
-| `/api/chat` | POST | customerId, messages, `sanitizeChatMessage` | LLM abuse, no rate limit | ⚠️ Consider rate limit |
-| `/api/chat/demo` | POST | messages | LLM abuse, no rate limit | ⚠️ Consider rate limit |
-| `/api/checkout/lead` | POST | Full validation (lib/validation) | — | ✅ Secure |
-| `/api/checkout/stripe` | POST | amountCents, bundleYears, businessName, domain, websiteUrl | Client can set amount — Stripe enforces payment | ⚠️ Add amount range check if needed |
-| `/api/chat/customer/[customerId]` | GET | — | Public by design | ✅ OK |
+| Endpoint | Verification |
+|----------|----------------|
+| `/api/webhooks/stripe` | Stripe signature |
+| `/api/webhooks/clerk` | Clerk `verifyWebhook` |
+| `/api/webhooks/resend` | Resend signing secret (if configured) |
+| `/api/cron/*` | `Authorization: Bearer CRON_SECRET` |
 
-### Unauthenticated — potential abuse
+### Public (by design)
 
-| Endpoint | Method | Issue | Recommendation |
-|----------|--------|-------|----------------|
-| ~~`/api/orders/[id]`~~ | GET | ~~Returns order to anyone with ID~~ | ✅ Fixed — auth + ownership |
-| ~~`/api/customers/by-order/[orderId]`~~ | GET | ~~Returns full customer to anyone with orderId~~ | ✅ Fixed — auth + ownership |
-| ~~`/api/email`~~ | POST | ~~Open relay~~ | ✅ Fixed — requires `Authorization: Bearer EMAIL_API_SECRET` |
-| `/api/orders` | POST | Anyone can create orders (no auth) | If only used internally, add API key or restrict to webhooks |
-
-### Webhooks (signature verification)
-
-| Endpoint | Method | Verification | Status |
-|----------|--------|---------------|--------|
-| `/api/webhooks/stripe` | POST | `Stripe.webhooks.constructEvent` | ✅ Secure |
-| `/api/webhooks/clerk` | POST | `verifyWebhook` (Clerk) | ✅ Secure |
-
-### Cron (secret-based)
-
-| Endpoint | Method | Verification | Status |
-|----------|--------|---------------|--------|
-| `/api/cron/payment-reminder` | GET | `Authorization: Bearer CRON_SECRET` | ✅ Secure |
+| Endpoint | Notes |
+|----------|--------|
+| `/api/scan` | **Auth required** (Clerk); Firecrawl cost — abuse limited to signed-in users |
+| `/api/scan/roast` | Public (pre-signup modal); **per-IP rate limit** `SCAN_ROAST_RATE_LIMIT_PER_MINUTE` (default 30); validated URL |
+| `/api/chat` | **Rate limit per `customerId`** (`CHAT_RATE_LIMIT_PER_MINUTE`); paid order required for chat |
+| `/api/chat/customer-lead` | **Paid customer only**; **per-IP** rate limit `CUSTOMER_CHAT_LEAD_RATE_LIMIT_PER_MINUTE` (default 20) |
+| `/api/chat/demo` | Demo-specific rate limits (see env in `DEVELOPER-GUIDE.md`) |
+| `/api/chat/customer/[customerId]` | **Minimal fields** (businessName, primaryColor) for widget UI |
+| `/api/chat/resolve-by-host` | **Rate limit per IP** (`RESOLVE_HOST_RATE_LIMIT_PER_MINUTE`, default 60); returns `customerId` for host — abuse mitigation |
+| `/api/checkout/stripe` | **Server-computed** `amountCents` via `computeCheckoutAmountCents`; sanitized inputs |
+| `/api/checkout/lead`, `/api/checkout/visit` | Validated leads / visits |
+| `/api/email` | **`EMAIL_API_SECRET`** required |
+| `/api/version` | Non-sensitive build metadata (env names only; no secrets) |
 
 ---
 
-## 3. Auth & User Blocking
+## 3. Known product / threat-model notes
 
-- **Fake emails:** `unknown@example.com` (and similar placeholders) are blocked in `lib/auth.ts` via `getOrCreateUser()`. Users with fake emails cannot access protected APIs.
-- **Clerk config:** Consider requiring verified email in Clerk Dashboard to prevent email-less sign-up at the source.
+- **Unclaimed orders:** If `orders.user_id` is null, first signed-in user who loads `/api/dashboard?orderId=` **claims** the order. Mitigated by unguessable UUIDs; do not share checkout success URLs publicly.
+- **`GET /api/chat/resolve-by-host`:** Reveals whether a host maps to a tenant (`customerId`). Rate limiting reduces enumeration; hostnames are often discoverable anyway via DNS.
 
 ---
 
 ## 4. Input Validation
 
-| Source | Used in | Functions |
-|--------|---------|-----------|
-| `lib/validation.ts` | checkout/lead, admin, scan/roast | `sanitizeFirstName`, `sanitizeEmail`, `isValidEmail`, `sanitizeWebsiteUrl`, `isValidUrl`, `sanitizeChatMessage`, etc. |
-| `LIMITS` | All sanitizers | Character limits (OWASP-style) |
+| Area | Location |
+|------|----------|
+| Checkout | `sanitizeBusinessName`, `sanitizeDomain`, `sanitizeWebsiteUrl`, `isValidPlanSlug`, server pricing |
+| Leads / demo | `lib/validation.ts` |
+| Customer-chat leads | Same sanitizers as demo; `customerId` + paid check |
+| Chat | `sanitizeChatMessage`; slash expansion uses fixed server prompts |
 
-**Validation gaps:**
-- `/api/scan` — URL normalized but not validated via `isValidUrl` / `sanitizeWebsiteUrl`
-- `/api/chat` — `customerId` not validated as UUID (Drizzle will no-op on bad ID)
-- `/api/checkout/stripe` — `businessName`, `domain`, `websiteUrl` not sanitized (passed through)
-- `/api/orders` — No sanitization on businessName, domain, websiteUrl
+**Residual gaps (low priority):** stricter UUID validation on some `customerId` query params; additional `/api/scan` rate limits by IP.
 
 ---
 
 ## 5. Sensitive Data
 
-| Data | Storage | Exposure |
-|------|---------|----------|
-| Stripe keys | Env only | Never in client |
-| Clerk keys | Env only | Publishable key is public by design |
-| Database URL | Env only | Never in client |
-| User emails | `users` table | Not returned to chat/customer APIs |
-| Order/customer | `orders`, `customers` | Auth required on GET orders/[id], customers/by-order |
+| Data | Exposure |
+|------|----------|
+| Stripe / DB / OpenAI keys | Env only, never client |
+| User emails | Not exposed on public chat metadata routes |
 
 ---
 
-## 6. Action Items (Priority Order)
+## 6. Action Items (rolling)
 
-| Priority | Issue | Action |
-|----------|-------|--------|
-| ~~**P0**~~ | ~~`GET /api/orders/[id]` — no auth~~ | ✅ Fixed |
-| ~~**P0**~~ | ~~`GET /api/customers/by-order/[orderId]` — no auth~~ | ✅ Fixed |
-| ~~**P0**~~ | ~~`POST /api/email` — open relay~~ | ✅ Fixed — `EMAIL_API_SECRET` required |
-| **P1** | `POST /api/orders` — unauthenticated create | Add API key or restrict to webhook/internal |
-| **P2** | `/api/scan` — Firecrawl abuse | Add rate limiting (Vercel or Upstash) |
-| **P2** | `/api/chat`, `/api/chat/demo` — LLM abuse | Add rate limiting |
-| **P2** | `/api/checkout/stripe` — amount manipulation | Validate amountCents against allowed tiers |
-| **P3** | `/api/scan` — URL validation | Use `sanitizeWebsiteUrl` + `isValidUrl` |
-| **P3** | `/api/checkout/stripe`, `/api/orders` — sanitization | Apply `sanitizeBusinessName`, `sanitizeDomain`, `sanitizeWebsiteUrl` |
+| Status | Item |
+|--------|------|
+| ✅ | `GET /api/orders/[id]`, `GET /api/customers/by-order/...` — auth + ownership |
+| ✅ | `POST /api/email` — `EMAIL_API_SECRET` |
+| ✅ | `POST /api/orders` — admin-only |
+| ✅ | `/api/chat` — per-customer rate limit |
+| ✅ | `/api/checkout/stripe` — server-side amount |
+| ✅ | `/api/chat/resolve-by-host` — per-IP rate limit + middleware IP forward |
+| ✅ | `/api/scan/roast` — per-IP rate limit (see env `SCAN_ROAST_RATE_LIMIT_PER_MINUTE`) |
+| ⏳ | `/api/scan` — optional extra per-user limits (already requires auth) |
+| ⏳ | Unclaimed-order claim — optional signed token from checkout success (future) |
 
 ---
 
 ## 7. References
 
 - [TECH-SPEC.md](./TECH-SPEC.md) — Stack, schema, API list
-- [lib/validation.ts](../lib/validation.ts) — Validation helpers
-- [middleware.ts](../middleware.ts) — Route protection
-
----
-
-## 8. Docs Gap Analysis (What's Missing)
-
-| Gap | Current state | Recommendation |
-|-----|---------------|----------------|
-| **PRODUCTION-READINESS-CHECKLIST.md** | Outdated — Auth, Payments, Data Storage listed as TODO | Update to reflect current state or archive |
-| **TECH-SPEC API reference** | Missing: scan-request, scan/roast, checkout/lead, email, customers/by-order | Add missing endpoints to Section 4 |
-| **Docs index** | No single nav — 29 files, hard to discover | Create `docs/README.md` or `DOCS-INDEX.md` with categorized links |
-| **Env vars** | Scattered across TECH-SPEC, APP-OVERVIEW, BACKEND-SETUP | Single `ENV-REFERENCE.md` with required/optional, purpose, where used |
-| **Deployment / CI** | Not documented | Add Vercel deploy steps, branch strategy, env setup |
-| **Runbook / Incident** | None | Add basic runbook: webhook failure, cron failure, DB issues |
-| **Changelog** | PROJECT-UPDATES exists but may be ad-hoc | Consider conventional changelog or keep PROJECT-UPDATES current |
+- [lib/validation.ts](../lib/validation.ts)
+- [middleware.ts](../middleware.ts)

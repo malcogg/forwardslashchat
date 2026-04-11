@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 
 /**
  * GET /api/chat/customer/[customerId]
- * Public: returns minimal customer info for chat page (businessName, primaryColor).
+ * Public: returns minimal customer info for chat page (businessName, logoUrl, websiteUrl).
  * Used by /chat/c/[customerId] to render the chat UI.
  */
 export async function GET(
@@ -22,7 +22,11 @@ export async function GET(
   }
 
   const [customer] = await db
-    .select({ businessName: customers.businessName, primaryColor: customers.primaryColor })
+    .select({
+      businessName: customers.businessName,
+      logoUrl: customers.logoUrl,
+      websiteUrl: customers.websiteUrl,
+    })
     .from(customers)
     .where(eq(customers.id, customerId));
 

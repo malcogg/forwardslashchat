@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { claimNextJob, markJobFailed, markJobSucceeded } from "@/lib/jobs";
+import {
+  claimNextJob,
+  markJobFailed,
+  markJobSucceeded,
+  recoverStuckRunningJobs,
+  JOB_TYPE_AUTO_CRAWL,
+  JOB_TYPE_GO_LIVE,
+} from "@/lib/jobs";
 import { autoCrawlCustomer } from "@/lib/customer-crawl";
 import { autoGoLiveCustomer } from "@/lib/go-live";
 
 export const dynamic = "force-dynamic";
-
-const JOB_TYPE_AUTO_CRAWL = "auto_crawl_customer";
-const JOB_TYPE_GO_LIVE = "go_live_domain";
 
 function requireCronAuth(req: NextRequest): NextResponse | null {
   const authHeader = req.headers.get("authorization");
@@ -25,7 +29,13 @@ export async function GET(req: NextRequest) {
   if (denied) return denied;
 
   const maxPerRun = Math.min(25, Math.max(1, Number(process.env.JOBS_MAX_PER_RUN ?? 5)));
-  const maxPages = Math.min(500, Math.max(10, Number(process.env.AUTO_CRAWL_MAX_PAGES ?? 200)));
+
+  let recoveredStuck = 0;
+  try {
+    recoveredStuck = await recoverStuckRunningJobs();
+  } catch (e) {
+    console.error("[cron/jobs] recoverStuckRunningJobs:", e);
+  }
 
   let processed = 0;
   let succeeded = 0;
@@ -45,15 +55,16 @@ export async function GET(req: NextRequest) {
         if (!customerId) throw new Error("Missing payload.customerId");
 
         const overrideMaxPagesRaw = payload.maxPages;
-        const overrideMaxPages = typeof overrideMaxPagesRaw === "number"
-          ? Math.min(500, Math.max(10, Math.round(overrideMaxPagesRaw)))
-          : null;
+        const overrideMaxPages =
+          typeof overrideMaxPagesRaw === "number"
+            ? Math.min(500, Math.max(10, Math.round(overrideMaxPagesRaw)))
+            : null;
 
         const res = await autoCrawlCustomer({
           customerId,
           notifyEmail,
           reason: "payment",
-          maxPages: overrideMaxPages ?? maxPages,
+          maxPages: overrideMaxPages,
         });
         if (!res.ok) throw new Error(res.error ?? "Auto crawl failed");
       } else if (job.type === JOB_TYPE_GO_LIVE) {
@@ -67,7 +78,7 @@ export async function GET(req: NextRequest) {
         throw new Error(`Unknown job type: ${job.type}`);
       }
 
-      await markJobSucceeded(job.id);
+      await markJobSucceeded(job);
       succeeded++;
     } catch (e) {
       failed++;
@@ -78,6 +89,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     ok: true,
+    recoveredStuck,
     processed,
     succeeded,
     failed,

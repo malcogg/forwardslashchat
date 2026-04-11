@@ -9,6 +9,7 @@ type MobileDashboardHomeProps = {
   orders: OrderRow[];
   onSelectSite: (orderId: string) => void;
   onGoToAddSite: () => void;
+  onOpenBundles: () => void;
 };
 
 export function MobileDashboardHome({
@@ -16,6 +17,7 @@ export function MobileDashboardHome({
   orders,
   onSelectSite,
   onGoToAddSite,
+  onOpenBundles,
 }: MobileDashboardHomeProps) {
   const totalSites = orders.length;
   const liveCount = orders.filter(
@@ -52,6 +54,14 @@ export function MobileDashboardHome({
           <p className="text-xs text-muted-foreground mt-0.5">Training</p>
         </div>
       </div>
+
+      <button
+        type="button"
+        onClick={onOpenBundles}
+        className="w-full mb-6 flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-border bg-card text-sm font-medium text-foreground hover:bg-muted/40 transition-colors"
+      >
+        Bundles & checkout
+      </button>
 
       <h2 className="text-sm font-semibold text-foreground mb-3">Your Sites</h2>
 
@@ -113,9 +123,12 @@ export function MobileDashboardHome({
                       </div>
                       <span
                         className={`inline-block mt-2 text-[10px] font-medium px-2 py-0.5 rounded ${
-                          statusLabel === "Live"
+                          statusLabel === "Live" || statusLabel === "Delivered"
                             ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
-                            : statusLabel === "Domain Setup"
+                            : statusLabel === "Domain" ||
+                                statusLabel === "In progress" ||
+                                statusLabel === "Indexing" ||
+                                statusLabel === "Ready to scan"
                               ? "bg-amber-500/20 text-amber-700 dark:text-amber-400"
                               : "bg-muted text-muted-foreground"
                         }`}
