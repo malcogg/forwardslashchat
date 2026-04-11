@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronUp, ListChecks, X, ArrowRight } from "lucide-react";
+import { ChevronDown, ChevronUp, ListChecks, X, ArrowRight, Check } from "lucide-react";
 
 const STORAGE_PREFIX = "fs_dashboard_checklist_dismissed_";
 
@@ -72,23 +72,23 @@ export function DashboardGetStartedChecklist({
 
   return (
     <div
-      className="fixed z-50 left-1/2 top-1/2 w-[min(calc(100vw-1.5rem),380px)] max-h-[85dvh] -translate-x-1/2 -translate-y-1/2 overflow-y-auto overscroll-contain shadow-2xl rounded-2xl border border-white/10 bg-[#141414] text-zinc-100"
+      className="fixed z-50 left-1/2 top-1/2 w-[min(calc(100vw-1.5rem),380px)] max-h-[85dvh] -translate-x-1/2 -translate-y-1/2 overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card text-card-foreground shadow-2xl ring-1 ring-black/5 dark:ring-white/10"
       role="region"
       aria-label="Get started checklist"
     >
-      <div className="border-b border-white/10 px-4 py-3 flex items-start gap-3">
+      <div className="border-b border-border px-4 py-3 flex items-start gap-3">
         <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500 to-blue-600 flex items-center justify-center shrink-0 shadow-lg">
           <ListChecks className="h-5 w-5 text-white" strokeWidth={2} />
         </div>
         <div className="flex-1 min-w-0 pt-0.5">
-          <p className="text-sm font-semibold text-white leading-tight">Get started checklist</p>
-          <p className="text-xs text-zinc-400 mt-0.5">
+          <p className="text-sm font-semibold text-foreground leading-tight">Get started checklist</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
             {completed} of {total} complete
           </p>
         </div>
         <div className="relative h-10 w-10 shrink-0" aria-hidden>
           <svg className="h-10 w-10 -rotate-90" viewBox="0 0 36 36">
-            <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="3" />
+            <circle cx="18" cy="18" r="15.5" fill="none" className="stroke-border" strokeWidth="3" />
             <circle
               cx="18"
               cy="18"
@@ -106,14 +106,14 @@ export function DashboardGetStartedChecklist({
               </linearGradient>
             </defs>
           </svg>
-          <span className="absolute inset-0 flex items-center justify-center text-[11px] font-semibold text-white">
+          <span className="absolute inset-0 flex items-center justify-center text-[11px] font-semibold text-foreground">
             {completed}
           </span>
         </div>
         <button
           type="button"
           onClick={() => setExpanded((e) => !e)}
-          className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 shrink-0"
+          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted shrink-0"
           aria-expanded={expanded}
           aria-label={expanded ? "Collapse checklist" : "Expand checklist"}
         >
@@ -126,61 +126,61 @@ export function DashboardGetStartedChecklist({
           <ul className="px-4 py-3 space-y-3">
             {items.map((item) => (
               <li key={item.id} className="flex gap-3">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/15 bg-zinc-900">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border bg-muted/60">
                   {item.done ? (
-                    <span className="text-[10px] text-white font-bold">✓</span>
+                    <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" strokeWidth={2.5} aria-hidden />
                   ) : (
-                    <span className="h-2 w-2 rounded-full bg-zinc-600" />
+                    <span className="h-2 w-2 rounded-full bg-muted-foreground/35" />
                   )}
                 </span>
                 <div className="min-w-0">
                   <p
                     className={`text-sm font-medium leading-snug ${
-                      item.done ? "text-zinc-500 line-through" : "text-white"
+                      item.done ? "text-muted-foreground line-through" : "text-foreground"
                     }`}
                   >
                     {item.title}
                   </p>
-                  <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed">{item.description}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{item.description}</p>
                 </div>
               </li>
             ))}
           </ul>
 
-          <div className="border-t border-white/10 px-4 py-3 space-y-2 bg-black/30">
+          <div className="border-t border-border px-4 py-3 space-y-2 bg-muted/30">
             {!isPaid ? (
               <Link
                 href={checkoutHref}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-zinc-900 py-3 px-4 text-sm font-medium text-white hover:bg-zinc-800 transition-colors"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 px-4 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
               >
                 {primaryLabel}
-                <ArrowRight className="h-4 w-4 opacity-80" />
+                <ArrowRight className="h-4 w-4 opacity-90" />
               </Link>
             ) : allDone && liveChatUrl ? (
               <a
                 href={liveChatUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-zinc-900 py-3 px-4 text-sm font-medium text-white hover:bg-zinc-800 transition-colors"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 px-4 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
               >
                 {primaryLabel}
-                <ArrowRight className="h-4 w-4 opacity-80" />
+                <ArrowRight className="h-4 w-4 opacity-90" />
               </a>
             ) : (
               <button
                 type="button"
                 onClick={onContinueSetup}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-zinc-900 py-3 px-4 text-sm font-medium text-white hover:bg-zinc-800 transition-colors"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 px-4 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
               >
                 {primaryLabel}
-                <ArrowRight className="h-4 w-4 opacity-80" />
+                <ArrowRight className="h-4 w-4 opacity-90" />
               </button>
             )}
 
             <button
               type="button"
               onClick={dismiss}
-              className="flex w-full items-center justify-center gap-1.5 py-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+              className="flex w-full items-center justify-center gap-1.5 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="h-3.5 w-3.5" />
               Dismiss this checklist
@@ -193,7 +193,7 @@ export function DashboardGetStartedChecklist({
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="w-full py-2.5 text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
+          className="w-full py-2.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           Tap to expand checklist
         </button>
