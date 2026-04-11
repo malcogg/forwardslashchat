@@ -11,6 +11,7 @@ import {
   sanitizePhone,
 } from "@/lib/validation";
 import { ChatMessageContent } from "@/components/chat/ChatMessageContent";
+import { CHAT_BRAND_ACCENT } from "@/lib/chat-brand";
 
 export function customerLeadSessionKey(customerId: string) {
   return `fs_cust_lead_v1_${customerId}`;
@@ -34,16 +35,15 @@ async function postCustomerLead(customerId: string, body: Record<string, unknown
 interface CustomerChatLeadGateProps {
   customerId: string;
   businessName: string;
-  primaryColor: string;
   onComplete: () => void;
 }
 
 export function CustomerChatLeadGate({
   customerId,
   businessName,
-  primaryColor,
   onComplete,
 }: CustomerChatLeadGateProps) {
+  const primaryColor = CHAT_BRAND_ACCENT;
   const bottomRef = useRef<HTMLDivElement>(null);
   const [lines, setLines] = useState<LeadLine[]>([]);
   const [step, setStep] = useState<"name" | "email" | "phone">("name");

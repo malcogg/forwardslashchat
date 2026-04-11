@@ -9,6 +9,7 @@ import { ChatCards } from "@/components/chat/ChatCards";
 import type { ChatCardBlock } from "@/components/chat/chat-types";
 import { SLASH_COMMAND_CHIPS } from "@/lib/chat-slash-commands";
 import { CustomerChatLeadGate, customerLeadSessionKey } from "@/components/CustomerChatLeadGate";
+import { CHAT_BRAND_ACCENT } from "@/lib/chat-brand";
 
 const PREVIEW_DEMO_MESSAGES = [
   { id: "preview-u1", role: "user" as const, content: "What services do you offer?" },
@@ -34,7 +35,8 @@ function initialLeadDone(customerId: string, previewDemo: boolean) {
 interface CustomerChatProps {
   customerId: string;
   businessName: string;
-  primaryColor?: string;
+  /** Public URL for logo / favicon (dashboard-editable). */
+  logoUrl?: string | null;
   compact?: boolean;
   /** Seed a sample thread in the dashboard preview so the widget feels alive before the user chats. */
   previewDemo?: boolean;
@@ -43,10 +45,11 @@ interface CustomerChatProps {
 export function CustomerChat({
   customerId,
   businessName,
-  primaryColor = "#059669",
+  logoUrl = null,
   compact = false,
   previewDemo = false,
 }: CustomerChatProps) {
+  const [logoBroken, setLogoBroken] = useState(false);
   const [leadDone, setLeadDone] = useState(() => initialLeadDone(customerId, previewDemo));
   const [messageBlocks, setMessageBlocks] = useState<Record<number, ChatCardBlock[]>>({});
   const nextAssistantIndexRef = useRef(0);
@@ -54,6 +57,10 @@ export function CustomerChat({
   useEffect(() => {
     setLeadDone(initialLeadDone(customerId, previewDemo));
   }, [customerId, previewDemo]);
+
+  useEffect(() => {
+    setLogoBroken(false);
+  }, [logoUrl]);
 
   const { messages, input, setInput, append, isLoading } = useChat({
     api: "/api/chat",
@@ -127,9 +134,19 @@ export function CustomerChat({
       }`}
     >
       <header className="flex items-center gap-2 px-4 py-3 border-b border-gray-200 shrink-0">
-        <div className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 bg-gray-200">
-          <span className="text-gray-700 text-xs font-bold">{initials[0]}</span>
-        </div>
+        {logoUrl && !logoBroken ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={logoUrl}
+            alt=""
+            className="w-7 h-7 rounded-lg object-contain shrink-0 bg-white border border-gray-100"
+            onError={() => setLogoBroken(true)}
+          />
+        ) : (
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-gray-200">
+            <span className="text-gray-700 text-xs font-bold">{initials[0]}</span>
+          </div>
+        )}
         <span className="font-medium text-gray-900 text-sm truncate">{businessName}</span>
       </header>
 
@@ -138,7 +155,6 @@ export function CustomerChat({
           <CustomerChatLeadGate
             customerId={customerId}
             businessName={businessName}
-            primaryColor={primaryColor}
             onComplete={() => setLeadDone(true)}
           />
         </div>
@@ -166,7 +182,7 @@ export function CustomerChat({
                         onClick={() => send(input)}
                         disabled={!input.trim() || isLoading}
                         className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 disabled:opacity-50 text-white"
-                        style={{ backgroundColor: primaryColor }}
+                        style={{ backgroundColor: CHAT_BRAND_ACCENT }}
                       >
                         <ArrowUp className="w-4 h-4" />
                       </button>
@@ -194,12 +210,12 @@ export function CustomerChat({
                       className={`inline-block max-w-[90%] px-3 py-2 rounded-xl text-sm ${
                         m.role === "user" ? "text-white" : "bg-gray-100 text-gray-900"
                       }`}
-                      style={m.role === "user" ? { backgroundColor: primaryColor } : undefined}
+                      style={m.role === "user" ? { backgroundColor: CHAT_BRAND_ACCENT } : undefined}
                     >
                       {m.role === "assistant" ? (
                         <>
                           <ChatMessageContent content={m.content} />
-                          <ChatCards blocks={messageBlocks[i] ?? []} primaryColor={primaryColor} />
+                          <ChatCards blocks={messageBlocks[i] ?? []} primaryColor={CHAT_BRAND_ACCENT} />
                         </>
                       ) : (
                         m.content
@@ -233,7 +249,7 @@ export function CustomerChat({
                   onClick={() => send(input)}
                   disabled={!input.trim() || isLoading}
                   className="p-2 rounded-full text-white disabled:opacity-50 flex items-center justify-center"
-                  style={{ backgroundColor: primaryColor }}
+                  style={{ backgroundColor: CHAT_BRAND_ACCENT }}
                 >
                   <ArrowUp className="w-4 h-4" />
                 </button>

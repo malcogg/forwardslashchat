@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, Suspense, useRef, useMemo, useCallback, type ChangeEvent } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -175,7 +175,8 @@ function DashboardContent() {
   const initials = getInitials(displayName);
 
   const [activePanel, setActivePanel] = useState<"training" | "design" | "domains" | "leads">("training");
-  const [accentDraft, setAccentDraft] = useState("#000000");
+  const [brandingBusinessNameDraft, setBrandingBusinessNameDraft] = useState("");
+  const [brandingLogoUrlDraft, setBrandingLogoUrlDraft] = useState("");
   const [brandingSaveState, setBrandingSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [mobileView, setMobileView] = useState<MobileSheetPanel>("design");
@@ -232,6 +233,7 @@ function DashboardContent() {
       lastCrawledAt: string | null;
       status: string;
       primaryColor: string | null;
+      logoUrl: string | null;
       crawlProgress?: CrawlProgressSnapshot | null;
       updatedAt?: string;
     } | null;
@@ -704,7 +706,7 @@ function DashboardContent() {
       {
         id: "design",
         title: "3. Design",
-        description: "Match colors and the widget to your brand in the Design tab.",
+        description: "Set your chat name and logo in the Design tab.",
         done: designReady,
       },
       {
@@ -865,10 +867,13 @@ function DashboardContent() {
   ]);
 
   useEffect(() => {
-    const hex = data?.customer?.primaryColor;
-    setAccentDraft(typeof hex === "string" && /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex : "#000000");
+    const c = data?.customer;
+    if (c) {
+      setBrandingBusinessNameDraft(c.businessName ?? "");
+      setBrandingLogoUrlDraft(c.logoUrl ?? "");
+    }
     setBrandingSaveState("idle");
-  }, [data?.customer?.id, data?.customer?.primaryColor]);
+  }, [data?.customer?.id, data?.customer?.businessName, data?.customer?.logoUrl]);
 
   const notifications = useMemo(() => {
     type Config = { id: string; title: string; body: string };
@@ -1077,6 +1082,11 @@ function DashboardContent() {
   const handleSaveBranding = async () => {
     const c = data?.customer;
     if (!c) return;
+    const name = brandingBusinessNameDraft.trim();
+    if (!name) {
+      setBrandingSaveState("error");
+      return;
+    }
     setBrandingSaveState("saving");
     try {
       const headers = { "Content-Type": "application/json", ...(await authHeaders()) };
@@ -1084,11 +1094,31 @@ function DashboardContent() {
         method: "PATCH",
         credentials: "include",
         headers,
-        body: JSON.stringify({ primaryColor: accentDraft }),
+        body: JSON.stringify({
+          businessName: name,
+          logoUrl: brandingLogoUrlDraft.trim() === "" ? null : brandingLogoUrlDraft.trim(),
+        }),
       });
       if (!res.ok) throw new Error("Save failed");
+      const json = (await res.json()) as {
+        success?: boolean;
+        businessName?: string;
+        logoUrl?: string | null;
+      };
       setBrandingSaveState("saved");
-      setData((d) => (d?.customer ? { ...d, customer: { ...d.customer, primaryColor: accentDraft } } : d));
+      setData((d) => {
+        if (!d?.customer) return d;
+        return {
+          ...d,
+          customer: {
+            ...d.customer,
+            ...(typeof json.businessName === "string" ? { businessName: json.businessName } : { businessName: name }),
+            ...(json.logoUrl !== undefined ? { logoUrl: json.logoUrl } : {}),
+          },
+        };
+      });
+      if (typeof json.businessName === "string") setBrandingBusinessNameDraft(json.businessName);
+      if (json.logoUrl !== undefined) setBrandingLogoUrlDraft(json.logoUrl ?? "");
       setTimeout(() => setBrandingSaveState("idle"), 2500);
     } catch {
       setBrandingSaveState("error");
@@ -1096,8 +1126,9 @@ function DashboardContent() {
   };
 
   const handleDiscardBranding = () => {
-    const hex = data?.customer?.primaryColor;
-    setAccentDraft(typeof hex === "string" && /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex : "#000000");
+    const c = data?.customer;
+    setBrandingBusinessNameDraft(c?.businessName ?? "");
+    setBrandingLogoUrlDraft(c?.logoUrl ?? "");
     setBrandingSaveState("idle");
   };
 
@@ -1795,9 +1826,10 @@ function DashboardContent() {
           {activePanel === "design" && (
             <>
               <div className="mb-5 pb-2 border-b border-border/60">
-                <h2 className="text-base font-semibold text-foreground tracking-tight">Branding</h2>
+                <h2 className="text-base font-semibold text-foreground tracking-tight">Design</h2>
                 <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
-                  Changes show in the live preview — adjust accent color to match your brand.
+                  Name and logo show in your public chat header and browser tab (when you add a logo URL). Live preview
+                  updates as you type; save to apply on your live chat link.
                 </p>
               </div>
               {!hasOrder ? (
@@ -1808,56 +1840,66 @@ function DashboardContent() {
                   directly.
                 </p>
               ) : (
-                <div className="space-y-6 rounded-xl border border-border bg-card/50 p-4 md:p-5 shadow-sm">
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Display name</label>
-                    <p className="text-sm text-foreground mt-1.5">{customer?.businessName ?? "—"}</p>
+                <div className="space-y-5 rounded-xl border border-border bg-card/50 p-4 md:p-5 shadow-sm max-w-xl">
+                  <div className="space-y-2">
+                    <label htmlFor="branding-business-name" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Chat / page name
+                    </label>
+                    <input
+                      id="branding-business-name"
+                      value={brandingBusinessNameDraft}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setBrandingBusinessNameDraft(e.target.value)}
+                      placeholder="e.g. Gasfees"
+                      maxLength={100}
+                      className={cn(
+                        "w-full rounded-md border border-border bg-background px-3 py-2 text-sm",
+                        "placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
+                      )}
+                    />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Logo</label>
-                      <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mt-2 border border-border">
-                        <span className="text-foreground text-sm font-semibold">{(customer?.businessName ?? "?")[0]}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Favicon</label>
-                      <div
-                        className="w-12 h-12 rounded-xl flex items-center justify-center mt-2 border border-border"
-                        style={{ backgroundColor: accentDraft }}
-                      >
-                        <span className="text-white text-xs drop-shadow-sm">✦</span>
-                      </div>
-                    </div>
+                  <div className="space-y-2">
+                    <label htmlFor="branding-logo-url" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Logo & favicon URL
+                    </label>
+                    <input
+                      id="branding-logo-url"
+                      type="url"
+                      value={brandingLogoUrlDraft}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setBrandingLogoUrlDraft(e.target.value)}
+                      placeholder="https://yoursite.com/logo.png"
+                      className={cn(
+                        "w-full rounded-md border border-border bg-background px-3 py-2 font-mono text-xs",
+                        "placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/40"
+                      )}
+                    />
+                    <p className="text-[11px] text-muted-foreground leading-snug">
+                      Use a square image (PNG or SVG) hosted on HTTPS. Shown in the chat header and as the tab icon.
+                      Leave empty to use initials.
+                    </p>
                   </div>
                   <div className="rounded-lg border border-border bg-muted/30 p-3">
                     <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-2">Header preview</p>
                     <div className="flex items-center gap-2">
-                      <div
-                        className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-white text-xs font-medium"
-                        style={{ backgroundColor: accentDraft }}
-                      >
-                        {initials}
-                      </div>
+                      {brandingLogoUrlDraft.trim() ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={brandingLogoUrlDraft.trim()}
+                          alt=""
+                          className="w-9 h-9 rounded-lg object-contain border border-border bg-white shrink-0"
+                        />
+                      ) : (
+                        <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0 border border-border">
+                          <span className="text-foreground text-xs font-bold">
+                            {(brandingBusinessNameDraft.trim() || customer?.businessName || "?")[0]}
+                          </span>
+                        </div>
+                      )}
                       <div className="min-w-0">
-                        <div className="text-sm font-medium text-foreground truncate">{displayName}</div>
-                        <div className="text-xs text-muted-foreground truncate">{customer?.businessName ?? "Chatbot"}</div>
+                        <div className="text-sm font-medium text-foreground truncate">
+                          {brandingBusinessNameDraft.trim() || customer?.businessName || "Your business"}
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">Visitor-facing chat</div>
                       </div>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-2">
-                      Accent color
-                    </label>
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <input
-                        type="color"
-                        value={accentDraft}
-                        onChange={(e) => setAccentDraft(e.target.value)}
-                        className="h-11 w-14 rounded-lg cursor-pointer border border-border bg-transparent p-1"
-                        aria-label="Accent color"
-                      />
-                      <span className="text-xs text-muted-foreground">Updates the preview instantly</span>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
@@ -1877,7 +1919,9 @@ function DashboardContent() {
                       {brandingSaveState === "saving" ? "Saving…" : brandingSaveState === "saved" ? "Saved" : "Save"}
                     </button>
                     {brandingSaveState === "error" && (
-                      <span className="text-xs text-destructive self-center">Could not save. Try again.</span>
+                      <span className="text-xs text-destructive self-center">
+                        Could not save. Check the logo URL (https) and name, then try again.
+                      </span>
                     )}
                   </div>
                 </div>
@@ -2051,8 +2095,8 @@ function DashboardContent() {
                 >
                   <CustomerChat
                     customerId={customer.id}
-                    businessName={customer.businessName}
-                    primaryColor={accentDraft || customer.primaryColor || "#000000"}
+                    businessName={brandingBusinessNameDraft.trim() || customer.businessName}
+                    logoUrl={brandingLogoUrlDraft.trim() || customer.logoUrl}
                     compact={false}
                     previewDemo
                   />

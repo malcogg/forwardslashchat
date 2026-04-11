@@ -10,7 +10,10 @@ import { CustomerChatAiDisclaimer } from "@/components/chat/CustomerChatAiDiscla
 export default function CustomerChatPage() {
   const params = useParams();
   const customerId = params.customerId as string;
-  const [customer, setCustomer] = useState<{ businessName: string; primaryColor: string | null } | null>(null);
+  const [customer, setCustomer] = useState<{
+    businessName: string;
+    logoUrl: string | null;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,6 +29,26 @@ export default function CustomerChatPage() {
       .catch(() => setError("Chatbot not found"))
       .finally(() => setLoading(false));
   }, [customerId]);
+
+  useEffect(() => {
+    if (!customer?.businessName) return;
+    const prevTitle = document.title;
+    document.title = `${customer.businessName} · Chat`;
+    return () => {
+      document.title = prevTitle;
+    };
+  }, [customer?.businessName]);
+
+  useEffect(() => {
+    const logo = customer?.logoUrl?.trim();
+    if (!logo) return;
+    const faviconEl = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    const prevHref = faviconEl?.href;
+    if (faviconEl) faviconEl.href = logo;
+    return () => {
+      if (faviconEl && prevHref) faviconEl.href = prevHref;
+    };
+  }, [customer?.logoUrl]);
 
   if (loading) {
     return (
@@ -56,29 +79,31 @@ export default function CustomerChatPage() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
-      <header className="flex items-center justify-end px-4 py-2 border-b border-gray-200 bg-white shrink-0">
-        <Link href="/" className="text-sm text-gray-500 hover:text-gray-700">
+      <header className="flex items-center justify-between gap-3 px-4 py-2 border-b border-gray-200 bg-white shrink-0">
+        <Link
+          href="https://forwardslash.chat"
+          className="text-sm text-gray-500 hover:text-gray-700 shrink-0 min-w-0 truncate"
+        >
           ForwardSlash.Chat
         </Link>
-      </header>
-      <div className="flex-1 min-h-0 overflow-hidden relative">
-        <CustomerChat
-          customerId={customerId}
-          businessName={customer.businessName}
-          primaryColor={customer.primaryColor ?? "#6B4E3D"}
-          compact={false}
-        />
-        {/* Shirt-tag style: full bleed, tucked in corner, black bg, white text — sits above disclaimer */}
         <a
           href="https://forwardslash.chat"
           target="_blank"
           rel="noopener noreferrer"
-          className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-black text-white px-3 py-1.5 text-xs font-medium -rotate-3 origin-bottom-right hover:bg-gray-900 hover:text-white shadow-sm"
+          className="flex items-center gap-1.5 bg-black text-white px-3 py-1.5 text-xs font-medium -rotate-3 origin-center hover:bg-gray-900 hover:text-white shadow-sm shrink-0"
           style={{ borderTopLeftRadius: 4 }}
         >
           <Zap className="w-3.5 h-3.5 shrink-0" strokeWidth={2.5} />
           <span>ForwardSlash</span>
         </a>
+      </header>
+      <div className="flex-1 min-h-0 overflow-hidden relative">
+        <CustomerChat
+          customerId={customerId}
+          businessName={customer.businessName}
+          logoUrl={customer.logoUrl}
+          compact={false}
+        />
       </div>
       <CustomerChatAiDisclaimer />
     </div>
