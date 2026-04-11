@@ -31,3 +31,16 @@ export function resolveChatRagChunkOverlap(): number {
 export function resolveChatRagEmbeddingModel(): string {
   return (process.env.CHAT_RAG_EMBEDDING_MODEL ?? "text-embedding-3-small").trim() || "text-embedding-3-small";
 }
+
+/**
+ * Second retrieval query to surface overview / blog / topic pages when the user message is short or vague.
+ * Set `CHAT_RAG_AUGMENT_QUERY=0` to disable (saves one embedding batch).
+ */
+export function resolveChatRagAugmentQueryText(): string | null {
+  const raw = process.env.CHAT_RAG_AUGMENT_QUERY;
+  if (raw === "0" || raw?.toLowerCase() === "false" || raw?.toLowerCase() === "off") {
+    return null;
+  }
+  if (raw?.trim()) return raw.trim().slice(0, 2000);
+  return "Company overview, what this site offers, mission, services, products, pricing, blog posts, articles, guides, fees and costs, how-to content, FAQ, contact and support.";
+}

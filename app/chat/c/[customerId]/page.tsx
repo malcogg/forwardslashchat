@@ -13,6 +13,7 @@ export default function CustomerChatPage() {
   const [customer, setCustomer] = useState<{
     businessName: string;
     logoUrl: string | null;
+    websiteUrl: string;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +57,7 @@ export default function CustomerChatPage() {
         <main className="flex-1 flex items-center justify-center">
           <p className="text-gray-500">Loading...</p>
         </main>
-        <CustomerChatAiDisclaimer />
+        <CustomerChatAiDisclaimer websiteUrl={null} />
       </div>
     );
   }
@@ -72,7 +73,7 @@ export default function CustomerChatPage() {
             </Link>
           </div>
         </main>
-        <CustomerChatAiDisclaimer />
+        <CustomerChatAiDisclaimer websiteUrl={null} />
       </div>
     );
   }
@@ -80,12 +81,19 @@ export default function CustomerChatPage() {
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       <header className="flex items-center justify-between gap-3 px-4 py-2 border-b border-gray-200 bg-white shrink-0">
-        <Link
+        <a
           href="https://forwardslash.chat"
-          className="text-sm text-gray-500 hover:text-gray-700 shrink-0 min-w-0 truncate"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-left text-xs sm:text-sm text-gray-500 hover:text-gray-800 shrink-0 min-w-0"
         >
-          ForwardSlash.Chat
-        </Link>
+          <span className="block truncate">
+            Powered by{" "}
+            <span className="font-medium text-gray-800 underline-offset-2 hover:underline">
+              ForwardSlash.chat
+            </span>
+          </span>
+        </a>
         <a
           href="https://forwardslash.chat"
           target="_blank"
@@ -105,7 +113,7 @@ export default function CustomerChatPage() {
           compact={false}
         />
       </div>
-      <CustomerChatAiDisclaimer />
+      <CustomerChatAiDisclaimer websiteUrl={customer.websiteUrl} />
     </div>
   );
 }

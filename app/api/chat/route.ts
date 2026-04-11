@@ -2,7 +2,7 @@ import { streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { content } from "@/db/schema";
+import { content, customerBlogPosts, customerProducts } from "@/db/schema";
 import { asc, eq } from "drizzle-orm";
 import { sanitizeChatMessage } from "@/lib/validation";
 import { checkAndIncrementRateLimit } from "@/lib/rate-limit";
@@ -14,7 +14,9 @@ import {
 } from "@/lib/chat-context";
 import { expandSlashCommand } from "@/lib/chat-slash-commands";
 import { resolveChatUseRag } from "@/lib/rag-config";
-import { buildRagContextBlock, retrieveChunksForQuery } from "@/lib/rag-retrieve";
+import { buildCustomerChatSupplementaryContext } from "@/lib/chat-supplementary-context";
+import type { CrawledPageForChat } from "@/lib/chat-context";
+import { buildRagContextBlock, retrieveChunksForCustomerChat } from "@/lib/rag-retrieve";
 import { getPaidCustomerForChat } from "@/lib/customer-chat-access";
 
 /**
@@ -67,27 +69,84 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Rate limited. Please slow down." }, { status: 429 });
     }
 
-    const rows = await db
-      .select()
-      .from(content)
-      .where(eq(content.customerId, customerId))
-      .orderBy(asc(content.createdAt), asc(content.url));
+    const [rows, products, posts] = await Promise.all([
+      db
+        .select()
+        .from(content)
+        .where(eq(content.customerId, customerId))
+        .orderBy(asc(content.createdAt), asc(content.url)),
+      db
+        .select({
+          title: customerProducts.title,
+          price: customerProducts.price,
+          productUrl: customerProducts.productUrl,
+          description: customerProducts.description,
+        })
+        .from(customerProducts)
+        .where(eq(customerProducts.customerId, customerId))
+        .orderBy(asc(customerProducts.sortOrder), asc(customerProducts.createdAt))
+        .limit(20),
+      db
+        .select({
+          title: customerBlogPosts.title,
+          excerpt: customerBlogPosts.excerpt,
+          url: customerBlogPosts.url,
+          date: customerBlogPosts.date,
+        })
+        .from(customerBlogPosts)
+        .where(eq(customerBlogPosts.customerId, customerId))
+        .orderBy(asc(customerBlogPosts.sortOrder), asc(customerBlogPosts.createdAt))
+        .limit(20),
+    ]);
 
     const maxContextChars = resolveChatContextMaxChars();
+    const supplementaryBudget = Math.min(18_000, Math.floor(maxContextChars * 0.3));
 
-    let context = "";
+    const crawledForIndex: CrawledPageForChat[] = rows.map((r) => ({
+      title: r.title,
+      url: r.url,
+      content: r.content,
+      createdAt: r.createdAt,
+    }));
+
+    const supplementary = buildCustomerChatSupplementaryContext({
+      customer: {
+        businessName: customer.businessName,
+        websiteUrl: customer.websiteUrl,
+        domain: customer.domain,
+        subdomain: customer.subdomain,
+        welcomeMessage: customer.welcomeMessage,
+      },
+      contentRows: crawledForIndex,
+      products,
+      posts,
+      budgetChars: supplementaryBudget,
+    });
+
+    const ragBudget = Math.max(6000, maxContextChars - supplementary.length - 400);
+
+    let bodyContext = "";
     if (resolveChatUseRag()) {
-      const chunks = await retrieveChunksForQuery(customerId, retrievalQuery);
-      context = buildRagContextBlock(chunks, maxContextChars);
+      const chunks = await retrieveChunksForCustomerChat(customerId, retrievalQuery);
+      bodyContext = buildRagContextBlock(chunks, ragBudget);
     }
-    if (!context.trim()) {
-      context = buildWebsiteKnowledgeContext(rows, maxContextChars).context;
+    if (!bodyContext.trim()) {
+      bodyContext = buildWebsiteKnowledgeContext(crawledForIndex, ragBudget).context;
     }
 
-    const systemPrompt = `You are a helpful AI assistant for ${customer.businessName}. Answer questions using ONLY the following content from their website. Do not make up information. If the content doesn't contain relevant information, say so politely. Include links when relevant. Format responses in markdown.
+    const contextParts = [supplementary, bodyContext].filter((s) => s.trim());
+    const context =
+      contextParts.join("\n\n========\n\n") || "(No content yet - the chatbot is still being built.)";
 
-Website content:
-${context || "(No content yet - the chatbot is still being built.)"}`;
+    const systemPrompt = `You are the official chat assistant for **${customer.businessName}**. You help visitors understand this business using the materials below.
+
+How to answer:
+- Use the **Company profile**, **curated** lists, **page index**, and **excerpts** together. The index lists every crawled page — use it to point people to the right blog post or guide when they ask about topics (e.g. fees, how-to articles).
+- Stay grounded in the provided text. If something is not covered, say so briefly and share the **official website** link from the profile when available.
+- Prefer concrete facts, steps, and URLs from the content. Write in clear markdown.
+
+Knowledge pack for this chat:
+${context}`;
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
