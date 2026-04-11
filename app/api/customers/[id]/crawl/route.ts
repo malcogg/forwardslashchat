@@ -19,6 +19,7 @@ import {
   createCrawlProgressPollerWriter,
   setCustomerCrawlProgress,
 } from "@/lib/crawl-progress";
+import { reindexCustomerContentChunks } from "@/lib/rag-index";
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
   .split(",")
@@ -308,6 +309,8 @@ export async function POST(
   } catch (e) {
     console.error("[crawl] enqueue go-live failed:", e);
   }
+
+  await reindexCustomerContentChunks(customerId);
 
   const remaining = skipCredits ? 9999 : (await getCreditBalance(user.userId)).remaining;
   const rescanCreditsRemaining = await getRescanCreditsBalance(user.userId);

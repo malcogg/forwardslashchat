@@ -75,7 +75,7 @@
 - [x] **Transactional email on Stripe paid** — Resend on `checkout.session.completed` via `lib/send-payment-received-email.ts` (`OrderConfirmationEmail`). Opt out: `SKIP_PAYMENT_RECEIVED_EMAIL=1`.
 - [x] **Email audit closure** — `docs/EMAIL-TRIGGERS-AND-DRAFTS.md` updated for Stripe payment row + env notes.
 - [x] **Cron / job runner — stuck `running` jobs** — `recoverStuckRunningJobs()` in `lib/jobs.ts` (default `JOBS_STUCK_AFTER_MINUTES=90`); runs at start of `GET /api/cron/jobs`; requeue/fail via existing `markJobFailed` (alerts unchanged on permanent fail). **Still open:** external paging/Slack beyond email alerts.
-- [ ] **P2 RAG** — chunking, embeddings, pgvector or hosted vector store; replace / augment char-cap stuffing in `/api/chat` with top-k similarity retrieval (see `docs/CHAT-CONTEXT.md`).
+- [x] **P2 RAG** — chunking, embeddings, **pgvector** (`content_chunks`, `019-content-chunks-rag.sql`); `/api/chat` uses top-k retrieval with stuffing fallback (`docs/CHAT-CONTEXT.md`, `lib/rag-*.ts`).
 
 ---
 
@@ -98,7 +98,7 @@
 
 ### Band B — monetize (upsell)
 
-- [ ] **Knowledge beyond crawl** — PDF/upload, manual FAQ/snippets, structured facts; ingestion; merge into chat context (pairs with **P2 RAG**, §6); **paid add-on** positioning
+- [ ] **Knowledge beyond crawl** — PDF/upload, manual FAQ/snippets, structured facts; ingestion; merge into retrieval (reuse chunk+embed pattern from §6 RAG); **free tier: tiny** (e.g. 1 small source / low word cap) + **Stripe Knowledge pack** for volume — product outline `docs/PRODUCT-ROADMAP.md` §4
 
 ### Band C — plan and ship in steps
 

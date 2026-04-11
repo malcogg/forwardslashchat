@@ -16,8 +16,7 @@ export const DEFAULT_CHAT_HISTORY_MESSAGES = 12;
 export const DEFAULT_CHAT_MAX_OUTPUT_TOKENS = 600;
 
 /**
- * Operator override for stuffing budget. Clamped to avoid absurd prompts or tiny windows.
- * Does not change retrieval strategy (still full-table, in DB order).
+ * Operator override for context budget (RAG excerpts and stuffing). Clamped to avoid absurd prompts or tiny windows.
  */
 export function resolveChatContextMaxChars(): number {
   const raw = Number(process.env.CHAT_CONTEXT_MAX_CHARS ?? DEFAULT_CHAT_CONTEXT_MAX_CHARS);
@@ -38,7 +37,7 @@ export function resolveChatMaxOutputTokens(): number {
 }
 
 /**
- * **Stuffing retrieval (pre-RAG):** concatenate crawled pages until the character budget is exhausted.
+ * **Stuffing fallback (when RAG is off or returns nothing):** concatenate crawled pages until the character budget is exhausted.
  * Pages are sorted by `createdAt` then `url` so context is stable across requests.
  * If a page would exceed the budget, it is **skipped** (no partial page); earlier pages stay included.
  */

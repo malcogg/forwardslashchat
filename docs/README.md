@@ -30,7 +30,7 @@ This folder is the single place for product, technical, and operational docs. Us
 | [TECH-SPEC.md](./TECH-SPEC.md) | Stack, project structure, schema, API reference (**source of truth** for routes) |
 | [BACKEND-SETUP.md](./BACKEND-SETUP.md) | Database, env vars, API routes, flow |
 | [SETUP-DATABASE-MIGRATIONS.md](./SETUP-DATABASE-MIGRATIONS.md) | How to run and add migrations |
-| [CHAT-CONTEXT.md](./CHAT-CONTEXT.md) | How customer chat context is built (stuffing limits, future RAG) |
+| [CHAT-CONTEXT.md](./CHAT-CONTEXT.md) | How customer chat context is built (RAG + stuffing fallback, limits) |
 | [CUSTOMER-CHAT-VISITOR-FEATURES.md](./CUSTOMER-CHAT-VISITOR-FEATURES.md) | Slash commands + visitor leads on `/chat/c/[customerId]` |
 | [SECURITY-AND-API-AUDIT.md](./SECURITY-AND-API-AUDIT.md) | Security review and endpoint auth |
 
@@ -41,6 +41,7 @@ This folder is the single place for product, technical, and operational docs. Us
 | Doc | Purpose |
 |-----|---------|
 | [PLATFORM-GAPS-ROADMAP.md](./PLATFORM-GAPS-ROADMAP.md) | Gaps vs “full” chatbot SaaS; **bands A/B/C** (same story as `PRODUCTION-READINESS-CHECKLIST.md` §5) |
+| [PRODUCT-ROADMAP.md](./PRODUCT-ROADMAP.md) | **State / next / want-haves**; extra knowledge (PDF, FAQs) + **free vs paid** Band B outline |
 | [pricing-and-bundles.md](./pricing-and-bundles.md) | **Single source of truth** for pricing tiers, add-ons, renewal |
 | [MVP-PRD.md](./MVP-PRD.md) | MVP goals, scope, requirements |
 | [INVESTOR-PITCH.md](./INVESTOR-PITCH.md) | Investor-facing overview |

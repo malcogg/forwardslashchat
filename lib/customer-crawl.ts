@@ -14,6 +14,7 @@ import {
   createCrawlProgressPollerWriter,
   setCustomerCrawlProgress,
 } from "@/lib/crawl-progress";
+import { reindexCustomerContentChunks } from "@/lib/rag-index";
 
 export async function autoCrawlCustomer(input: {
   customerId: string;
@@ -220,6 +221,8 @@ export async function autoCrawlCustomer(input: {
   } catch (e) {
     console.error("[auto-crawl] enqueue go-live failed:", e);
   }
+
+  await reindexCustomerContentChunks(customer.id);
 
   return { ok: true, pages: pagesCrawled };
 }

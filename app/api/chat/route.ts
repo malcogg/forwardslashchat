@@ -13,6 +13,8 @@ import {
   resolveChatMaxOutputTokens,
 } from "@/lib/chat-context";
 import { expandSlashCommand } from "@/lib/chat-slash-commands";
+import { resolveChatUseRag } from "@/lib/rag-config";
+import { buildRagContextBlock, retrieveChunksForQuery } from "@/lib/rag-retrieve";
 import { getPaidCustomerForChat } from "@/lib/customer-chat-access";
 
 /**
@@ -40,6 +42,7 @@ export async function POST(request: Request) {
     if (!query) {
       return NextResponse.json({ error: "No message to answer" }, { status: 400 });
     }
+    const retrievalQuery = expandSlashCommand(query) ?? query;
 
     const access = await getPaidCustomerForChat(customerId);
     if (!access.ok) {
@@ -71,7 +74,15 @@ export async function POST(request: Request) {
       .orderBy(asc(content.createdAt), asc(content.url));
 
     const maxContextChars = resolveChatContextMaxChars();
-    const { context } = buildWebsiteKnowledgeContext(rows, maxContextChars);
+
+    let context = "";
+    if (resolveChatUseRag()) {
+      const chunks = await retrieveChunksForQuery(customerId, retrievalQuery);
+      context = buildRagContextBlock(chunks, maxContextChars);
+    }
+    if (!context.trim()) {
+      context = buildWebsiteKnowledgeContext(rows, maxContextChars).context;
+    }
 
     const systemPrompt = `You are a helpful AI assistant for ${customer.businessName}. Answer questions using ONLY the following content from their website. Do not make up information. If the content doesn't contain relevant information, say so politely. Include links when relevant. Format responses in markdown.
 

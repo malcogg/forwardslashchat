@@ -14,7 +14,7 @@ Last updated: April 2026
 |--------|---------|
 | **Launch-ready (current product)** | Paid chatbot SKUs: Stripe → auto-crawl → emails → DNS/go-live → hosted chat. Customer uses dashboard; you **manage** via `/fs-ops/{ADMIN_PATH_TOKEN}`, Stripe, Vercel, and env — not hand-coding per order. |
 | **Roadmap after v1 (parity + your priorities)** | See **§5**: chat logs and an **owner-facing “messages” experience** are strong expectations from buyers; other rows are phased (paid add-ons vs **coming soon**). |
-| **Improves answers at scale** | TODO.md **§6 — P2 RAG** (chunking + embeddings + retrieval) — optional upgrade from context stuffing (`docs/CHAT-CONTEXT.md`). |
+| **Improves answers at scale** | **P2 RAG shipped** (TODO §6): chunking + embeddings + pgvector retrieval + stuffing fallback (`docs/CHAT-CONTEXT.md`). **Next:** owner **extra knowledge** (PDF, FAQs) as a **paid** Band B pack — `docs/PRODUCT-ROADMAP.md` §4. |
 
 ---
 
@@ -43,7 +43,7 @@ Use this when onboarding someone or answering “is it built?”
 
 ### Reliability & AI
 - [x] Firecrawl runner limits, logging, admin job visibility
-- [x] Chat context stuffing caps and shared helpers (`lib/chat-context.ts`)
+- [x] Chat context caps and shared helpers; crawl RAG + stuffing fallback (`lib/chat-context.ts`, `lib/rag-*.ts`, `docs/CHAT-CONTEXT.md`)
 
 ### Docs
 - [x] Developer handoff, architecture, email map, security audit, platform gaps, user guide (`docs/USER-GUIDE.md`)
@@ -75,12 +75,12 @@ Use this when onboarding someone or answering “is it built?”
 
 1. **§3 Launch hygiene** — legal smoke + attorney review, prod verification, **secrets** hygiene, **alerting** (Slack/paging if needed), **refund / chargeback** playbook (`TODO.md` §8).
 2. **Band A** — **persisted chat logs** + owner **Messages** UI + **light analytics** (owners are not blind).
-3. **P2 RAG + rich UI cards** — better answers at scale + **visitor-visible** structured UI (`TODO.md` §6 + §9, `docs/CHATBOT-RICH-UI-AND-CARDS-PLAN.md`).
-4. **Band B / C** — **paid** extra knowledge; **human handoff**; **visitor identity** / CRM export.
+3. **Rich UI cards** + tune **crawl RAG** — **visitor-visible** structured UI (`TODO.md` §9, `docs/CHATBOT-RICH-UI-AND-CARDS-PLAN.md`); eval chunking/embeddings on real sites (`TODO.md` §6, shipped).
+4. **Band B / C** — **paid** extra knowledge (PDF/FAQ uploads, `docs/PRODUCT-ROADMAP.md` §4); **human handoff**; **visitor identity** / CRM export.
 
 ### Founder parallel track (status)
 
-**Slash commands + customer-chat leads** are **shipped**; continue with **§3** hygiene, then **Band A** (full message logs / inbox), **P2 RAG + rich cards**, **B/C**.
+**Slash commands + customer-chat leads** are **shipped**; continue with **§3** hygiene, then **Band A** (full message logs / inbox), **rich cards**, **Band B** (paid extra knowledge), **B/C** handoff/identity. Crawl **P2 RAG** is already shipped (§4).
 
 ---
 
@@ -113,13 +113,10 @@ These are **not** big feature builds; they reduce support load and legal risk.
 
 ## 4. Product depth you care about next
 
-### P2 RAG (customer-quality upgrade)
-**When:** Sites outgrow stuffing caps or answers feel noisy.
+### P2 RAG (customer-quality upgrade) — shipped
+**Status:** Crawl-backed **chunk → embed → pgvector → top-k** is live (`019-content-chunks-rag.sql`, `lib/rag-*.ts`, `POST /api/chat`). Tuning remains (chunk size, overlap, evals on real sites).
 
-**Work (high level):**
-1. Chunk crawled `content` rows; embed with OpenAI (or chosen provider); store vectors (e.g. pgvector on Neon or hosted vector DB).
-2. On each chat message: embed query → top-k retrieval → inject only relevant chunks into the prompt (keep guardrails from `docs/CHAT-CONTEXT.md`).
-3. Tune chunk size, overlap, and max tokens; add evals on a few customer sites.
+**Next related upgrade:** **Band B — extra knowledge** (PDF, pasted FAQ, uploads) merged into the same retrieval path, with **usage limits** and **Stripe add-ons** — see **`docs/PRODUCT-ROADMAP.md` §4**.
 
 **Refs:** `TODO.md` §6, `docs/CHAT-CONTEXT.md`, `docs/PLATFORM-GAPS-ROADMAP.md`.
 
@@ -153,7 +150,7 @@ These are **not** big feature builds; they reduce support load and legal risk.
 
 | Area | Notes |
 |------|--------|
-| **Knowledge beyond crawl** | **Charge for this**: PDF/uploads, **manual FAQ / snippets**, structured facts (hours, locations). Needs **ingestion jobs** (parse PDF → text/chunks), storage, and merge into **chat context** (works best alongside **P2 RAG** in §4). Position as **“Knowledge pack”** or per-seat add-on so crawl-only SKUs stay simple. |
+| **Knowledge beyond crawl** | **Charge for this**: PDF/uploads, **manual FAQ / snippets**, structured facts. **Suggested packaging:** one **small free** allowance (e.g. single short source / low word cap) + **Knowledge pack** Stripe add-on for real volume — full outline in **`docs/PRODUCT-ROADMAP.md` §4**. Engineering: storage, PDF parse, chunk+embed (same pattern as crawl RAG), dashboard + entitlements. |
 
 ### Priority band C — strong value, plan architecture early
 
@@ -177,7 +174,7 @@ These are **not** big feature builds; they reduce support load and legal risk.
 
 - **Maintenance** (dependencies, Stripe/Clerk dashboard changes, provider incidents) is normal and not “scope creep.”
 - **Scope freeze for marketing** = ship the **current** hands-off MVP, complete **§3**, then sell. That does **not** mean deprioritizing **Band A** (logs, messages UI, analytics): that is the **intended first expansion** after launch—or **in parallel** if you treat it as launch-blocking. **Defer** mainly **coming soon** items (prompt A/B, multi-channel) and heavy **Band B** until traction or explicit prioritization—unless you choose to build them earlier.
-- **After launch, typical order:** (1) **§3** — ops, alerts, refund playbook; (2) **§5 band A** — persisted logs + owner messages UI + light analytics; **optional (2b)** **§2.5 pull-forward** — customer-chat **leads** + **slash commands** if sales-critical; (3) **§4** — **rich cards** and/or **P2 RAG**; (4) **§5 band B** — paid knowledge; (5) **§5 band C** — handoff + visitor identity (if not already done in 2b); (6) coming-soon items when ready.
+- **After launch, typical order:** (1) **§3** — ops, alerts, refund playbook; (2) **§5 band A** — persisted logs + owner messages UI + light analytics; **optional (2b)** **§2.5 pull-forward** — customer-chat **leads** + **slash commands** if sales-critical; (3) **§4** — **rich cards** (P2 RAG on crawl is already shipped); (4) **§5 band B** — **paid extra knowledge** + free tier limits (`docs/PRODUCT-ROADMAP.md` §4); (5) **§5 band C** — handoff + visitor identity (if not already done in 2b); (6) coming-soon items when ready.
 - **Dashboard UX:** modernize the **owner dashboard** in parallel with band A (same surface: jobs, chat preview, **messages**). Use a **reference design** (Figma, screenshots, or a product you admire) so implementation matches a clear visual target — generic “make it hot” is ambiguous; references are not.
 
 ---
@@ -187,6 +184,7 @@ These are **not** big feature builds; they reduce support load and legal risk.
 | Doc | Use |
 |-----|-----|
 | `TODO.md` | Engineering backlog; §6–9 = forward / parking |
+| `docs/PRODUCT-ROADMAP.md` | **In place / next / want-haves** + Band B knowledge monetization outline |
 | `docs/SECURITY-AND-API-AUDIT.md` | Auth matrix, rate limits, rolling action items |
 | `docs/USER-GUIDE.md` | Share with customers |
 | `docs/legal/TERMS-OF-SERVICE.md`, `PRIVACY-POLICY.md` | Legal drafts (review before relying) |

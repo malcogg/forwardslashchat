@@ -17,7 +17,7 @@ Last updated: April 2026
 | **Payments** | Stripe | Checkout + webhooks (chatbot SKUs) | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` |
 | **Email** | Resend | Welcome, payment reminder, order confirmation | `RESEND_API_KEY`, `RESEND_FROM_EMAIL` |
 | **Web Scraping** | Firecrawl | Crawl customer websites → markdown for chat | `FIRECRAWL_API_KEY` |
-| **AI / Chat** | OpenAI | LLM for customer + demo chat; context from crawled pages (RAG path: stuffing today; vector RAG planned — `TODO.md` §6) | `OPENAI_API_KEY` |
+| **AI / Chat** | OpenAI | LLM for customer + demo chat; context from crawled pages (**pgvector RAG** + stuffing fallback — `docs/CHAT-CONTEXT.md`, `TODO.md` §6) | `OPENAI_API_KEY` |
 | **AI SDK** | Vercel AI SDK | `useChat`, `streamText` for chat UI | `ai`, `@ai-sdk/openai` |
 | **Scheduling** | Cal.com | 1-on-1 strategy calls | `NEXT_PUBLIC_STRATEGY_CALL_URL` |
 | **Analytics** | Vercel Analytics | Page views, events | `@vercel/analytics` |
@@ -74,7 +74,7 @@ Do **not** use the old “Phase 1–4” / PayPal-primary narrative below; it is
 
 1. **Launch hygiene** — `docs/PRODUCTION-READINESS-CHECKLIST.md` §3 (legal review, prod smoke, secrets, alerting, refunds).
 2. **Owner experience** — Band A: **persisted logs**, **messages UI**, **analytics v1** (`TODO.md` §7).
-3. **Quality & differentiation** — P2 RAG (`TODO.md` §6), **rich chat cards** (`TODO.md` §9, `docs/CHATBOT-RICH-UI-AND-CARDS-PLAN.md`).
+3. **Quality & differentiation** — **Extra knowledge** (PDF/FAQ, paid pack — `docs/PRODUCT-ROADMAP.md` §4), **rich chat cards** (`TODO.md` §9, `docs/CHATBOT-RICH-UI-AND-CARDS-PLAN.md`). Crawl RAG is shipped (`TODO.md` §6).
 4. **Monetize depth** — Band B extra knowledge; Bands C + coming soon per checklist §5.
 
 ---

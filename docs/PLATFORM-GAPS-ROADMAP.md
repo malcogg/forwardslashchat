@@ -1,6 +1,6 @@
 # Platform gaps vs full chatbot platforms
 
-ForwardSlash.Chat ships **hands-off delivery**: Stripe → crawl → DNS → go-live → hosted chat, with **context stuffing** into the model today (see `docs/CHAT-CONTEXT.md`). **P2 RAG** (TODO §6) will improve retrieval at scale.
+ForwardSlash.Chat ships **hands-off delivery**: Stripe → crawl → DNS → go-live → hosted chat. Customer chat uses **pgvector RAG** over crawled pages with **stuffing fallback** (see `docs/CHAT-CONTEXT.md`, `TODO.md` §6). **Extra knowledge** (PDF, owner FAQs) is **not** built yet — **Band B**, with a proposed **free allowance + paid pack** in `docs/PRODUCT-ROADMAP.md` §4.
 
 This doc lists gaps vs typical “full” chatbot SaaS (Intercom-style, Chatbase, etc.). **Priority is decided product strategy**, not “everything is optional.”
 
@@ -25,8 +25,8 @@ This doc lists gaps vs typical “full” chatbot SaaS (Intercom-style, Chatbase
 | Gap | Notes |
 |-----|--------|
 | **Persisted chat logs** | Required for trust, support, and owner visibility. Needs schema, retention, export/delete, policy updates. |
-| **RAG / vector retrieval** | Today: capped stuffing. Target: chunking + embeddings + top-k (TODO §6 **P2 RAG**). |
-| **Knowledge beyond crawl** | PDFs, manual FAQs, structured facts — **Band B**, best with RAG; **monetize**. |
+| **RAG / vector retrieval** | **Shipped:** chunking + embeddings + top-k on crawl (`content_chunks`, `lib/rag-*.ts`). |
+| **Knowledge beyond crawl** | PDFs, manual FAQs, structured facts — **Band B**; **monetize** (see **`docs/PRODUCT-ROADMAP.md` §4** for free vs paid envelope). |
 
 ## Owner / operator
 
@@ -53,6 +53,7 @@ This doc lists gaps vs typical “full” chatbot SaaS (Intercom-style, Chatbase
 
 ## Related docs
 
-- `docs/PRODUCTION-READINESS-CHECKLIST.md` §4–§6 — P2 RAG, rich cards, post-launch order
+- `docs/PRODUCT-ROADMAP.md` — consolidated **in place / next / want-haves** + Band B knowledge pricing outline
+- `docs/PRODUCTION-READINESS-CHECKLIST.md` §4–§6 — rich cards, post-launch order
 - `TODO.md` §6–§9 — RAG, owner experience, ops, differentiation
 - `docs/CHAT-CONTEXT.md` — current stuffing semantics

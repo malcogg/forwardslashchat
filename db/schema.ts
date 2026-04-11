@@ -183,6 +183,18 @@ export const content = pgTable("content", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+/** Vector embeddings for RAG (`019-content-chunks-rag.sql`). Inserts/ANN search use raw SQL for `vector` literals. */
+export const contentChunks = pgTable("content_chunks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  customerId: uuid("customer_id").references(() => customers.id, { onDelete: "cascade" }).notNull(),
+  contentId: uuid("content_id").references(() => content.id, { onDelete: "cascade" }).notNull(),
+  chunkIndex: integer("chunk_index").notNull(),
+  url: text("url").notNull(),
+  title: text("title"),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Per-customer products (for rich chat product cards)
 export const customerProducts = pgTable("customer_products", {
   id: uuid("id").primaryKey().defaultRandom(),
