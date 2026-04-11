@@ -233,7 +233,18 @@ function DashboardContent() {
         createdAt: string;
       }[];
     } | null;
+    onboarding?: {
+      websiteUrlSnapshot: string | null;
+      dnsHelpPreference: string | null;
+      hasExistingAiChat: boolean | null;
+    } | null;
   } | null>(null);
+
+  const suggestedOnboardingUrl = useMemo(() => {
+    const raw = data?.onboarding?.websiteUrlSnapshot?.trim();
+    if (!raw) return "";
+    return raw.startsWith("http") ? raw : `https://${raw}`;
+  }, [data?.onboarding?.websiteUrlSnapshot]);
   const [myOrders, setMyOrders] = useState<{
     order: { id: string; status?: string; planSlug?: string; amountCents?: number };
     customer: { businessName: string; websiteUrl: string; status?: string } | null;
@@ -1904,6 +1915,7 @@ function DashboardContent() {
               )}
               {mobileScreen === "add" && (
                 <MobileAddSite
+                  defaultUrl={suggestedOnboardingUrl}
                   onScan={(url) => {
                     setScanInitialUrl(url);
                     setScanNewSiteModalOpen(true);
@@ -1967,7 +1979,7 @@ function DashboardContent() {
           setScanNewSiteModalOpen(false);
           setScanInitialUrl("");
         }}
-        url={scanInitialUrl || ""}
+        url={scanInitialUrl || suggestedOnboardingUrl || ""}
         origin="dashboard"
         onAddToDashboard={async (urlToAdd, estimatedPages) => {
           try {

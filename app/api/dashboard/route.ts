@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { orders, customers, content, jobs, customerChatLeads } from "@/db/schema";
+import { orders, customers, content, jobs, customerChatLeads, userOnboarding } from "@/db/schema";
 import { eq, desc, count, inArray, and, gte } from "drizzle-orm";
 import { getOrCreateUser } from "@/lib/auth";
 import { buildCrawlShortfallHint } from "@/lib/crawl-coverage-hint";
@@ -26,8 +26,26 @@ export async function GET(request: Request) {
 
     // When DB not configured or user not in DB yet, return empty dashboard (allows "Get started" UX)
     if (!db || !user.userId) {
-      return NextResponse.json({ order: null, customer: null });
+      return NextResponse.json({ order: null, customer: null, onboarding: null });
     }
+
+    const [onboardingRow] = await db
+      .select({
+        websiteUrlSnapshot: userOnboarding.websiteUrlSnapshot,
+        dnsHelpPreference: userOnboarding.dnsHelpPreference,
+        hasExistingAiChat: userOnboarding.hasExistingAiChat,
+      })
+      .from(userOnboarding)
+      .where(eq(userOnboarding.userId, user.userId));
+
+    const onboardingPayload =
+      onboardingRow != null
+        ? {
+            websiteUrlSnapshot: onboardingRow.websiteUrlSnapshot,
+            dnsHelpPreference: onboardingRow.dnsHelpPreference,
+            hasExistingAiChat: onboardingRow.hasExistingAiChat,
+          }
+        : null;
 
     let order;
     if (orderId) {
@@ -54,7 +72,7 @@ export async function GET(request: Request) {
   }
 
   if (!order) {
-    return NextResponse.json({ order: null, customer: null });
+    return NextResponse.json({ order: null, customer: null, onboarding: onboardingPayload });
   }
 
   const [customer] = await db
@@ -147,6 +165,7 @@ export async function GET(request: Request) {
     automationJobs,
     crawlShortfallHint,
     visitorLeads,
+    onboarding: onboardingPayload,
   });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

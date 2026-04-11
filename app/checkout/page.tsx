@@ -151,6 +151,7 @@ function CheckoutContent() {
 
   const urlParam = searchParams.get("url") ?? searchParams.get("websiteUrl");
   const initialUrl = urlParam ? (urlParam.startsWith("http") ? urlParam : `https://${urlParam}`) : "";
+  const dnsFromQuery = searchParams.get("dns") === "1";
 
   const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
@@ -162,7 +163,9 @@ function CheckoutContent() {
     () => sanitizeDomain(searchParams.get("domain") ?? urlParam ?? "")
   );
   const [websiteUrl, setWebsiteUrl] = useState(() => safeInitialUrl(urlParam ?? searchParams.get("websiteUrl")));
-  const [addOns, setAddOns] = useState<Set<AddOnId>>(new Set());
+  const [addOns, setAddOns] = useState<Set<AddOnId>>(() =>
+    dnsFromQuery ? new Set<AddOnId>(["dns"]) : new Set()
+  );
   const [saveError, setSaveError] = useState<string | null>(null);
   const [emailTouched, setEmailTouched] = useState(false);
 
