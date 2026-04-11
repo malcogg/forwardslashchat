@@ -72,7 +72,7 @@ export function DashboardGetStartedChecklist({
 
   return (
     <div
-      className="fixed z-50 w-[min(calc(100vw-1.5rem),380px)] max-md:left-3 max-md:right-3 max-md:bottom-[4.5rem] md:right-5 md:bottom-5 shadow-2xl rounded-2xl border border-white/10 bg-[#141414] text-zinc-100 overflow-hidden"
+      className="fixed z-50 left-1/2 top-1/2 w-[min(calc(100vw-1.5rem),380px)] max-h-[85dvh] -translate-x-1/2 -translate-y-1/2 overflow-y-auto overscroll-contain shadow-2xl rounded-2xl border border-white/10 bg-[#141414] text-zinc-100"
       role="region"
       aria-label="Get started checklist"
     >
@@ -123,7 +123,7 @@ export function DashboardGetStartedChecklist({
 
       {expanded && (
         <>
-          <ul className="px-4 py-3 space-y-3 max-h-[min(50vh,320px)] overflow-y-auto">
+          <ul className="px-4 py-3 space-y-3">
             {items.map((item) => (
               <li key={item.id} className="flex gap-3">
                 <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/15 bg-zinc-900">

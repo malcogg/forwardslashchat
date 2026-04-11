@@ -1116,7 +1116,7 @@ function DashboardContent() {
 
       {hasOrder && (
         <div className="shrink-0 border-b border-border/80 bg-muted/15">
-          <div className="py-3 md:py-3.5 space-y-2">
+          <div className="py-1.5 md:py-2 space-y-1">
             <DesktopStepper steps={DESKTOP_STEPPER_STEPS} currentIndex={stepperCurrentIndex} />
             {isWebsiteOrder && isPaid && order?.status !== "delivered" && (
               <div className="max-w-7xl mx-auto px-4 sm:px-6 xl:px-8">
@@ -1136,13 +1136,6 @@ function DashboardContent() {
             sidebarCollapsed ? "w-14 p-2" : "w-56 p-3"
           }`}
         >
-          <div className={`flex items-center gap-2 mb-4 ${sidebarCollapsed ? "justify-center" : ""}`}>
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
-              <span className="text-primary-foreground text-xs font-medium">{initials}</span>
-            </div>
-            {!sidebarCollapsed && <span className="text-sm font-medium text-foreground truncate">{displayName}</span>}
-          </div>
-
           {sidebarCollapsed ? (
             <button
               type="button"
@@ -1158,14 +1151,14 @@ function DashboardContent() {
                 onClick={() => setScanDropdownOpen((o) => !o)}
                 className="w-full flex items-center justify-between gap-2 px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted/50 rounded hover:text-foreground"
               >
-                <span className="flex items-center gap-2 min-w-0">
+                <span className="flex items-center gap-2 min-w-0 flex-1">
                   <span className="w-5 shrink-0 text-center text-[11px] font-semibold text-muted-foreground tabular-nums">
                     1
                   </span>
-                  <span className="flex items-center gap-1.5 truncate">
-                    <span className="text-xs shrink-0">▸</span>
-                    <span className="truncate">Scan site</span>
+                  <span className="w-5 shrink-0 flex justify-center">
+                    <Globe className="w-4 h-4 opacity-70" />
                   </span>
+                  <span className="truncate">Scan site</span>
                 </span>
                 <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${scanDropdownOpen ? "rotate-180" : ""}`} />
               </button>

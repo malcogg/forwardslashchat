@@ -90,8 +90,11 @@ export function DashboardMockup() {
           </div>
 
           <div className="mb-4">
-            <div className={`flex items-center justify-between px-2 py-1.5 text-sm ${base.muted}`}>
-              <span>▸</span> Scan site
+            <div className={`flex items-center justify-between gap-2 px-2 py-1.5 text-sm ${base.muted}`}>
+              <span className="flex items-center gap-2 min-w-0">
+                <Globe className="w-4 h-4 shrink-0 opacity-70" />
+                <span className="truncate">Scan site</span>
+              </span>
             </div>
           </div>
 
