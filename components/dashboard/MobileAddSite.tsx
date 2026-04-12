@@ -1,10 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Check } from "lucide-react";
+
+function normalizeDefaultUrl(raw: string): string {
+  const t = raw.trim();
+  if (!t) return "";
+  return t.startsWith("http") ? t : `https://${t}`;
+}
 
 type MobileAddSiteProps = {
   onScan: (url: string) => void;
+  /** Pre-filled from onboarding (Scan site default) */
+  defaultUrl?: string;
 };
 
 const HOW_IT_WORKS = [
@@ -14,8 +22,13 @@ const HOW_IT_WORKS = [
   "Add your domain and go live. No monthly fees.",
 ];
 
-export function MobileAddSite({ onScan }: MobileAddSiteProps) {
-  const [url, setUrl] = useState("");
+export function MobileAddSite({ onScan, defaultUrl = "" }: MobileAddSiteProps) {
+  const [url, setUrl] = useState(() => normalizeDefaultUrl(defaultUrl));
+
+  useEffect(() => {
+    const n = normalizeDefaultUrl(defaultUrl);
+    if (n) setUrl((u) => (u.trim() ? u : n));
+  }, [defaultUrl]);
 
   const handleScan = () => {
     const trimmed = url.trim();

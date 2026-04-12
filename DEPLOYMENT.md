@@ -40,6 +40,8 @@ Note: this codebase currently uses the single-key vars above. Multi-key rotation
 - `JOBS_MAX_PER_RUN` (optional, default `5`)
 - `AUTO_CRAWL_MAX_PAGES` (optional, default `200`, max `500`)
 
+**Flow:** Stripe `checkout.session.completed` (paid) enqueues `auto_crawl_*` → Vercel cron hits `GET /api/cron/jobs` (Bearer `CRON_SECRET`) → worker runs Firecrawl and sets customer to `dns_setup`, then enqueues `go_live_*`. The go-live job verifies CNAME (Google DoH) and calls the Vercel Domains API; it retries with long backoff until DNS is correct or `maxAttempts` is exhausted. Manual “Build” uses the same crawl route and also enqueues go-live.
+
 ### Domain automation
 - `VERCEL_ACCESS_TOKEN`
 - `VERCEL_PROJECT_ID`
@@ -88,6 +90,28 @@ Configured in Vercel Cron (recommended):
 - `/api/cron/checkout-reminder` — daily
 - `/api/cron/payment-reminder` — daily
 - `/api/cron/jobs` — every 1–2 minutes (processes background jobs like auto-crawl after payment)
+
+---
+
+## Admin UI (testing & fulfillment)
+
+The old `/admin` URL **always returns 404** (avoid guessable paths).
+
+1. Generate a long random token (do **not** reuse the example):
+
+   `openssl rand -hex 24`
+
+2. In Vercel → **Environment variables**:
+   - `ADMIN_PATH_TOKEN` = that string (same value for Preview/Production as needed).
+   - `ADMIN_EMAILS` = comma-separated Clerk primary emails allowed to use admin APIs (e.g. your work email).
+
+3. **Redeploy** so the server sees `ADMIN_PATH_TOKEN`.
+
+4. Sign in with an **ADMIN_EMAILS** account in Clerk, then open:
+
+   `https://www.forwardslash.chat/fs-ops/<ADMIN_PATH_TOKEN>`
+
+   Wrong or missing token → **404**. APIs `/api/admin/*` still enforce **ADMIN_EMAILS** — the secret path only hides the UI.
 
 ---
 

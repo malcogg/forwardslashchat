@@ -1,6 +1,6 @@
 # ForwardSlash.Chat — Technical Specification
 
-> **Last updated:** February 2026  
+> **Last updated:** April 2026  
 > One-time paid AI chatbots for SMBs. Scan site → pay once → deploy at chat.yourdomain.com.
 
 ---
@@ -49,6 +49,8 @@ app/
     ├── customers/by-order/[orderId]/route.ts
     ├── chat/route.ts           # POST: Customer chat (streaming)
     ├── chat/demo/route.ts      # POST: Demo chat (streaming)
+    ├── chat/demo/lead/route.ts # POST: Demo lead capture → demo_chat_leads
+    ├── chat/customer-lead/route.ts # POST: Paid-widget visitor leads → customer_chat_leads
     ├── chat/customer/[customerId]/route.ts  # GET: Customer metadata (public)
     ├── credits/route.ts       # GET: User credit balance
     └── admin/orders/route.ts  # GET: All orders (admin only)
@@ -81,6 +83,8 @@ db/
 | **orders** | Payment: `userId`, `scanId`, `amountCents`, `bundleYears`, `dnsHelp`, `status`, `paymentProvider`, `paymentId` |
 | **customers** | Per-order: `orderId`, `businessName`, `domain`, `subdomain`, `websiteUrl`, `primaryColor`, `status`, `prepaidUntil` |
 | **content** | Crawled pages for chat: `customerId`, `url`, `title`, `content`, `description` |
+| **demo_chat_leads** | Public demo (`/chat/demo`): `first_name`, `email`, `phone`, `skipped`, `created_at` — see migration `016-demo-chat-leads.sql` |
+| **customer_chat_leads** | Paid customer chat widget: same shape + `customer_id` FK — migration `017-customer-chat-leads.sql` |
 
 **Customer status flow:** `pending` → `content_collection` → `crawling` → `indexing` → `dns_setup` → `testing` → `delivered`
 
@@ -122,15 +126,17 @@ db/
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/chat` | Body: `{ customerId, messages }`. Streams LLM response using customer content |
-| POST | `/api/chat/demo` | Streams ForwardSlash product assistant |
+| POST | `/api/chat` | Body: `{ customerId, messages }`. Streams LLM response; **expands** known **`/slash`** commands on the last user turn (see `lib/chat-slash-commands.ts`) |
+| POST | `/api/chat/customer-lead` | Body: `{ customerId, skipped?: true }` **or** `{ customerId, firstName, email, phone? }`. Paid customer only → `customer_chat_leads`; IP rate limit |
+| POST | `/api/chat/demo` | Body: `{ messages }`. Streams product assistant from `data/demo-content.json`; rate-limited by IP |
+| POST | `/api/chat/demo/lead` | Body: `{ skipped: true }` **or** `{ firstName, email, phone? }`. Persists to `demo_chat_leads` |
 
 ---
 
 ## 5. Auth & Middleware
 
 - **Clerk** for sign-in / sign-up / session
-- **Middleware** protects `/dashboard` and `/admin`; allows `/`, `/chat/demo`, sign-in, sign-up
+- **Middleware** protects `/dashboard` and `/fs-ops/*`; allows `/`, `/chat/demo`, sign-in, sign-up
 - **getOrCreateUser()** in `lib/auth.ts`: syncs Clerk user → `users` table, returns `{ userId, clerkUserId, email }`
 
 ---
@@ -149,7 +155,10 @@ db/
 - **Vercel AI SDK** `streamText` + `@ai-sdk/openai`
 - **Model:** `gpt-4o-mini`
 - **Context:** Customer `content` rows concatenated; system prompt instructs “answer only from this content”
-- **Demo:** Uses `data/demo-content.json` for product Q&A
+- **Slash commands (customer chat):** Last user message, if it matches `/about`, `/pricing`, etc., is **rewritten server-side** to a structured instruction before `streamText`. See `docs/CUSTOMER-CHAT-VISITOR-FEATURES.md`.
+- **Demo (LLM path):** Uses `data/demo-content.json` for product Q&A. The `/chat/demo` **page** also uses **client-side keyword shortcuts** for common questions (instant replies + pills); non-matching queries hit the LLM.
+- **Demo leads:** `POST /api/chat/demo/lead` requires `DATABASE_URL`; IP rate limit via `DEMO_LEAD_RATE_LIMIT_PER_MINUTE` (default 15).
+- **Customer-chat leads:** `POST /api/chat/customer-lead`; IP rate limit `CUSTOMER_CHAT_LEAD_RATE_LIMIT_PER_MINUTE` (default 20). Dashboard exposes `visitorLeads` on `GET /api/dashboard`.
 
 ---
 
@@ -164,7 +173,8 @@ db/
 | `FIRECRAWL_API_KEY` | Yes (for scan/crawl) | Firecrawl API key |
 | `STRIPE_SECRET_KEY` | Yes (checkout) | Stripe secret key |
 | `STRIPE_WEBHOOK_SECRET` | Yes (webhooks) | Stripe webhook signing secret |
-| `ADMIN_EMAILS` | Optional | Comma-separated emails for `/admin` |
+| `ADMIN_EMAILS` | Optional | Comma-separated emails for `/api/admin/*` |
+| `ADMIN_PATH_TOKEN` | Optional | Secret segment for admin UI at `/fs-ops/{token}` |
 | `NEXT_PUBLIC_STRATEGY_CALL_URL` | Optional | Cal.com link for upsell CTA (default: cal.com/forwardslash/30min) |
 | `NEXT_PUBLIC_APP_URL` / `VERCEL_URL` | Optional | Base URL for Stripe redirects |
 
@@ -186,11 +196,11 @@ db/
 
 ### Demo chat
 
-- `/chat/demo` — product assistant using `/api/chat/demo`, `data/demo-content.json`
+- `/chat/demo` — **Lead capture** (name / email / phone, skippable) → then **hybrid** chat: keyword replies + `POST /api/chat/demo` for open questions. **New chat (+)** clears the thread only; **`?forceLead=1`** replays the intro. Session flag: `sessionStorage` key `fs_demo_lead_v2`.
 
 ### Customer chat
 
-- `/chat/c/[customerId]` — public chat for deployed chatbots
+- `/chat/c/[customerId]` — public chat for deployed chatbots; **optional lead gate** + **`/command` shortcuts** (`CustomerChat`, `CustomerChatLeadGate`). Details: [CUSTOMER-CHAT-VISITOR-FEATURES.md](./CUSTOMER-CHAT-VISITOR-FEATURES.md).
 
 ---
 

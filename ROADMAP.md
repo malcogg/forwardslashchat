@@ -1,5 +1,7 @@
 ## ForwardSlash.Chat — Roadmap (Modernization + Production Readiness)
 
+**April 2026:** Much of Phase 0–1 here is **already shipped** (Stripe hardening, automation, jobs). For **current product priorities** — owner chat logs/messages UI, analytics, P2 RAG, rich cards, monetized knowledge — use **`docs/PRODUCTION-READINESS-CHECKLIST.md`** and **`TODO.md` §6–§9**. Treat this document as **technical phase history** plus residual ideas, not the live backlog.
+
 ### Principles
 - **Security and correctness first** (money + identity + data boundaries).
 - **Automation before polish** (remove manual steps).

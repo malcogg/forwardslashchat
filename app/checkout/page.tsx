@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth, useUser } from "@clerk/nextjs";
 import Link from "next/link";
@@ -17,6 +17,7 @@ import {
   sanitizeWebsiteUrl,
 } from "@/lib/validation";
 import { getPriceFromPagesAndYears } from "@/lib/pricing";
+import { computeCheckoutAmountCents, type CheckoutPlanSlug } from "@/lib/checkout-pricing";
 
 function safeInitialUrl(param: string | null): string {
   if (!param?.trim()) return "";
@@ -150,6 +151,7 @@ function CheckoutContent() {
 
   const urlParam = searchParams.get("url") ?? searchParams.get("websiteUrl");
   const initialUrl = urlParam ? (urlParam.startsWith("http") ? urlParam : `https://${urlParam}`) : "";
+  const dnsFromQuery = searchParams.get("dns") === "1";
 
   const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
@@ -161,7 +163,9 @@ function CheckoutContent() {
     () => sanitizeDomain(searchParams.get("domain") ?? urlParam ?? "")
   );
   const [websiteUrl, setWebsiteUrl] = useState(() => safeInitialUrl(urlParam ?? searchParams.get("websiteUrl")));
-  const [addOns, setAddOns] = useState<Set<AddOnId>>(new Set());
+  const [addOns, setAddOns] = useState<Set<AddOnId>>(() =>
+    dnsFromQuery ? new Set<AddOnId>(["dns"]) : new Set()
+  );
   const [saveError, setSaveError] = useState<string | null>(null);
   const [emailTouched, setEmailTouched] = useState(false);
 
@@ -174,8 +178,27 @@ function CheckoutContent() {
     });
   };
 
-  const addOnsTotal = addOnsList.reduce((sum, a) => (addOns.has(a.id) ? sum + a.price : sum), 0);
-  const subtotal = plan.price + addOnsTotal;
+  /** Same calculation as POST /api/checkout/stripe — single source for UI total and pay eligibility */
+  const checkoutQuote = useMemo(() => {
+    try {
+      return computeCheckoutAmountCents({
+        planSlug: effectivePlanSlug as CheckoutPlanSlug,
+        addOns: Array.from(addOns),
+        pages: isStarterBot ? 5 : !isWebsitePlan ? pages : undefined,
+      });
+    } catch {
+      return null;
+    }
+  }, [effectivePlanSlug, addOns, isStarterBot, isWebsitePlan, pages]);
+
+  const orderTotalDollars =
+    checkoutQuote != null ? checkoutQuote.amountCents / 100 : null;
+  const selectedAddonTotal = addOnsList.reduce(
+    (sum, a) => (addOns.has(a.id) ? sum + a.price : sum),
+    0
+  );
+  const planLineDollars =
+    orderTotalDollars != null ? Math.max(0, orderTotalDollars - selectedAddonTotal) : plan.price;
 
   const emailValid = !email.trim() || isValidEmail(email);
   const detailsComplete =
@@ -188,13 +211,22 @@ function CheckoutContent() {
     websiteUrl.trim();
 
   const [isPaying, setIsPaying] = useState(false);
+  const payInFlightRef = useRef(false);
 
   const handlePay = async (e: React.MouseEvent) => {
     e.preventDefault();
-    if (!detailsComplete || subtotal <= 0 || isPaying) return;
+    if (
+      !detailsComplete ||
+      orderTotalDollars == null ||
+      orderTotalDollars <= 0 ||
+      isPaying ||
+      payInFlightRef.current
+    )
+      return;
 
     setSaveError(null);
     setIsPaying(true);
+    payInFlightRef.current = true;
     try {
       const orderId = searchParams.get("orderId");
       const token = isSignedIn ? await getToken() : null;
@@ -213,25 +245,38 @@ function CheckoutContent() {
           websiteUrl: sanitizeWebsiteUrl(websiteUrl),
           planSlug: effectivePlanSlug,
           addOns: Array.from(addOns),
-          amountCents: Math.round(subtotal * 100),
           pages: isStarterBot ? 5 : (!isWebsitePlan ? pages : undefined),
           orderId: orderId || undefined,
         }),
         credentials: "include",
+        cache: "no-store",
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error((data as { error?: string }).error ?? "Failed to start checkout");
+
+      // Use text() + JSON.parse instead of res.json() — avoids "Response body object should not be disturbed or locked"
+      // in some browsers when extensions or runtimes touch the stream (see Chromium #1527291 class issues).
+      const raw = await res.text();
+      let data: Record<string, unknown> = {};
+      if (raw) {
+        try {
+          data = JSON.parse(raw) as Record<string, unknown>;
+        } catch {
+          data = {};
+        }
       }
-      const { url } = data as { url?: string };
+
+      if (!res.ok) {
+        throw new Error(typeof data.error === "string" ? data.error : "Failed to start checkout");
+      }
+      const url = typeof data.url === "string" ? data.url : "";
       if (url) {
-        window.location.href = url;
+        window.location.assign(url);
       } else {
         throw new Error("No checkout URL returned");
       }
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Could not start checkout. Please try again.");
       setIsPaying(false);
+      payInFlightRef.current = false;
     }
   };
 
@@ -465,7 +510,7 @@ function CheckoutContent() {
                 <p className="font-medium text-foreground">{plan.name}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{plan.description}</p>
               </div>
-              <span className="font-medium text-foreground whitespace-nowrap">${plan.price.toLocaleString()}</span>
+              <span className="font-medium text-foreground whitespace-nowrap">${planLineDollars.toLocaleString()}</span>
             </div>
             {addOns.size > 0 && (
               <div className="pt-4 border-t border-border space-y-2">
@@ -479,19 +524,32 @@ function CheckoutContent() {
             )}
             <div className="pt-4 border-t border-border flex justify-between items-center">
               <span className="font-medium text-foreground">Total</span>
-              <span className="text-xl font-bold text-foreground">${subtotal.toLocaleString()}</span>
+              <span className="text-xl font-bold text-foreground">
+                ${orderTotalDollars != null ? orderTotalDollars.toLocaleString() : "—"}
+              </span>
             </div>
           </div>
           <p className="text-xs text-muted-foreground mt-4">Hosting included. One-time payment. No monthly fees.</p>
-          <p className="text-xs text-muted-foreground mt-2">
-            After payment,{" "}
-            <Link href="/thank-you" className="text-primary hover:underline">
-              create an account
-            </Link>{" "}
-            to track your order and get updates.
-          </p>
+          {isWebsitePlan && websitePlan ? (
+            <p className="text-xs text-muted-foreground mt-2">
+              After payment, we&apos;ll email you to start your website project. For a{" "}
+              <span className="text-foreground font-medium">fully automated AI chatbot</span> trained on your site and hosted at
+              chat.yourdomain.com, use the chatbot plans instead.
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground mt-2">
+              After payment, we automatically crawl and train your chatbot (usually about{" "}
+              <span className="text-foreground font-medium">5–15 minutes</span>
+              ). Your dashboard shows live progress; we also email you when your content is ready and when to add your DNS record for{" "}
+              <span className="text-foreground font-medium">chat.yourdomain.com</span>.{" "}
+              <Link href="/thank-you" className="text-primary hover:underline">
+                After checkout
+              </Link>
+              , create an account to track everything.
+            </p>
+          )}
 
-          {detailsComplete && subtotal > 0 ? (
+          {detailsComplete && orderTotalDollars != null && orderTotalDollars > 0 ? (
             <div className="mt-6">
               <button
                 type="button"
@@ -499,7 +557,9 @@ function CheckoutContent() {
                 disabled={isPaying}
                 className="flex w-full items-center justify-center rounded-full bg-emerald-600 px-6 py-3 text-base font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-70 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
-                {isPaying ? "Redirecting to checkout…" : `Pay $${subtotal.toLocaleString()} — Secure checkout`}
+                {isPaying
+                  ? "Redirecting to checkout…"
+                  : `Pay $${orderTotalDollars.toLocaleString()} — Secure checkout`}
               </button>
               <p className="mt-2 text-xs text-muted-foreground text-center">
                 Secured by Stripe. Card payment. One-time charge.
@@ -508,7 +568,9 @@ function CheckoutContent() {
             </div>
           ) : (
             <p className="mt-6 text-sm text-muted-foreground text-center">
-              Complete your details above to enable payment.
+              {checkoutQuote == null && detailsComplete
+                ? "This plan selection can’t be priced. Adjust pages or add-ons, or contact us for a custom quote."
+                : "Complete your details above to enable payment."}
             </p>
           )}
         </div>

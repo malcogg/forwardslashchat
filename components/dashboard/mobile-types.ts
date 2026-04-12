@@ -23,24 +23,28 @@ export type OrderRow = {
 };
 
 export function getSiteStatusLabel(order: OrderRow["order"], customer: OrderRow["customer"] | undefined, contentCount: number): string {
-  if (!customer) return "Payment";
+  if (!customer) return "Checkout pending";
   const isWebsite = order.planSlug && ["starter", "new-build", "redesign"].includes(order.planSlug);
   if (isWebsite) {
     if (order.status === "delivered") return "Delivered";
-    if (order.status === "processing") return "Building";
-    return "Payment";
+    if (order.status === "processing") return "In progress";
+    if (order.status === "paid") return "In progress";
+    return "Checkout pending";
   }
   if (customer.status === "delivered") return "Live";
-  if (["testing", "dns_setup"].includes(customer.status ?? "")) return "Domain Setup";
-  if (contentCount > 0 || (customer.status && !["content_collection"].includes(customer.status))) return "Domain Setup";
-  if (order.status === "paid") return "Training AI";
-  return "Payment";
+  if (["crawling", "indexing"].includes(customer.status ?? "")) return "Indexing";
+  if (["testing", "dns_setup"].includes(customer.status ?? "")) return "Domain";
+  if (contentCount > 0 || (customer.status && !["content_collection"].includes(customer.status ?? ""))) {
+    return "Domain";
+  }
+  if (["paid", "processing", "delivered"].includes(order.status ?? "")) return "Ready to scan";
+  return "Checkout pending";
 }
 
 export function getSiteStatusDot(order: OrderRow["order"], customer: OrderRow["customer"] | undefined, contentCount: number): "live" | "domain" | "training" {
   const label = getSiteStatusLabel(order, customer, contentCount);
-  if (label === "Live") return "live";
-  if (label === "Domain Setup") return "domain";
+  if (label === "Live" || label === "Delivered") return "live";
+  if (label === "Domain" || label === "In progress" || label === "Building") return "domain";
   return "training";
 }
 
@@ -60,20 +64,71 @@ export function getPlanLabel(order: OrderRow["order"], estimatedPages: number): 
   return "Pro";
 }
 
+/** Stripe-aligned checkout CTAs: amount when known, otherwise neutral “checkout”. */
+export function getMobilePaymentCtaLabels(input: {
+  isWebsiteOrder: boolean;
+  unpaidQuoteDollars: number | null;
+  amountCents?: number | null;
+}): { compact: string; primary: string } {
+  const quote = input.unpaidQuoteDollars;
+  const cents = input.amountCents ?? 0;
+  const money =
+    quote != null
+      ? `$${quote.toLocaleString("en-US", { maximumFractionDigits: 0 })}`
+      : cents > 0
+        ? (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })
+        : null;
+
+  if (input.isWebsiteOrder) {
+    if (money) {
+      return {
+        compact: `Pay ${money}`,
+        primary: `Confirm & pay ${money}`,
+      };
+    }
+    return {
+      compact: "Continue to checkout",
+      primary: "Continue to checkout",
+    };
+  }
+
+  if (money) {
+    return {
+      compact: `${money} · Checkout`,
+      primary: `Continue to checkout · ${money}`,
+    };
+  }
+  return {
+    compact: "Continue to checkout",
+    primary: "Continue to checkout",
+  };
+}
+
 export function getProgressSteps(order: OrderRow["order"], customer: OrderRow["customer"] | undefined, contentCount: number) {
   const isWebsite = order.planSlug && ["starter", "new-build", "redesign"].includes(order.planSlug);
+  const checkoutDone = ["paid", "processing", "delivered"].includes(order.status ?? "");
+
   if (isWebsite) {
+    const delivered = order.status === "delivered";
     return [
-      { key: "payment", label: "Payment", done: ["paid", "processing", "delivered"].includes(order.status ?? "") },
-      { key: "planning", label: "Planning", done: ["processing", "delivered"].includes(order.status ?? "") },
-      { key: "design", label: "Design", done: ["processing", "delivered"].includes(order.status ?? "") },
-      { key: "delivered", label: "Delivered", done: order.status === "delivered" },
+      { key: "payment", label: checkoutDone ? "Paid" : "Checkout", done: checkoutDone },
+      { key: "delivered", label: delivered ? "Delivered" : "Handoff", done: delivered },
     ];
   }
+
+  const contentDone =
+    contentCount > 0 || ["dns_setup", "testing", "delivered"].includes(customer?.status ?? "");
+  const dnsDone = ["testing", "delivered"].includes(customer?.status ?? "");
+  const liveDone = customer?.status === "delivered";
+
   return [
-    { key: "payment", label: "Payment", done: ["paid", "processing", "delivered"].includes(order.status ?? "") },
-    { key: "content", label: "AI Training", done: contentCount > 0 || ["dns_setup", "testing", "delivered"].includes(customer?.status ?? "") },
-    { key: "dns", label: "Domain Setup", done: ["testing", "delivered"].includes(customer?.status ?? "") },
-    { key: "live", label: "Live", done: customer?.status === "delivered" },
+    { key: "payment", label: checkoutDone ? "Paid" : "Checkout", done: checkoutDone },
+    {
+      key: "content",
+      label: contentDone ? "Indexed" : "Index site",
+      done: contentDone,
+    },
+    { key: "dns", label: dnsDone ? "DNS ready" : "Connect domain", done: dnsDone },
+    { key: "live", label: liveDone ? "Live" : "Go live", done: liveDone },
   ];
 }

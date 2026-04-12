@@ -9,9 +9,17 @@ import { resend, FROM_EMAIL } from "@/lib/resend";
 import { CrawlCompleteEmail } from "@/components/emails/crawl-complete";
 import { DnsInstructionsEmail } from "@/components/emails/dns-instructions";
 import { assertSafeOutboundHttpUrl } from "@/lib/url-safety";
-import { fetchWithRetry } from "@/lib/fetch-retry";
 import { normalizeContentUrl, shouldKeepCrawledPage } from "@/lib/content-filter";
 import { deductRescanCredits, getRescanCreditsBalance } from "@/lib/credit-balance";
+import { enqueueGoLiveForCustomer } from "@/lib/jobs";
+import { resolveEffectiveCrawlLimit } from "@/lib/crawl-limits";
+import { logCrawlFilterShortfall, logCrawlOutcome, runFirecrawlCrawl } from "@/lib/firecrawl-crawl";
+import {
+  crawlProgressNow,
+  createCrawlProgressPollerWriter,
+  setCustomerCrawlProgress,
+} from "@/lib/crawl-progress";
+import { reindexCustomerContentChunks } from "@/lib/rag-index";
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
   .split(",")
@@ -20,65 +28,6 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
 
 function isAdmin(email: string | undefined): boolean {
   return !!email && ADMIN_EMAILS.includes(email.toLowerCase());
-}
-
-async function runFirecrawlCrawl(
-  apiKey: string,
-  url: string,
-  limit = 50
-): Promise<{
-  success: boolean;
-  data?: { markdown?: string; metadata?: { sourceURL?: string; title?: string } }[];
-  error?: string;
-}> {
-  const start = await fetch("https://api.firecrawl.dev/v2/crawl", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ url, limit }),
-  });
-
-  const startJson = (await start.json()) as { success?: boolean; id?: string; error?: string };
-  if (!startJson.success || !startJson.id) {
-    return { success: false, error: startJson.error ?? "Could not start crawl" };
-  }
-
-  const maxWait = 180;
-  const pollInterval = 3;
-  let elapsed = 0;
-
-  while (elapsed < maxWait) {
-    await new Promise((r) => setTimeout(r, pollInterval * 1000));
-    elapsed += pollInterval;
-
-    const statusRes = await fetchWithRetry(
-      `https://api.firecrawl.dev/v2/crawl/${startJson.id}`,
-      {
-        headers: { Authorization: `Bearer ${apiKey}` },
-        timeoutMs: 10_000,
-        maxAttempts: 3,
-        baseDelayMs: 400,
-        maxDelayMs: 3_000,
-        logTag: "firecrawl-status",
-      }
-    );
-    const status = (await statusRes.json()) as {
-      success?: boolean;
-      status?: string;
-      data?: { markdown?: string; metadata?: { sourceURL?: string; title?: string } }[];
-      error?: string;
-    };
-
-    if (!status.success) return { success: false, error: status.error ?? "Crawl error" };
-    if (status.status === "failed") return { success: false, error: status.error ?? "Crawl failed" };
-    if (status.status === "completed" && Array.isArray(status.data)) {
-      return { success: true, data: status.data };
-    }
-  }
-
-  return { success: false, error: "Crawl timed out" };
 }
 
 /**
@@ -150,8 +99,7 @@ export async function POST(
   // Initial build is included for paid orders; rescans require credits.
   const enforceRescanCredits = !adminBypass && order.status === "paid" && isRescan;
   const skipCredits = adminBypass || (order.status === "paid" && !enforceRescanCredits);
-  // Use purchased/estimated pages — we charge for what the bot will crawl (cap 500)
-  const crawlLimit = Math.min(Math.max(customer.estimatedPages ?? 50, 1), 500);
+  const crawlLimit = resolveEffectiveCrawlLimit(customer.estimatedPages, null);
 
   if (enforceRescanCredits) {
     const bal = await getRescanCreditsBalance(user.userId);
@@ -193,10 +141,62 @@ export async function POST(
     );
   }
 
-  const result = await runFirecrawlCrawl(apiKey, url, crawlLimit);
+  const prevStatus = customer.status;
+  await db
+    .update(customers)
+    .set({
+      status: "crawling",
+      crawlProgress: crawlProgressNow({
+        phase: "starting",
+        source: "manual_api",
+        requestedLimit: crawlLimit,
+      }),
+      updatedAt: new Date(),
+    })
+    .where(eq(customers.id, customerId));
+
+  const onPoll = createCrawlProgressPollerWriter(customerId, "manual_api", crawlLimit);
+  const result = await runFirecrawlCrawl(apiKey, url, crawlLimit, { onProgress: onPoll });
   if (!result.success || !result.data) {
+    logCrawlOutcome({
+      source: "manual_api",
+      customerId,
+      orderId: order.id,
+      websiteUrl: url,
+      requestedLimit: crawlLimit,
+      rawPageCount: 0,
+      storedPageCount: 0,
+      crawlJobId: result.crawlJobId,
+      error: result.error,
+    });
+    await setCustomerCrawlProgress(
+      customerId,
+      crawlProgressNow({
+        phase: "failed",
+        source: "manual_api",
+        requestedLimit: crawlLimit,
+        error: result.error ?? "Crawl failed",
+        firecrawlJobId: result.crawlJobId,
+      })
+    );
+    await db
+      .update(customers)
+      .set({ status: prevStatus, updatedAt: new Date() })
+      .where(eq(customers.id, customerId));
     return NextResponse.json({ error: result.error ?? "Crawl failed" }, { status: 500 });
   }
+
+  const rawPageCount = result.data.length;
+
+  await setCustomerCrawlProgress(
+    customerId,
+    crawlProgressNow({
+      phase: "saving",
+      source: "manual_api",
+      requestedLimit: crawlLimit,
+      firecrawlJobId: result.crawlJobId,
+    })
+  );
 
   // Delete existing content for this customer
   await db.delete(content).where(eq(content.customerId, customerId));
@@ -222,6 +222,25 @@ export async function POST(
     pagesSaved++;
   }
 
+  logCrawlOutcome({
+    source: "manual_api",
+    customerId,
+    orderId: order.id,
+    websiteUrl: url,
+    requestedLimit: crawlLimit,
+    rawPageCount,
+    storedPageCount: pagesSaved,
+    crawlJobId: result.crawlJobId,
+  });
+  logCrawlFilterShortfall({
+    source: "manual_api",
+    customerId,
+    orderId: order.id,
+    requestedLimit: crawlLimit,
+    rawPageCount,
+    storedPageCount: pagesSaved,
+  });
+
   const pagesCrawled = pagesSaved;
   if (enforceRescanCredits) {
     const deducted = await deductRescanCredits({ userId: user.userId, amount: pagesCrawled, reason: "rescan" });
@@ -238,7 +257,12 @@ export async function POST(
   const now = new Date();
   await db
     .update(customers)
-    .set({ status: "dns_setup", updatedAt: now, lastCrawledAt: now })
+    .set({
+      status: "dns_setup",
+      updatedAt: now,
+      lastCrawledAt: now,
+      crawlProgress: null,
+    })
     .where(eq(customers.id, customerId));
 
   // Send crawl complete + DNS instructions emails
@@ -279,6 +303,14 @@ export async function POST(
       }
     }
   }
+
+  try {
+    await enqueueGoLiveForCustomer(customerId);
+  } catch (e) {
+    console.error("[crawl] enqueue go-live failed:", e);
+  }
+
+  await reindexCustomerContentChunks(customerId);
 
   const remaining = skipCredits ? 9999 : (await getCreditBalance(user.userId)).remaining;
   const rescanCreditsRemaining = await getRescanCreditsBalance(user.userId);

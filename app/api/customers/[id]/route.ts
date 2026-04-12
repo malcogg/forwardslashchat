@@ -3,11 +3,16 @@ import { db } from "@/db";
 import { customers, orders } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getOrCreateUser } from "@/lib/auth";
+import { sanitizeBusinessName, isValidUrl, LIMITS } from "@/lib/validation";
+
+function stripControlChars(s: string): string {
+  return s.replace(/[\x00-\x1F\x7F]/g, "");
+}
 
 /**
  * PATCH /api/customers/[id]
- * Update customer status. Requires auth + ownership.
- * Body: { status: "testing" | "delivered" }
+ * Update customer fields. Requires auth + ownership.
+ * Body: { status?: "testing" | "delivered"; primaryColor?: "#rrggbb"; businessName?: string; logoUrl?: string | null }
  */
 export async function PATCH(
   request: Request,
@@ -34,16 +39,71 @@ export async function PATCH(
   }
 
   const body = await request.json().catch(() => ({}));
-  const { status } = body as { status?: string };
+  const { status, primaryColor, businessName, logoUrl } = body as {
+    status?: string;
+    primaryColor?: string;
+    businessName?: string;
+    logoUrl?: string | null;
+  };
 
-  if (!status || !["testing", "delivered"].includes(status)) {
-    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+  const set: Partial<typeof customers.$inferInsert> = {};
+
+  if (businessName !== undefined) {
+    if (typeof businessName !== "string") {
+      return NextResponse.json({ error: "Invalid businessName" }, { status: 400 });
+    }
+    const name = sanitizeBusinessName(businessName);
+    if (!name) {
+      return NextResponse.json({ error: "businessName cannot be empty" }, { status: 400 });
+    }
+    set.businessName = name;
+  }
+
+  if (logoUrl !== undefined) {
+    if (logoUrl === null || logoUrl === "") {
+      set.logoUrl = null;
+    } else if (typeof logoUrl === "string") {
+      const t = stripControlChars(logoUrl).trim().slice(0, LIMITS.websiteUrl);
+      if (!t) {
+        set.logoUrl = null;
+      } else if (!isValidUrl(t)) {
+        return NextResponse.json({ error: "Invalid logoUrl (use https://…)" }, { status: 400 });
+      } else {
+        set.logoUrl = t.startsWith("http") ? t : `https://${t}`;
+      }
+    } else {
+      return NextResponse.json({ error: "Invalid logoUrl" }, { status: 400 });
+    }
+  }
+
+  if (primaryColor !== undefined) {
+    if (typeof primaryColor !== "string" || !/^#[0-9A-Fa-f]{6}$/.test(primaryColor)) {
+      return NextResponse.json({ error: "Invalid primaryColor (use #rrggbb)" }, { status: 400 });
+    }
+    set.primaryColor = primaryColor;
+  }
+
+  if (status !== undefined) {
+    if (!["testing", "delivered"].includes(status)) {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
+    set.status = status;
+  }
+
+  if (Object.keys(set).length === 0) {
+    return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
   }
 
   await db
     .update(customers)
-    .set({ status, updatedAt: new Date() })
+    .set({ ...set, updatedAt: new Date() })
     .where(eq(customers.id, customerId));
 
-  return NextResponse.json({ success: true, status });
+  return NextResponse.json({
+    success: true,
+    status: set.status,
+    primaryColor: set.primaryColor,
+    businessName: set.businessName,
+    logoUrl: set.logoUrl,
+  });
 }

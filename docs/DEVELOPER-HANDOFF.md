@@ -1,6 +1,6 @@
 # Developer Handoff – ForwardSlash.Chat
 
-**Last updated:** February 2026
+**Last updated:** April 2026
 
 This doc is for a developer taking over the app. It covers what you need to run it, where things live, and what’s documented (or missing).
 
@@ -27,7 +27,7 @@ Create `.env.local` in the project root. **Never commit secrets.**
 
 Optional: `POSTGRES_URL` (some setups use this instead of `DATABASE_URL`). Vercel: set all of the above in Project → Settings → Environment Variables.
 
-There is no single `.env.example` in the repo; this list is the source. See also [BACKEND-SETUP.md](./BACKEND-SETUP.md) and [PAYMENT-SETUP.md](./PAYMENT-SETUP.md).
+Copy **`.env.example`** at the repo root to `.env.local` and fill values (or create `.env.local` from the tables below). See also [BACKEND-SETUP.md](./BACKEND-SETUP.md) and [PAYMENT-SETUP.md](./PAYMENT-SETUP.md).
 
 ### First run (local)
 
@@ -63,15 +63,20 @@ npm run dev
 ## 3. Docs to read (in order)
 
 1. **[DEVELOPER-HANDOFF.md](./DEVELOPER-HANDOFF.md)** (this file) – env and first run  
-2. **[APP-OVERVIEW.md](./APP-OVERVIEW.md)** – product, stack, services  
-3. **[APP-FLOW-AND-AUDIT.md](./APP-FLOW-AND-AUDIT.md)** – full flow, triggers, notifications, audit  
-4. **[pricing-and-bundles.md](./pricing-and-bundles.md)** – pricing tiers, add-ons, messaging  
-5. **[TECH-SPEC.md](./TECH-SPEC.md)** – structure, schema, API list  
-6. **[BACKEND-SETUP.md](./BACKEND-SETUP.md)** – DB, Clerk, API routes  
-7. **[PAYMENT-SETUP.md](./PAYMENT-SETUP.md)** – Stripe (and PayPal if used)  
-8. **[EMAIL-TRIGGERS-AND-DRAFTS.md](./EMAIL-TRIGGERS-AND-DRAFTS.md)** – when emails fire and copy  
-9. **[SECURITY-AND-API-AUDIT.md](./SECURITY-AND-API-AUDIT.md)** – auth and security notes  
-10. **[dev-instructions.md](./dev-instructions.md)** – what to do when a new order comes in  
+2. **[DEVELOPER-GUIDE.md](./DEVELOPER-GUIDE.md)** – deeper: demo page, code map, release hints  
+3. **[PRODUCTION-READINESS-CHECKLIST.md](./PRODUCTION-READINESS-CHECKLIST.md)** – launch vs post-launch priorities (owner logs, messages UI, RAG, rich cards) — with **`TODO.md` §6–§9**  
+4. **[APP-OVERVIEW.md](./APP-OVERVIEW.md)** – product, stack (snapshot; roadmap = checklist + TODO)  
+5. **[ARCHITECTURE-AND-FLOWS.md](./ARCHITECTURE-AND-FLOWS.md)** – diagrams and routing  
+6. **[APP-FLOW-AND-AUDIT.md](./APP-FLOW-AND-AUDIT.md)** – full flow, triggers, notifications, audit  
+7. **[pricing-and-bundles.md](./pricing-and-bundles.md)** – pricing tiers, add-ons, messaging  
+8. **[TECH-SPEC.md](./TECH-SPEC.md)** – structure, schema, API list  
+9. **[BACKEND-SETUP.md](./BACKEND-SETUP.md)** – DB, Clerk, API routes  
+10. **[PAYMENT-SETUP.md](./PAYMENT-SETUP.md)** – Stripe  
+11. **[EMAIL-TRIGGERS-AND-DRAFTS.md](./EMAIL-TRIGGERS-AND-DRAFTS.md)** – when emails fire and copy  
+12. **[SECURITY-AND-API-AUDIT.md](./SECURITY-AND-API-AUDIT.md)** – auth and security notes  
+13. **[dev-instructions.md](./dev-instructions.md)** – what to do when a new order comes in  
+
+**Acquisition / handoff:** [ACQUISITION-HANDBOOK.md](./ACQUISITION-HANDBOOK.md) · **Upgrades:** [MAINTENANCE-AND-DEPENDENCIES.md](./MAINTENANCE-AND-DEPENDENCIES.md)
 
 Full index: [docs/README.md](./README.md).
 
@@ -91,15 +96,14 @@ Full index: [docs/README.md](./README.md).
 
 ## 5. Gaps / docs we don’t have (yet)
 
-These would help a new developer or ops person; add them as you need them:
+Partially superseded by **[ACQUISITION-HANDBOOK.md](./ACQUISITION-HANDBOOK.md)** §7 and **[docs/README.md](./README.md)** (“What documentation to add next”). Remaining gaps:
 
 | Gap | Suggestion |
 |-----|------------|
-| **Deploy checklist** | One-pager: Vercel env, build, cron URLs, webhook URLs, post-deploy smoke test. |
+| **Deploy checklist** | `DEPLOYMENT.md` exists; ensure post-deploy smoke steps stay in sync with production. |
 | **Clerk setup** | How to create Clerk app, redirect URLs, webhook (if used) for user sync. |
-| **Neon runbook** | How to run migrations in Neon SQL Editor (which files, in what order). Partially in SETUP-DATABASE-MIGRATIONS.md. |
 | **“Mark order paid” runbook** | If webhook fails: how to mark an order paid manually (DB or admin UI). |
-| **Stripe product/price IDs** | Where Stripe product and price IDs are set (dashboard vs code); doc or comment in `lib/pricing.ts`. |
-| **Resend domains** | Which domain is used for sending (e.g. hello@forwardslash.chat), how to add/verify. |
+| **Stripe product/price IDs** | Where IDs live: `lib/pricing.ts` + Stripe dashboard — keep comments in code. |
+| **Resend domains** | Which domain is used for sending; how to add/verify in Resend. |
 
-Once you add any of these, link them from this section and from [docs/README.md](./README.md).
+Neon migrations: [SETUP-DATABASE-MIGRATIONS.md](./SETUP-DATABASE-MIGRATIONS.md) and `docs/migrations/`.

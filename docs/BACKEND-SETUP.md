@@ -52,7 +52,7 @@ This creates/updates tables from `db/schema.ts`.
 
 ### Admin
 
-Add `ADMIN_EMAILS=your@email.com` (comma-separated) to access `/admin` — list orders, trigger crawl, view dashboard.
+Add `ADMIN_EMAILS=your@email.com` (comma-separated) for `/api/admin/*`, and `ADMIN_PATH_TOKEN` (long random string) for the secret UI at `/fs-ops/{token}` — see `DEPLOYMENT.md`.
 
 ### Payments
 

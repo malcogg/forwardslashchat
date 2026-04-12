@@ -2,13 +2,11 @@
 
 import Link from "next/link";
 import { useRef, useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { SignedIn, SignedOut, useUser, useClerk } from "@clerk/nextjs";
 import { LayoutDashboard, LogOut, Menu, X, Bell } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { isBannerExcluded } from "@/components/landing/AnnouncementBannerSitewide";
 
 function getInitials(user: { firstName?: string | null; lastName?: string | null; fullName?: string | null } | null | undefined) {
   if (!user) return "?";
@@ -140,15 +138,10 @@ export function Header({
     };
   }, [mobileDrawerOpen]);
 
-  const pathname = usePathname() ?? "";
-  const showBanner = !isBannerExcluded(pathname);
-
   return (
     <>
       <header
-        className={`fixed left-0 right-0 z-50 w-full backdrop-blur-xl bg-background/70 dark:bg-background/80 border-b border-border/40 shadow-sm transition-[top] duration-200 ${
-          showBanner ? "top-[3.5rem] md:top-10" : "top-0"
-        }`}
+        className="fixed left-0 right-0 top-0 z-[55] w-full backdrop-blur-xl bg-background/70 dark:bg-background/80 border-b border-border/40 shadow-sm"
       >
         <div className="w-full py-3 px-4 sm:py-4 sm:px-6 flex items-center justify-between max-w-7xl mx-auto">
           <Link href="/" className="text-xl font-bold text-foreground lowercase shrink-0">
@@ -298,10 +291,8 @@ export function Header({
         )}
       </AnimatePresence>
 
-      <div
-        className={`shrink-0 ${showBanner ? "h-[7.5rem] md:h-[6.5rem]" : "h-14 md:h-16"} transition-[height] duration-200`}
-        aria-hidden
-      />
+      {/* Spacer = navbar height only; announcement bar reserves its own height in layout (fixed + flow spacer). */}
+      <div className="shrink-0 h-14 md:h-16 transition-[height] duration-200" aria-hidden />
     </>
   );
 }

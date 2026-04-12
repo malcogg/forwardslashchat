@@ -23,6 +23,9 @@ export function Footer() {
           <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             Dashboard
           </Link>
+          <Link href="/help" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            Help center
+          </Link>
         </nav>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -30,10 +33,10 @@ export function Footer() {
             © {new Date().getFullYear()} ForwardSlash.Chat. All rights reserved.
           </p>
           <div className="flex gap-6">
-            <Link href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Terms
             </Link>
-            <Link href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Privacy
             </Link>
           </div>
