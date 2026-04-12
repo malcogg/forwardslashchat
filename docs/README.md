@@ -36,6 +36,17 @@ This folder is the single place for product, technical, and operational docs. Us
 
 ---
 
+## End-user help (website)
+
+Markdown sources for **`/help`** (GitBook-style help center in the Next.js app):
+
+| Path | Purpose |
+|------|---------|
+| [help/dns-overview.md](./help/dns-overview.md) | DNS concepts + `/help/dns` |
+| [help/dns/*.md](./help/dns/) | Per-provider CNAME guides (Namecheap, Cloudflare, GoDaddy, …) |
+
+---
+
 ## Product & pricing
 
 | Doc | Purpose |

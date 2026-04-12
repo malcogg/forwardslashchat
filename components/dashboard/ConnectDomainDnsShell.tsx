@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import { X } from "lucide-react";
 import { GoLiveButton } from "@/components/dashboard/GoLiveButton";
 
@@ -127,13 +128,20 @@ export function ConnectDomainDnsShell({
           </p>
 
           <p className="text-xs text-muted-foreground mt-4">
+            <Link
+              href="/help/dns"
+              className="text-emerald-600 dark:text-emerald-400 font-medium hover:underline"
+            >
+              Help center (all providers)
+            </Link>
+            {" · "}
             <a
               href="https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-cname-record/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-emerald-600 dark:text-emerald-400 font-medium hover:underline"
             >
-              Cloudflare
+              Cloudflare (external)
             </a>
             {" · "}
             <a
@@ -142,7 +150,7 @@ export function ConnectDomainDnsShell({
               rel="noopener noreferrer"
               className="text-emerald-600 dark:text-emerald-400 font-medium hover:underline"
             >
-              GoDaddy
+              GoDaddy (external)
             </a>
           </p>
 

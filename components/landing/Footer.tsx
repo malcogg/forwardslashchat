@@ -23,6 +23,9 @@ export function Footer() {
           <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             Dashboard
           </Link>
+          <Link href="/help" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            Help center
+          </Link>
         </nav>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
